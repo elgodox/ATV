@@ -1,6 +1,8 @@
 # Movie and TV Series Search Website
 
 This project is a web application that allows users to search, filter, and view information about movies and TV series. The data is retrieved through an API that provides titles, genres, streaming platforms, and other relevant details.
+![image](https://github.com/user-attachments/assets/c5beac3d-caca-49bb-b384-a07349952527)
+
 
 ## Features
 
