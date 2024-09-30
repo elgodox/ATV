@@ -1,6 +1,7 @@
 
 let currentPage = 1;
 let totalResults = 0;
+let isLoading = false; 
 let originalDescription = '';
 let spanishDescription = '';
 let originalTitle = '';
@@ -16,8 +17,6 @@ const elements = {
   modalTitle: document.getElementById("modal-title"),
   modalDescription: document.getElementById("modal-description"),
   modalTrailer: document.getElementById("modal-trailer"),
-  prevPageButton: document.getElementById("prev-page"),
-  nextPageButton: document.getElementById("next-page"),
   platformSelect: document.getElementById("platform"),
   sortSelect: document.getElementById("sort")
   
@@ -113,7 +112,10 @@ async function updateGenreSelect() {
 
 // Función para obtener títulos y mostrarlos
 async function getTitles(page = 1) {
-  const type = document.getElementById('type').value;  
+  if (isLoading) return;  
+  isLoading = true; 
+
+  const type = document.getElementById('type').value;
   const genre = document.getElementById('genre').value;
   const platform = document.getElementById('platform').value;
   const sortBy = document.getElementById('sort').value;
@@ -130,15 +132,14 @@ async function getTitles(page = 1) {
 
   try {
     const data = await fetchData('titles', params);
-    
-    // Verificación de resultados
+
     if (!data || !data.results || data.results.length === 0) {
-      elements.movieGrid.innerHTML = '<p>No se encontraron resultados.</p>';
+      if (currentPage === 1) elements.movieGrid.innerHTML = '<p>No se encontraron resultados.</p>';
+      isLoading = false;  // Marcamos como terminado
       return;
     }
 
     totalResults = data.total_results;
-    elements.movieGrid.innerHTML = '';
 
     // Obtener los géneros y mapearlos por su ID
     const genreData = await fetchData('genres');
@@ -164,31 +165,27 @@ async function getTitles(page = 1) {
       const releaseDate = title.release_date || title.first_air_date || 'Fecha desconocida';
 
       let seasons = '';
-    let status = '';
+      let status = '';
 
-    // Si es una serie de TV, obtener el número de temporadas y el estado (si está finalizada o no)
-    if (type === 'tv') {
-      const tvDetails = await fetchTVDetails(title.id);  // Realizar la solicitud adicional
-      seasons = tvDetails ? `${tvDetails.number_of_seasons} Temporadas` : 'N/A';
-      status = tvDetails ? (tvDetails.status === 'Ended' ? 'Finalizada' : 'En emisión') : 'Estado desconocido';
-    }
+      if (type === 'tv') {
+        const tvDetails = await fetchTVDetails(title.id);  
+        seasons = tvDetails ? `${tvDetails.number_of_seasons} Temporadas` : 'N/A';
+        status = tvDetails ? (tvDetails.status === 'Ended' ? 'Finalizada' : 'En emisión') : 'Estado desconocido';
+      }
 
-      // Renderizar la valoración con estrellas
-      const stars = renderStars(title.vote_average);  // Convertir la valoración a estrellas
+      const stars = renderStars(title.vote_average);
 
-      // Renderizar la tarjeta de película/serie con géneros, plataformas, temporadas (si es TV), estado y valoración
-    movieCard.innerHTML = `
-    <img src="https://image.tmdb.org/t/p/w500${title.poster_path}" alt="${titleName}">
-    <h3>${titleName}</h3>
-    <p><strong>Estreno:</strong> ${releaseDate}</p>
-    <p><strong>Género:</strong> ${movieGenres}</p>
-    ${seasons ? `<p><strong>Temporadas:</strong> ${seasons}</p>` : ''}
-    ${status ? `<p><strong>Estado:</strong> ${status}</p>` : ''}
-    <p><strong>Plataformas:</strong> ${providerNames}</p>
-    <p><strong>Valoración:</strong> ${stars}</p>
-  `;
+      movieCard.innerHTML = `
+        <img src="https://image.tmdb.org/t/p/w500${title.poster_path}" alt="${titleName}">
+        <h3>${titleName}</h3>
+        <p><strong>Estreno:</strong> ${releaseDate}</p>
+        <p><strong>Género:</strong> ${movieGenres}</p>
+        ${seasons ? `<p><strong>Temporadas:</strong> ${seasons}</p>` : ''}
+        ${status ? `<p><strong>Estado:</strong> ${status}</p>` : ''}
+        <p><strong>Plataformas:</strong> ${providerNames}</p>
+        <p><strong>Valoración:</strong> ${stars}</p>
+      `;
 
-      // Asignar evento de clic para mostrar detalles
       movieCard.addEventListener('click', () => {
         showDetails(title.id, type, movieCard);
       });
@@ -201,28 +198,17 @@ async function getTitles(page = 1) {
     elements.movieGrid.innerHTML = '<p>Error al cargar los títulos. Intente nuevamente.</p>';
   }
 
-  // Actualizar la paginación
-  elements.currentPage.textContent = page;
-  elements.prevPageButton.disabled = currentPage === 1;
-  elements.nextPageButton.disabled = currentPage * 20 >= totalResults;
+  isLoading = false;  // Marcamos como terminado
 }
 
-
-// Función para avanzar a la siguiente página
-function nextPage() {
-  if (currentPage * 20 < totalResults) {
+// Detectar cuando estamos cerca del final de la página
+window.addEventListener('scroll', () => {
+  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500 && !isLoading) {
     currentPage++;
     getTitles(currentPage);
   }
-}
+});
 
-// Función para retroceder a la página anterior
-function prevPage() {
-  if (currentPage > 1) {
-    currentPage--;
-    getTitles(currentPage);
-  }
-}
 
 // Función para obtener los detalles completos de una serie de TV
 async function fetchTVDetails(tvId) {
