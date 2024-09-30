@@ -46,10 +46,22 @@ Defines the visual style of the site, including:
 
 ## API Endpoints
 
-- `/api/providers?type=movie`: Fetches streaming providers based on content type.
-- `/api/genres/{type}`: Retrieves genres for movies or TV series.
-- `/api/titles`: Fetches movie or series titles with search parameters, filters, and pagination.
-- `/api/titles/details?id={id}&language={lang}`: Fetches details of a title in the specified language.
+### The Movie Database (TMDb) API
+
+- **`/api/providers?type=movie`**: Fetches streaming providers based on the content type (movie or series). Used to display where a title can be watched.
+  
+- **`/api/genres/{type}`**: Retrieves genres for movies or TV series based on the content type (`movie` or `tv`). This populates the genre filter.
+
+- **`/api/titles`**: Fetches movie or series titles with search parameters, filters (genre, platform, etc.), and pagination. It returns a list of titles based on the user’s search and filter criteria.
+
+- **`/api/titles/details?id={id}&type={type}&language={lang}`**: Fetches detailed information about a specific title (movie or series) in the requested language (`en` for English, `es` for Spanish). Used to display the details in the modal window when a user clicks on a movie/series.
+
+- **`/api/{type}/{movieId}/watch/providers`**: Fetches streaming providers for a specific movie or TV series, checking availability for regions (like Argentina - AR) and offering alternatives if the title is not available locally.
+
+### Torrent Search (1337x or similar)
+
+- **`/api/torrents?movieTitle={movieTitle}`**: Searches for torrents of a specific movie title using the 1337x API (or another torrent site). Returns a list of available torrents sorted by quality (e.g., 4K, 1080p, 720p). This function populates the torrent download buttons within the movie detail modal.
+
 
 ## License
 
