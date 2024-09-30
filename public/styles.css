@@ -1,3 +1,83 @@
+/* Estilos para la barra superior */
+#top-bar {
+  background-color: #202020;
+  padding: 5px 10px; /* Reducir el padding */
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+#top-bar .container {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px; /* Espacio entre los botones */
+}
+
+#top-bar .button {
+  color: white;
+  text-decoration: none;
+  background-color: #333;
+  padding: 5px 10px; /* Reducir el padding de los botones */
+  border-radius: 15px; /* Bordes más pequeños */
+  font-size: 0.8em; /* Reducir el tamaño del texto */
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 0.3s ease;
+}
+
+#top-bar .button i {
+  margin-right: 5px; /* Reducir el espacio entre el icono y el texto */
+  font-size: 1.1em; /* Tamaño del icono */
+}
+
+#top-bar .button:hover {
+  background-color: #444;
+}
+
+/* Estilos para el botón de donaciones */
+.donate-btn {
+  background-color: #f7931a; /* Color de Bitcoin */
+}
+
+.donate-btn:hover {
+  background-color: #e07c1a;
+}
+
+/* Estilos para el botón de GitHub */
+.github-btn {
+  background-color: #333;
+}
+
+.github-btn:hover {
+  background-color: #555;
+}
+
+/* Para dispositivos móviles: mantener los botones en una fila */
+@media (max-width: 600px) {
+  #top-bar .container {
+    flex-direction: row; /* Mantener los botones en fila en lugar de columna */
+    justify-content: center;
+    gap: 5px; /* Espacio más pequeño entre los botones */
+  }
+
+  #top-bar .button {
+    padding: 3px 8px; /* Hacer los botones más pequeños */
+    font-size: 0.7em; /* Reducir aún más el tamaño del texto */
+  }
+
+  #top-bar .button i {
+    font-size: 1em; /* Hacer el icono un poco más pequeño */
+    margin-right: 3px;
+  }
+}
+
+
+
 /* Reseteo de estilos */
 * {
   margin: 0;

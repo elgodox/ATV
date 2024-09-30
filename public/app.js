@@ -496,6 +496,33 @@ function applyFilters() {
   getTitles(currentPage);
 }
 
+// Obtener el botón de Bitcoin
+const btcButton = document.getElementById('btc-button');
+
+// Agregar un evento al botón para copiar la dirección al portapapeles
+btcButton.addEventListener('click', function() {
+  // Obtener la dirección de Bitcoin del atributo data-btc-address
+  const btcAddress = btcButton.getAttribute('data-btc-address');
+
+  // Crear un campo de texto temporal para copiar la dirección
+  const tempInput = document.createElement('input');
+  tempInput.value = btcAddress;
+  document.body.appendChild(tempInput);
+  tempInput.select();
+  document.execCommand('copy');
+  document.body.removeChild(tempInput);
+
+  // Cambiar el texto del botón temporalmente a "Address copied!"
+  const originalText = btcButton.innerHTML;
+  btcButton.innerHTML = '<i class="fab fa-bitcoin"></i> Address copied!';
+  
+  // Restaurar el texto original después de 2 segundos
+  setTimeout(() => {
+    btcButton.innerHTML = originalText;
+  }, 2000); // Cambia el texto por 2 segundos
+});
+
+
 // Inicializar la carga de títulos y géneros
 getTitles();
 fetchGenres();
