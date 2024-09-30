@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATV</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+</head>
+
+<body>
+
+  <!-- Buscador por título -->
+  <div id="search-container">
+    <input type="text" id="search-bar" placeholder="Buscar películas o series">
+  </div>
+
+  <!-- Filtros -->
+  <div id="filters">
+    <div class="filter-group">
+      <label for="type">Tipo de contenido:</label>
+      <select id="type">
+        <option value="movie">Películas</option>
+        <option value="tv">Series de TV</option>
+      </select>
+    </div>
+  
+    <div class="filter-group">
+      <label for="genre">Género:</label>
+      <select id="genre">
+        <option value="">Todos</option>
+      </select>
+    </div>
+  
+    <div class="filter-group">
+      <label for="platform">Plataforma:</label>
+      <select id="platform">
+        <option value="">Todas</option>
+      </select>
+    </div>
+  
+    <div class="filter-group">
+      <label for="sort">Ordenar por:</label>
+      <select id="sort">
+        <option value="popularity.desc">Popularidad</option>
+        <option value="vote_average.desc">Mejor valoradas</option>
+        <option value="release_date.desc">Más nuevas</option>
+        <option value="vote_count.desc">Más vistas</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Resultados -->
+  <div id="movie-grid"></div>
+
+  <!-- Paginación -->
+  <div id="pagination">
+    <button id="prev-page" onclick="prevPage()" class="pagination-button">Anterior</button>
+    <span id="current-page">1</span>
+    <button id="next-page" onclick="nextPage()" class="pagination-button">Siguiente</button>
+  </div>
+
+  <!-- Modal para mostrar detalles completos y tráiler -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h2 id="modal-title"></h2>
+      <p id="modal-description"></p>
+      <div id="modal-trailer"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
