@@ -267,7 +267,7 @@ h1 {
   flex-wrap: wrap;
   justify-content: center;
   gap: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .filter-group {
@@ -288,7 +288,7 @@ h1 {
   padding: 10px;
   border-radius: 5px;
   font-size: 1em;
-  width: 150px;
+  width: auto;
 }
 
 
@@ -605,7 +605,7 @@ h1 {
   }
 
   #filters select, #filters button {
-    width: 100%;
+    width: auto;
     margin-bottom: 15px;
   }
 

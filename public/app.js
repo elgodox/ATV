@@ -134,27 +134,28 @@ async function getTitles(page = 1) {
   
   // Verificar si el filtro de favoritos está activo
   if (showingFavorites) {
-    // Si el filtro de favoritos está activo, obtenemos los IDs desde localStorage
     const favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
 
-    if (favorites.length === 0) {
-      elements.movieGrid.innerHTML = '<p>No tienes películas en favoritos.</p>';
-      isLoading = false;
-      return;
+    // Filter favorites by the current type (movie or tv)
+    const filteredFavorites = favorites.filter(fav => fav.type === type);
+
+    if (filteredFavorites.length === 0) {
+        elements.movieGrid.innerHTML = '<p>No tienes favoritos en esta categoría.</p>';
+        isLoading = false;
+        return;
     }
 
     // Obtener los detalles de cada película/serie en la lista de favoritos
     data = { results: [] };
 
-    for (let movieId of favorites) {
-      const response = await fetch(`/api/titles/details?id=${movieId}&type=${type}&language=en`);
-      const movie = await response.json();
-      if (movie) {
-        data.results.push(movie);
-      }
+    for (let favorite of filteredFavorites) {
+        const response = await fetch(`/api/titles/details?id=${favorite.id}&type=${type}&language=en`);
+        const movie = await response.json();
+        if (movie) {
+            data.results.push(movie);
+        }
     }
-
-  } else {
+} else {
     // Si no está activo el filtro de favoritos, llamamos a la API normal
     const params = new URLSearchParams({
       type,
@@ -221,9 +222,10 @@ async function getTitles(page = 1) {
       <p><strong>Plataformas:</strong> ${providerNames}</p>
       <p><strong>Valoración:</strong> ${stars}</p>
       <i id="heart-icon-${title.id}" 
-         class="fas fa-heart" 
-         style="cursor: pointer; color: ${isFavorite(title.id) ? 'red' : 'black'};" 
-         onclick="toggleFavorite(${title.id}, event)"></i>
+   class="fas fa-heart" 
+   style="cursor: pointer; color: ${isFavorite(title.id, type) ? 'red' : 'black'};" 
+   onclick="toggleFavorite(${title.id}, '${type}', event)"></i>
+
     `;
 
     movieCard.addEventListener('click', () => {
@@ -250,9 +252,9 @@ window.addEventListener('scroll', () => {
 });
 
 // Verifica si la película está en favoritos
-function isFavorite(movieId) {
+function isFavorite(movieId, type) {
   let favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
-  return favorites.includes(movieId);
+  return favorites.some(fav => fav.id === movieId && fav.type === type);
 }
 // Función para obtener los detalles completos de una serie de TV
 async function fetchTVDetails(tvId) {
@@ -585,65 +587,6 @@ async function connectMetaMask() {
   }
 }
 
-// Función para cargar títulos (con o sin filtro de favoritos)
-// async function loadTitles() {
-//   const movieGrid = document.getElementById('movie-grid');
-//   movieGrid.innerHTML = ''; // Limpiar los títulos anteriores
-
-//   if (showingFavorites && selectedAccount) {
-//       // Mostrar solo favoritos
-//       const favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
-//       favorites.forEach(movieId => {
-//           // Aquí llamas a tu función que carga las tarjetas de películas según su ID
-//           loadMovieCardById(movieId);
-//       });
-//   } else {
-//       // Mostrar todos los títulos normalmente (sin el filtro de favoritos)
-//       getTitles(); // Llama a tu función existente para cargar todos los títulos
-//   }
-// }
-
-// Función para cargar una tarjeta de película por su ID
-// async function loadMovieCardById(movieId) {
-//   try {
-//       // Realiza una solicitud a tu backend o API para obtener los detalles de la película por ID
-//       const response = await fetch(`/api/titles/details?id=${movieId}&type=movie&language=en`);
-//       const movie = await response.json();
-
-//       // Si no se encuentra la película, mostrar un mensaje de error
-//       if (!movie) {
-//           console.error("No se encontraron detalles de la película.");
-//           return;
-//       }
-
-//       // Crear el contenedor de la tarjeta de película
-//       const movieCard = document.createElement('div');
-//       movieCard.classList.add('movie-card');
-
-//       // Mapeo de géneros si está disponible
-//       const movieGenres = movie.genres ? movie.genres.map(genre => genre.name).join(', ') : 'Sin género';
-
-//       // Estructura HTML de la tarjeta de película
-//       movieCard.innerHTML = `
-//           <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="${movie.title || movie.original_title}">
-//           <h3>${movie.title || movie.original_title}</h3>
-//           <p><strong>Estreno:</strong> ${movie.release_date || 'Fecha desconocida'}</p>
-//           <p><strong>Género:</strong> ${movieGenres}</p>
-//           <p><strong>Plataformas:</strong> ${movie.providerNames}</p>
-//           <p><strong>Valoración:</strong> ${renderStars(movie.vote_average)}</p>
-//           <i id="heart-icon-${movie.id}" 
-//              class="fas fa-heart" 
-//              style="cursor: pointer; color: ${isFavorite(movie.id) ? 'red' : 'black'};" 
-//              onclick="toggleFavorite(${movie.id}, event)"></i>
-//       `;
-
-//       // Agregar la tarjeta de la película al grid
-//       document.getElementById('movie-grid').appendChild(movieCard);
-
-//   } catch (error) {
-//       console.error('Error al cargar la película:', error);
-//   }
-// }
 
 async function getPlatforms(movieId) {
   try {
@@ -658,9 +601,8 @@ async function getPlatforms(movieId) {
 }
 
 
-
 // Alternar favoritos
-function toggleFavorite(movieId, event) {
+function toggleFavorite(movieId, type, event) {
   // Evitar que el clic en el corazón se propague y abra el modal
   event.stopPropagation();
 
@@ -671,12 +613,17 @@ function toggleFavorite(movieId, event) {
 
   let favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
 
+  // Check if the favorite with the specific type is already in the list
+  const favoriteIndex = favorites.findIndex(fav => fav.id === movieId && fav.type === type);
+
   // Agregar o quitar de favoritos
-  if (favorites.includes(movieId)) {
-      favorites = favorites.filter(id => id !== movieId);
+  if (favoriteIndex !== -1) {
+      // Remove favorite
+      favorites.splice(favoriteIndex, 1);
       document.getElementById(`heart-icon-${movieId}`).style.color = 'black'; // Cambiar a negro si se quita de favoritos
   } else {
-      favorites.push(movieId);
+      // Add new favorite with type
+      favorites.push({ id: movieId, type: type });
       document.getElementById(`heart-icon-${movieId}`).style.color = 'red'; // Cambiar a rojo si se agrega a favoritos
   }
 
@@ -686,6 +633,7 @@ function toggleFavorite(movieId, event) {
   // Actualizar la lista de favoritos (opcional)
   loadFavorites();
 }
+
 
 
 // Función para cargar los favoritos desde localStorage
