@@ -233,6 +233,11 @@ async function fetchTVDetails(tvId) {
 // Función para obtener detalles y mostrar el modal
 async function showDetails(id, type, movieCard) {
 
+  document.getElementById('loading-screen').style.display = 'flex';
+  const lottiePlayer = document.querySelector('lottie-player');
+  lottiePlayer.stop();  // Detener la animación
+  lottiePlayer.play();  // Reproducir la animación desde el principio
+
   // Deshabilitar la tarjeta de la película temporalmente
   movieCard.style.pointerEvents = 'none'; // Deshabilita clics en la tarjeta
   movieCard.classList.add('disabled'); // Opcional: añadir una clase para aplicar estilos visuales
@@ -327,6 +332,7 @@ async function showDetails(id, type, movieCard) {
   } catch (error) {
     console.error("Error mostrando detalles:", error);
   } finally {
+    document.getElementById('loading-screen').style.display = 'none';
     // Rehabilitar la tarjeta de la película después de mostrar los detalles
     movieCard.style.pointerEvents = 'auto';  // Habilita nuevamente los clics
     movieCard.classList.remove('disabled');  // Opcional: quitar la clase de deshabilitación

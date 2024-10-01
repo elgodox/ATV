@@ -42,9 +42,9 @@ app.get('/api/titles', async (req, res) => {
   
   let url;
   if (searchQuery) {
-    url = `https://api.themoviedb.org/3/search/${type}?api_key=${API_KEY}&query=${searchQuery}&page=${page}&language=es&with_watch_providers=${platform}&watch_region=US`;
+    url = `https://api.themoviedb.org/3/search/${type}?api_key=${API_KEY}&query=${searchQuery}&page=${page}&language=en&with_watch_providers=${platform}&watch_region=US`;
   } else {
-    url = `https://api.themoviedb.org/3/discover/${type}?api_key=${API_KEY}&with_watch_providers=${platform}&watch_region=US&page=${page}&with_genres=${genre}&language=es&sort_by=${sortBy}`;
+    url = `https://api.themoviedb.org/3/discover/${type}?api_key=${API_KEY}&with_watch_providers=${platform}&watch_region=US&page=${page}&with_genres=${genre}&language=en&sort_by=${sortBy}`;
   }
 
   const response = await fetch(url);

@@ -1,3 +1,22 @@
+#loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.8); /* Fondo semitransparente */
+  z-index: 9999;
+  display: none; /* Oculto por defecto */
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-size: 20px;
+  text-align: center;
+}
+
+
+
+
 /* Estilos para la barra superior */
 #top-bar {
   background-color: #202020;
