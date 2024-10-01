@@ -341,25 +341,48 @@ h1 {
 }
 
 .movie-card {
-  background-color: rgba(30, 30, 30, 1); /* Fondo negro sólido */
-  border-radius: 9px; /* Esquinas redondeadas */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* Asegura que los íconos estén en la parte inferior */
+  height: 100%; /* Asegura que la tarjeta ocupe todo el espacio disponible */
   padding: 10px;
+  background-color: rgba(30, 30, 30, 1); /* Fondo negro sólido */
+  border-radius: 9px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
   transition: transform 0.3s ease, background-color 0.3s ease;
-  text-align: left; /* Alinear el contenido a la izquierda */
-  color: white; /* Texto blanco */
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); /* Sombra suave */
+}
+
+/* Contenido de la tarjeta */
+.card-content {
+  flex-grow: 1; /* Hace que el contenido crezca para ocupar el espacio disponible */
+}
+/* Contenedor de los íconos en la parte inferior */
+.card-icons {
+  display: flex;
+  justify-content: flex-end; /* Alinear los íconos a la derecha */
+  margin-top: 10px;
+  gap: 10px; /* Espacio entre los íconos */
+}
+
+.card-icons i {
+  font-size: 1.2em;
+  cursor: pointer;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.card-icons i:hover {
+  transform: scale(1.1); /* Efecto de zoom al pasar el ratón por encima */
 }
 
 .movie-card img {
   width: 100%;
-  border-radius: 2px; /* Mantener las esquinas redondeadas */
-  margin-bottom: 2px; /* Espacio debajo de la imagen */
+  border-radius: 5px;
+  margin-bottom: 10px; /* Separación entre la imagen y el texto */
 }
 
 .movie-card h3 {
   font-size: 1em;
-  font-weight: bold;
-  margin-bottom: 1px;
+  margin-bottom: 10px;
   color: #ffffff; /* Texto blanco */
 }
 
@@ -369,9 +392,8 @@ h1 {
 }
 
 .movie-card p {
-  font-size: 1em;
-  color: #b0b0b0; /* Texto en gris claro */
-  margin: 5px 0;
+  font-size: 0.9em;
+  color: #b0b0b0;
 }
 
 .movie-details p {

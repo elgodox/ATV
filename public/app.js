@@ -216,23 +216,28 @@ async function getTitles(page = 1) {
     
 
     movieCard.innerHTML = `
-  <img src="https://image.tmdb.org/t/p/w500${title.poster_path}" alt="${titleName}">
-  <h3>${titleName}</h3>
-  <p><strong>Estreno:</strong> ${releaseDate}</p>
-  <p><strong>Género:</strong> ${movieGenres}</p>
-  ${seasons ? `<p><strong>Temporadas:</strong> ${seasons}</p>` : ''}
-  ${status ? `<p><strong>Estado:</strong> ${status}</p>` : ''}
-  <p><strong>Plataformas:</strong> ${providerNames}</p>
-  <p><strong>Valoración:</strong> ${stars}</p>
-  <i id="heart-icon-${title.id}" 
-     class="fas fa-heart" 
-     style="cursor: pointer; color: ${isFavorite(title.id, type) ? 'red' : 'black'};" 
-     onclick="toggleFavorite(${title.id}, '${type}', event)"></i>
-  <i id="eye-icon-${title.id}" class="fas fa-eye" 
-     style="cursor: pointer; color: ${isWatched(title.id, type) ? 'blue' : 'black'};" 
-     onclick="toggleWatched(${title.id}, '${type}', event)"></i>
-`;
-
+    <img src="https://image.tmdb.org/t/p/w500${title.poster_path}" alt="${titleName}">
+    <h3>${titleName}</h3>
+    <p><strong>Estreno:</strong> ${releaseDate}</p>
+    <p><strong>Género:</strong> ${movieGenres}</p>
+    ${seasons ? `<p><strong>Temporadas:</strong> ${seasons}</p>` : ''}
+    ${status ? `<p><strong>Estado:</strong> ${status}</p>` : ''}
+    <p><strong>Plataformas:</strong> ${providerNames}</p>
+    <p><strong>Valoración:</strong> ${stars}</p>
+  
+    <!-- Contenedor para los íconos alineados a la derecha -->
+    <div class="card-icons">
+      <i id="heart-icon-${title.id}" 
+         class="fas fa-heart" 
+         style="cursor: pointer; color: ${isFavorite(title.id, type) ? 'red' : 'black'};" 
+         onclick="toggleFavorite(${title.id}, '${type}', event)"></i>
+      <i id="eye-icon-${title.id}" 
+         class="fas fa-eye" 
+         style="cursor: pointer; color: ${isWatched(title.id, type) ? 'blue' : 'black'};" 
+         onclick="toggleWatched(${title.id}, '${type}', event)"></i>
+    </div>
+  `;
+  
 
     if (isWatched(title.id, type)) {
       movieCard.classList.add('watched');
