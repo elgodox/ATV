@@ -121,6 +121,9 @@ async function getTitles(page = 1) {
   const sortBy = document.getElementById('sort').value;
   const searchQuery = document.getElementById('search-bar') ? document.getElementById('search-bar').value.trim() : '';
 
+  if (page === 1) {
+    elements.movieGrid.innerHTML = '';  
+  }
   const params = new URLSearchParams({
     type,
     searchQuery,
@@ -492,8 +495,9 @@ document.getElementById("search-bar").addEventListener("input", () => {
 
 // Aplicar filtros y obtener títulos
 function applyFilters() {
-  currentPage = 1;
-  getTitles(currentPage);
+  currentPage = 1;  // Reiniciar a la primera página
+  elements.movieGrid.innerHTML = '';  // Limpiar el contenedor de resultados
+  getTitles(currentPage);  // Volver a cargar los títulos según los nuevos filtros
 }
 
 // Obtener el botón de Bitcoin
