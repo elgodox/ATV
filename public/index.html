@@ -19,16 +19,37 @@
       <a href="https://github.com/elgodox/ATV/" target="_blank" class="button github-btn">
         <i class="fab fa-github"></i> GitHub
       </a>
-      <a href="javascript:void(0);" class="button donate-btn" id="btc-button" data-btc-address="bc1qpc5xzv2lrl3g4kjlmqz83aqnnyu7d0r30utryw">
+      <a href="javascript:void(0);" class="button donate-btn" id="btc-button"
+        data-btc-address="bc1qpc5xzv2lrl3g4kjlmqz83aqnnyu7d0r30utryw">
         <i class="fab fa-bitcoin"></i> Buy me a coffee ☕
       </a>
+      <a href="javascript:void(0);" id="connect-metamask" class="button metamask-btn">
+        <img src="https://cdn.iconscout.com/icon/free/png-256/metamask-2728406-2261817.png" alt="MetaMask Logo">
+        Conectar MetaMask
+      </a>
+
     </div>
   </header>
 
-  <!-- Buscador por título -->
-  <div id="search-container">
-    <input type="text" id="search-bar" placeholder="Buscar películas o series">
+  <!-- <button id="connect-wallet">Conectar MetaMask</button> -->
+  <div id="favorites-list">
+    <!-- Aquí se mostrarán los favoritos del usuario -->
   </div>
+
+  <div class="search-favorite-container">
+    <!-- Buscador -->
+    <input type="text" id="search-bar" placeholder="Buscar películas o series">
+    
+    <!-- Toggle de favoritos -->
+    <div class="favorite-toggle">
+        <input type="checkbox" id="favorites-checkbox" onchange="toggleFavoritesFilter()">
+        <label for="favorites-checkbox" class="toggle-label">
+            <span class="toggle-slider"></span>
+        </label>
+        <span>Mostrar solo favoritos</span>
+    </div>
+</div>
+
 
   <!-- Filtros -->
   <div id="filters">
@@ -39,21 +60,21 @@
         <option value="tv">Series de TV</option>
       </select>
     </div>
-  
+
     <div class="filter-group">
       <label for="genre">Género:</label>
       <select id="genre">
         <option value="">Todos</option>
       </select>
     </div>
-  
+
     <div class="filter-group">
       <label for="platform">Plataforma:</label>
       <select id="platform">
         <option value="">Todas</option>
       </select>
     </div>
-  
+
     <div class="filter-group">
       <label for="sort">Ordenar por:</label>
       <select id="sort">
@@ -63,6 +84,8 @@
         <option value="vote_count.desc">Más vistas</option>
       </select>
     </div>
+    </div>
+
   </div>
 
   <!-- Resultados -->
@@ -80,17 +103,12 @@
 
   <!-- Cargando -->
   <div id="loading-screen">
-    <lottie-player 
-      src="https://lottie.host/c69367c9-c37b-4976-b9c1-66822ea0d322/bKWz2ycdtA.json" 
-      background="##FFFFFF" 
-      speed="1" 
-      style="width: 300px; height: 300px" 
-      loop 
-      autoplay>
+    <lottie-player src="https://lottie.host/c69367c9-c37b-4976-b9c1-66822ea0d322/bKWz2ycdtA.json" background="##FFFFFF"
+      speed="1" style="width: 300px; height: 300px" loop autoplay>
     </lottie-player>
   </div>
-  
-  
+
+
 
   <script src="app.js"></script>
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>

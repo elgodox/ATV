@@ -1,3 +1,135 @@
+/* Estilos para el botón de MetaMask */
+#top-bar .button.metamask-btn {
+  background-color: transparent; /* Fondo transparente */
+  border: 2px solid #f6851b;  /* Borde color naranja de MetaMask */
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 15px;
+  color: #f6851b; /* Color del texto */
+  text-decoration: none;
+  font-size: 0.8em;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+#top-bar .button.metamask-btn:hover {
+  background-color: #f6851b; /* Fondo naranja al pasar el cursor */
+  color: white; /* Cambia el texto a blanco al pasar el cursor */
+  border-color: #e4761b; /* Cambia el borde a un naranja más oscuro */
+}
+
+#top-bar .button.metamask-btn img {
+  width: 20px;
+  height: 20px;
+  margin-right: 5px;
+}
+
+#top-bar .button.metamask-btn:disabled {
+  background-color: #f6851b; /* Fondo naranja al estar deshabilitado */
+  color: white; /* Texto en blanco */
+  cursor: not-allowed; /* Cambiar cursor a no permitido */
+  border-color: #f6851b;
+  opacity: 0.6; /* Hacerlo un poco más transparente */
+}
+
+#top-bar .button.metamask-btn:disabled:hover {
+  background-color: #f6851b; /* Mantener el color en hover */
+  color: white;
+  border-color: #f6851b;
+}
+
+#filters .filter-group {
+  display: flex;
+  flex-direction: column;
+}
+/* Contenedor para alinear el buscador y el toggle */
+.search-favorite-container {
+  display: flex;
+  justify-content: center; /* Alineamos ambos elementos en el centro horizontal */
+  align-items: center; /* Alineación vertical */
+  gap: 20px; /* Espacio entre el buscador y el toggle */
+  width: 100%; /* Ocupar el 100% del espacio disponible */
+  margin-bottom: 20px; /* Espacio inferior para separar de otros elementos */
+}
+
+/* Estilo del buscador */
+#search-bar {
+  width: 400px; /* Puedes ajustar este tamaño si lo deseas */
+  padding: 10px 15px;
+  font-size: 1em;
+  border: none;
+  border-radius: 25px;
+  background-color: #333;
+  color: white;
+  outline: none;
+  transition: background-color 0.3s ease;
+}
+
+#search-bar::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+#search-bar:focus {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Contenedor del toggle */
+.favorite-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Ocultar el checkbox original */
+#favorites-checkbox {
+  display: none;
+}
+
+/* Estilo del switch */
+.toggle-label {
+  position: relative;
+  width: 50px;
+  height: 26px;
+  background-color: #ccc;
+  border-radius: 34px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Slider dentro del switch */
+.toggle-slider {
+  position: absolute;
+  content: "";
+  width: 22px;
+  height: 22px;
+  background-color: white;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Cuando el checkbox está activado */
+#favorites-checkbox:checked + .toggle-label {
+  background-color: #f6851b;  /* Color naranja */
+}
+
+/* Mueve el slider cuando está activado */
+#favorites-checkbox:checked + .toggle-label .toggle-slider {
+  transform: translateX(24px);
+}
+
+/* Texto del toggle */
+.favorite-toggle span {
+  color: white;
+  font-size: 0.9em;
+}
+
+
+
+
 #loading-screen {
   position: fixed;
   top: 0;
@@ -127,35 +259,6 @@ h1 {
   text-align: center;
   max-width: 80%;
   margin: 0 auto;
-}
-
-/* Buscador */
-#search-container {
-  margin-top: 40px;
-  margin-bottom: 30px;
-  text-align: center;
-
-}
-
-#search-bar {
-  width: 100%;
-  max-width: 600px;
-  padding: 15px 20px;
-  font-size: 1.2em;
-  border: none;
-  border-radius: 25px;
-  background-color: rgba(255, 255, 255, 0.2); /* Fondo semitransparente */
-  color: white;
-  outline: none;
-  transition: background-color 0.3s ease;
-}
-
-#search-bar::placeholder {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-#search-bar:focus {
-  background-color: rgba(255, 255, 255, 0.3); /* Fondo más claro al enfocar */
 }
 
 /* Filtros */

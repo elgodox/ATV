@@ -6,6 +6,9 @@ let originalDescription = '';
 let spanishDescription = '';
 let originalTitle = '';
 let spanishTitle = '';
+let selectedAccount;
+let showingFavorites = false; 
+
 
 // Elementos del DOM
 const elements = {
@@ -27,6 +30,8 @@ document.getElementById("genre").addEventListener("change", applyFilters);
 document.getElementById("platform").addEventListener("change", applyFilters);
 document.getElementById("sort").addEventListener("change", applyFilters);
 document.getElementById('type').addEventListener('change', updateGenreSelect);
+document.getElementById('connect-metamask').addEventListener('click', connectMetaMask);
+
 
 // Función para obtener todos los proveedores
 async function fetchProviders(type) {
@@ -122,97 +127,133 @@ async function getTitles(page = 1) {
   const searchQuery = document.getElementById('search-bar') ? document.getElementById('search-bar').value.trim() : '';
 
   if (page === 1) {
-    elements.movieGrid.innerHTML = '';
+    elements.movieGrid.innerHTML = ''; // Limpiar el grid al cambiar de página
   }
-  const params = new URLSearchParams({
-    type,
-    searchQuery,
-    genre,
-    platform,
-    sortBy,
-    page
-  }).toString();
 
-  try {
-    const data = await fetchData('titles', params);
+  let data;
+  
+  // Verificar si el filtro de favoritos está activo
+  if (showingFavorites) {
+    // Si el filtro de favoritos está activo, obtenemos los IDs desde localStorage
+    const favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
 
-    if (!data || !data.results || data.results.length === 0) {
-      if (currentPage === 1) elements.movieGrid.innerHTML = '<p>No se encontraron resultados.</p>';
-      isLoading = false;  // Marcamos como terminado
+    if (favorites.length === 0) {
+      elements.movieGrid.innerHTML = '<p>No tienes películas en favoritos.</p>';
+      isLoading = false;
       return;
     }
 
-    totalResults = data.total_results;
+    // Obtener los detalles de cada película/serie en la lista de favoritos
+    data = { results: [] };
 
-    // Obtener los géneros y mapearlos por su ID
-    const genreData = await fetchData('genres');
-    const genreMap = {};
-    genreData.genres.forEach(genre => {
-      genreMap[genre.id] = genre.name;
-    });
-
-    // Iterar sobre cada título
-    data.results.forEach(async (title) => {
-      const movieCard = document.createElement('div');
-      movieCard.classList.add('movie-card');
-
-      // Obtener los géneros de la película/serie
-      const movieGenres = title.genre_ids.map(id => genreMap[id]).join(', ');
-
-      // Obtener las plataformas disponibles
-      const providers = await fetchProvider(title.id, type);
-      const providerNames = providers ? providers.join(', ') : 'No disponible';
-
-      // Verificar el título y la fecha según si es película o serie de TV
-      const titleName = title.original_title || title.original_name || 'Título desconocido';
-      const releaseDate = title.release_date || title.first_air_date || 'Fecha desconocida';
-
-      let seasons = '';
-      let status = '';
-
-      if (type === 'tv') {
-        const tvDetails = await fetchTVDetails(title.id);
-        seasons = tvDetails ? `${tvDetails.number_of_seasons} Temporadas` : 'N/A';
-        status = tvDetails ? (tvDetails.status === 'Ended' ? 'Finalizada' : 'En emisión') : 'Estado desconocido';
+    for (let movieId of favorites) {
+      const response = await fetch(`/api/titles/details?id=${movieId}&type=${type}&language=en`);
+      const movie = await response.json();
+      if (movie) {
+        data.results.push(movie);
       }
+    }
 
-      const stars = renderStars(title.vote_average);
+  } else {
+    // Si no está activo el filtro de favoritos, llamamos a la API normal
+    const params = new URLSearchParams({
+      type,
+      searchQuery,
+      genre,
+      platform,
+      sortBy,
+      page
+    }).toString();
 
-      movieCard.innerHTML = `
-        <img src="https://image.tmdb.org/t/p/w500${title.poster_path}" alt="${titleName}">
-        <h3>${titleName}</h3>
-        <p><strong>Estreno:</strong> ${releaseDate}</p>
-        <p><strong>Género:</strong> ${movieGenres}</p>
-        ${seasons ? `<p><strong>Temporadas:</strong> ${seasons}</p>` : ''}
-        ${status ? `<p><strong>Estado:</strong> ${status}</p>` : ''}
-        <p><strong>Plataformas:</strong> ${providerNames}</p>
-        <p><strong>Valoración:</strong> ${stars}</p>
-      `;
-
-      movieCard.addEventListener('click', () => {
-        showDetails(title.id, type, movieCard);
-      });
-
-      elements.movieGrid.appendChild(movieCard);
-    });
-
-  } catch (error) {
-    console.error('Error fetching titles:', error);
-    elements.movieGrid.innerHTML = '<p>Error al cargar los títulos. Intente nuevamente.</p>';
+    data = await fetchData('titles', params); // Llamada a la API
   }
 
-  isLoading = false;  // Marcamos como terminado
+  // Validar que tengamos resultados
+  if (!data || !data.results || data.results.length === 0) {
+    if (currentPage === 1) elements.movieGrid.innerHTML = '<p>No se encontraron resultados.</p>';
+    isLoading = false;
+    return;
+  }
+
+  totalResults = data.total_results;
+
+  // Obtener los géneros y mapearlos por su ID
+  const genreData = await fetchData('genres');
+  const genreMap = {};
+  genreData.genres.forEach(genre => {
+    genreMap[genre.id] = genre.name;
+  });
+
+  // Iterar sobre cada título
+  data.results.forEach(async (title) => {
+    const movieCard = document.createElement('div');
+    movieCard.classList.add('movie-card');
+
+    // Obtener los géneros de la película/serie
+    const movieGenres = title.genre_ids ? title.genre_ids.map(id => genreMap[id]).join(', ') : title.genres.map(genre => genre.name).join(', ');
+
+    // Obtener las plataformas disponibles
+    const providers = await fetchProvider(title.id, type);
+    const providerNames = providers ? providers.join(', ') : 'No disponible';
+
+    // Verificar el título y la fecha según si es película o serie de TV
+    const titleName = title.original_title || title.original_name || 'Título desconocido';
+    const releaseDate = title.release_date || title.first_air_date || 'Fecha desconocida';
+
+    let seasons = '';
+    let status = '';
+
+    if (type === 'tv') {
+      const tvDetails = await fetchTVDetails(title.id);
+      seasons = tvDetails ? `${tvDetails.number_of_seasons} Temporadas` : 'N/A';
+      status = tvDetails ? (tvDetails.status === 'Ended' ? 'Finalizada' : 'En emisión') : 'Estado desconocido';
+    }
+
+    const stars = renderStars(title.vote_average);
+
+    movieCard.innerHTML = `
+      <img src="https://image.tmdb.org/t/p/w500${title.poster_path}" alt="${titleName}">
+      <h3>${titleName}</h3>
+      <p><strong>Estreno:</strong> ${releaseDate}</p>
+      <p><strong>Género:</strong> ${movieGenres}</p>
+      ${seasons ? `<p><strong>Temporadas:</strong> ${seasons}</p>` : ''}
+      ${status ? `<p><strong>Estado:</strong> ${status}</p>` : ''}
+      <p><strong>Plataformas:</strong> ${providerNames}</p>
+      <p><strong>Valoración:</strong> ${stars}</p>
+      <i id="heart-icon-${title.id}" 
+         class="fas fa-heart" 
+         style="cursor: pointer; color: ${isFavorite(title.id) ? 'red' : 'black'};" 
+         onclick="toggleFavorite(${title.id}, event)"></i>
+    `;
+
+    movieCard.addEventListener('click', () => {
+      showDetails(title.id, type, movieCard);
+    });
+
+    elements.movieGrid.appendChild(movieCard);
+  });
+
+  isLoading = false; // Marcamos como terminado
 }
+
 
 // Detectar cuando estamos cerca del final de la página
 window.addEventListener('scroll', () => {
+  if (showingFavorites) {
+    // Si el filtro de favoritos está activado, no hacer nada en el scroll
+    return;
+}
   if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500 && !isLoading) {
     currentPage++;
     getTitles(currentPage);
   }
 });
 
-
+// Verifica si la película está en favoritos
+function isFavorite(movieId) {
+  let favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
+  return favorites.includes(movieId);
+}
 // Función para obtener los detalles completos de una serie de TV
 async function fetchTVDetails(tvId) {
   try {
@@ -516,12 +557,172 @@ btcButton.addEventListener('click', function () {
   }, 2000); // Cambia el texto por 2 segundos
 });
 
+// Función para conectar a MetaMask y mostrar el filtro de favoritos si está conectado
+async function connectMetaMask() {
+  if (window.ethereum) {
+      try {
+          // Solicita la conexión a MetaMask
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          const accounts = await ethereum.request({ method: 'eth_accounts' });
+          selectedAccount = accounts[0]; // Guarda la cuenta conectada
+          console.log("Conectado a MetaMask:", selectedAccount);
+
+          // Deshabilitar el botón de MetaMask y cambiar su apariencia
+          const metamaskButton = document.getElementById('connect-metamask');
+          metamaskButton.disabled = true;
+          metamaskButton.textContent = "MetaMask Conectado";
+
+          // Mostrar el filtro de favoritos
+          document.getElementById('favorite-filter-group').style.display = 'flex';
+
+          // Cargar los favoritos si el filtro está activado
+          loadTitles();
+      } catch (error) {
+          console.error("Error al conectar MetaMask", error);
+      }
+  } else {
+      alert('MetaMask no está instalado');
+  }
+}
+
+// Función para cargar títulos (con o sin filtro de favoritos)
+// async function loadTitles() {
+//   const movieGrid = document.getElementById('movie-grid');
+//   movieGrid.innerHTML = ''; // Limpiar los títulos anteriores
+
+//   if (showingFavorites && selectedAccount) {
+//       // Mostrar solo favoritos
+//       const favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
+//       favorites.forEach(movieId => {
+//           // Aquí llamas a tu función que carga las tarjetas de películas según su ID
+//           loadMovieCardById(movieId);
+//       });
+//   } else {
+//       // Mostrar todos los títulos normalmente (sin el filtro de favoritos)
+//       getTitles(); // Llama a tu función existente para cargar todos los títulos
+//   }
+// }
+
+// Función para cargar una tarjeta de película por su ID
+// async function loadMovieCardById(movieId) {
+//   try {
+//       // Realiza una solicitud a tu backend o API para obtener los detalles de la película por ID
+//       const response = await fetch(`/api/titles/details?id=${movieId}&type=movie&language=en`);
+//       const movie = await response.json();
+
+//       // Si no se encuentra la película, mostrar un mensaje de error
+//       if (!movie) {
+//           console.error("No se encontraron detalles de la película.");
+//           return;
+//       }
+
+//       // Crear el contenedor de la tarjeta de película
+//       const movieCard = document.createElement('div');
+//       movieCard.classList.add('movie-card');
+
+//       // Mapeo de géneros si está disponible
+//       const movieGenres = movie.genres ? movie.genres.map(genre => genre.name).join(', ') : 'Sin género';
+
+//       // Estructura HTML de la tarjeta de película
+//       movieCard.innerHTML = `
+//           <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="${movie.title || movie.original_title}">
+//           <h3>${movie.title || movie.original_title}</h3>
+//           <p><strong>Estreno:</strong> ${movie.release_date || 'Fecha desconocida'}</p>
+//           <p><strong>Género:</strong> ${movieGenres}</p>
+//           <p><strong>Plataformas:</strong> ${movie.providerNames}</p>
+//           <p><strong>Valoración:</strong> ${renderStars(movie.vote_average)}</p>
+//           <i id="heart-icon-${movie.id}" 
+//              class="fas fa-heart" 
+//              style="cursor: pointer; color: ${isFavorite(movie.id) ? 'red' : 'black'};" 
+//              onclick="toggleFavorite(${movie.id}, event)"></i>
+//       `;
+
+//       // Agregar la tarjeta de la película al grid
+//       document.getElementById('movie-grid').appendChild(movieCard);
+
+//   } catch (error) {
+//       console.error('Error al cargar la película:', error);
+//   }
+// }
+
+async function getPlatforms(movieId) {
+  try {
+      const response = await fetch(`/api/movie/${movieId}/watch/providers`);
+      const data = await response.json();
+      const platforms = data.results?.US?.flatrate || [];
+      return platforms.length > 0 ? platforms.map(p => p.provider_name).join(', ') : 'No disponible';
+  } catch (error) {
+      console.error('Error al obtener las plataformas:', error);
+      return 'No disponible';
+  }
+}
+
+
+
+// Alternar favoritos
+function toggleFavorite(movieId, event) {
+  // Evitar que el clic en el corazón se propague y abra el modal
+  event.stopPropagation();
+
+  if (!selectedAccount) {
+      alert("Primero debes conectar MetaMask");
+      return;
+  }
+
+  let favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
+
+  // Agregar o quitar de favoritos
+  if (favorites.includes(movieId)) {
+      favorites = favorites.filter(id => id !== movieId);
+      document.getElementById(`heart-icon-${movieId}`).style.color = 'black'; // Cambiar a negro si se quita de favoritos
+  } else {
+      favorites.push(movieId);
+      document.getElementById(`heart-icon-${movieId}`).style.color = 'red'; // Cambiar a rojo si se agrega a favoritos
+  }
+
+  // Guardar favoritos en localStorage
+  localStorage.setItem(selectedAccount, JSON.stringify(favorites));
+
+  // Actualizar la lista de favoritos (opcional)
+  loadFavorites();
+}
+
+
+// Función para cargar los favoritos desde localStorage
+function loadFavorites() {
+  const favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
+
+  // Iterar sobre todas las películas y actualizar el color del corazón
+  favorites.forEach(movieId => {
+      const heartIcon = document.getElementById(`heart-icon-${movieId}`);
+      if (heartIcon) {
+          heartIcon.style.color = 'red'; // Cambiar a rojo si está en favoritos
+      }
+  });
+}
+
+// Función para activar/desactivar el filtro de favoritos
+function toggleFavoritesFilter() {
+  showingFavorites = !showingFavorites;
+  getTitles();
+}
 
 // Inicializar la carga de títulos y géneros
 getTitles();
 fetchGenres();
 fetchProviders("movie"); // Cargar proveedores iniciales de películas (por defecto)
 
-window.onload = function () {
+window.onload = async function () {
+  if (window.ethereum) {
+    const accounts = await ethereum.request({ method: 'eth_accounts' });
+    if (accounts.length > 0) {
+        selectedAccount = accounts[0];
+        const metamaskButton = document.getElementById('connect-metamask');
+        metamaskButton.disabled = true;
+        metamaskButton.textContent = "MetaMask Conectado";
+        document.getElementById('favorite-filter-group').style.display = 'flex';
+
+    }
+}
   updateGenreSelect();  // Cargar los géneros iniciales (por ejemplo, películas)
 };
