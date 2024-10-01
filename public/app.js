@@ -188,6 +188,7 @@ async function getTitles(page = 1) {
   // Iterar sobre cada título
   data.results.forEach(async (title) => {
     const movieCard = document.createElement('div');
+    movieCard.id = `movie-card-${title.id}`;
     movieCard.classList.add('movie-card');
 
     // Obtener los géneros de la película/serie
@@ -212,21 +213,32 @@ async function getTitles(page = 1) {
 
     const stars = renderStars(title.vote_average);
 
-    movieCard.innerHTML = `
-      <img src="https://image.tmdb.org/t/p/w500${title.poster_path}" alt="${titleName}">
-      <h3>${titleName}</h3>
-      <p><strong>Estreno:</strong> ${releaseDate}</p>
-      <p><strong>Género:</strong> ${movieGenres}</p>
-      ${seasons ? `<p><strong>Temporadas:</strong> ${seasons}</p>` : ''}
-      ${status ? `<p><strong>Estado:</strong> ${status}</p>` : ''}
-      <p><strong>Plataformas:</strong> ${providerNames}</p>
-      <p><strong>Valoración:</strong> ${stars}</p>
-      <i id="heart-icon-${title.id}" 
-   class="fas fa-heart" 
-   style="cursor: pointer; color: ${isFavorite(title.id, type) ? 'red' : 'black'};" 
-   onclick="toggleFavorite(${title.id}, '${type}', event)"></i>
+    
 
-    `;
+    movieCard.innerHTML = `
+  <img src="https://image.tmdb.org/t/p/w500${title.poster_path}" alt="${titleName}">
+  <h3>${titleName}</h3>
+  <p><strong>Estreno:</strong> ${releaseDate}</p>
+  <p><strong>Género:</strong> ${movieGenres}</p>
+  ${seasons ? `<p><strong>Temporadas:</strong> ${seasons}</p>` : ''}
+  ${status ? `<p><strong>Estado:</strong> ${status}</p>` : ''}
+  <p><strong>Plataformas:</strong> ${providerNames}</p>
+  <p><strong>Valoración:</strong> ${stars}</p>
+  <i id="heart-icon-${title.id}" 
+     class="fas fa-heart" 
+     style="cursor: pointer; color: ${isFavorite(title.id, type) ? 'red' : 'black'};" 
+     onclick="toggleFavorite(${title.id}, '${type}', event)"></i>
+  <i id="eye-icon-${title.id}" class="fas fa-eye" 
+     style="cursor: pointer; color: ${isWatched(title.id, type) ? 'blue' : 'black'};" 
+     onclick="toggleWatched(${title.id}, '${type}', event)"></i>
+`;
+
+
+    if (isWatched(title.id, type)) {
+      movieCard.classList.add('watched');
+    } else {
+      movieCard.classList.remove('watched');
+    }
 
     movieCard.addEventListener('click', () => {
       showDetails(title.id, type, movieCard);
@@ -237,6 +249,61 @@ async function getTitles(page = 1) {
 
   isLoading = false; // Marcamos como terminado
 }
+
+
+function toggleWatched(movieId, type, event) {
+  event.stopPropagation(); // Evita que se abra el modal al hacer clic en el ícono
+
+  if (!selectedAccount) {
+    alert("Primero debes conectar MetaMask");
+    return;
+  }
+
+  let watched = JSON.parse(localStorage.getItem(selectedAccount + '-watched')) || [];
+  const watchedIndex = watched.findIndex(item => item.id === movieId && item.type === type);
+  
+  const movieCard = document.querySelector(`#movie-card-${movieId}`);
+
+  if (watchedIndex !== -1) {
+    // Si ya está en la lista de vistos, quitarlo
+    watched.splice(watchedIndex, 1);
+    document.getElementById(`eye-icon-${movieId}`).style.color = 'black'; // Cambia el color del ícono de "visto"
+    movieCard.classList.remove('watched'); // Quitar la clase que oscurece la tarjeta
+  } else {
+    // Si no está en la lista, agregarlo
+    watched.push({ id: movieId, type: type });
+    document.getElementById(`eye-icon-${movieId}`).style.color = 'blue'; // Cambia el color del ícono de "visto"
+    movieCard.classList.add('watched'); // Oscurecer la tarjeta
+  }
+
+  // Guardar el estado actualizado en el localStorage
+  localStorage.setItem(selectedAccount + '-watched', JSON.stringify(watched));
+
+ // updateMovieGrid();
+}
+
+
+
+function isWatched(movieId, type) {
+  let watched = JSON.parse(localStorage.getItem(selectedAccount + '-watched')) || [];
+  return watched.some(item => item.id === movieId && item.type === type);
+}
+
+function updateMovieGrid() {
+  const movieCards = document.querySelectorAll('.movie-card');
+  
+  movieCards.forEach(card => {
+    const movieId = card.getAttribute('data-id');
+    const type = card.getAttribute('data-type');
+    
+    if (isWatched(movieId, type)) {
+      card.classList.add('watched');
+    } else {
+      card.classList.remove('watched');
+    }
+  });
+}
+
 
 
 // Detectar cuando estamos cerca del final de la página

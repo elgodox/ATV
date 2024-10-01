@@ -69,6 +69,11 @@
   }
 }
 
+.movie-card.watched {
+  opacity: 0.5; /* Reducir la opacidad para oscurecer la miniatura */
+  transition: opacity 0.3s ease; /* Transición suave al cambiar de estado */
+}
+
 
 
 /* Estilo del buscador para pantallas grandes */
