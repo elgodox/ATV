@@ -6,6 +6,8 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY; // Cargar la API key desde el .env
+const VIMEO_ACCESS_TOKEN = process.env.VIMEO_ACCESS_TOKEN;
+
 
 // Servir archivos estáticos
 app.use(express.static('public'));
@@ -48,6 +50,62 @@ app.get('/api/titles', async (req, res) => {
   const response = await fetch(url);
   const data = await response.json();
   res.json(data);
+});
+
+// Ruta para buscar tráiler en YouTube
+app.get('/api/youtube-trailer', async (req, res) => {
+  const title = req.query.title;
+  if (!title) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+
+  const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(title + ' trailer')}`;
+
+  try {
+    const response = await fetch(searchUrl);
+    const data = await response.text();
+
+    // Extraer el primer ID de video de los resultados
+    const videoIdMatch = data.match(/"videoId":"(.*?)"/);
+    if (videoIdMatch && videoIdMatch[1]) {
+      return res.json({ videoId: videoIdMatch[1] }); // Devuelve el ID del video
+    }
+
+    // Si no se encuentra el tráiler
+    return res.status(404).json({ error: 'Trailer not found' });
+  } catch (error) {
+    console.error('Error fetching YouTube trailer:', error);
+    return res.status(500).json({ error: 'Error fetching YouTube trailer' });
+  }
+});
+
+// Ruta para buscar tráiler en Vimeo
+app.get('/api/vimeo-trailer', async (req, res) => {
+  const title = req.query.title;
+  if (!title) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+
+  const searchUrl = `https://api.vimeo.com/videos?query=${encodeURIComponent(title + ' trailer')}&per_page=1`;
+
+  try {
+    const response = await fetch(searchUrl, {
+      headers: {
+        'Authorization': `Bearer ${VIMEO_ACCESS_TOKEN}`
+      }
+    });
+    const data = await response.json();
+
+    if (data.data && data.data.length > 0) {
+      const vimeoTrailerId = data.data[0].uri.split('/').pop();  // Extraer el ID del video
+      return res.json({ videoId: vimeoTrailerId });
+    }
+
+    return res.status(404).json({ error: 'Trailer not found on Vimeo' });
+  } catch (error) {
+    console.error('Error fetching Vimeo trailer:', error);
+    return res.status(500).json({ error: 'Error fetching Vimeo trailer' });
+  }
 });
 
 // Define tus rutas de API después de configurar los archivos estáticos

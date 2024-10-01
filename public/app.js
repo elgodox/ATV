@@ -1,7 +1,7 @@
 
 let currentPage = 1;
 let totalResults = 0;
-let isLoading = false; 
+let isLoading = false;
 let originalDescription = '';
 let spanishDescription = '';
 let originalTitle = '';
@@ -19,7 +19,7 @@ const elements = {
   modalTrailer: document.getElementById("modal-trailer"),
   platformSelect: document.getElementById("platform"),
   sortSelect: document.getElementById("sort")
-  
+
 };
 
 document.getElementById("type").addEventListener("change", applyFilters);
@@ -112,8 +112,8 @@ async function updateGenreSelect() {
 
 // Función para obtener títulos y mostrarlos
 async function getTitles(page = 1) {
-  if (isLoading) return;  
-  isLoading = true; 
+  if (isLoading) return;
+  isLoading = true;
 
   const type = document.getElementById('type').value;
   const genre = document.getElementById('genre').value;
@@ -122,7 +122,7 @@ async function getTitles(page = 1) {
   const searchQuery = document.getElementById('search-bar') ? document.getElementById('search-bar').value.trim() : '';
 
   if (page === 1) {
-    elements.movieGrid.innerHTML = '';  
+    elements.movieGrid.innerHTML = '';
   }
   const params = new URLSearchParams({
     type,
@@ -171,7 +171,7 @@ async function getTitles(page = 1) {
       let status = '';
 
       if (type === 'tv') {
-        const tvDetails = await fetchTVDetails(title.id);  
+        const tvDetails = await fetchTVDetails(title.id);
         seasons = tvDetails ? `${tvDetails.number_of_seasons} Temporadas` : 'N/A';
         status = tvDetails ? (tvDetails.status === 'Ended' ? 'Finalizada' : 'En emisión') : 'Estado desconocido';
       }
@@ -265,18 +265,24 @@ async function showDetails(id, type, movieCard) {
   </div>
 `;
 
-  
-
-
     // Mostrar la descripción en español inicialmente
     elements.modalDescription.innerHTML = `<p id="description-text">${spanishDescription}</p>`;
 
-    // Mostrar tráiler si está disponible
-    const trailer = dataOriginal.videos?.results?.find(video => video.type === 'Trailer' && video.site === 'YouTube');
-    if (trailer) {
-      elements.modalTrailer.innerHTML = `<iframe src="https://www.youtube.com/embed/${trailer.key}" frameborder="0" allowfullscreen></iframe>`;
+    // Intentar buscar tráiler en el servidor (primero YouTube, luego Vimeo)
+
+    const youtubeTrailer = await fetch(`/api/youtube-trailer?title=${encodeURIComponent(originalTitle)}`).then(response => response.json());
+
+    if (youtubeTrailer.videoId) {
+      // Mostrar tráiler de YouTube si se encuentra
+      elements.modalTrailer.innerHTML = `<iframe src="https://www.youtube.com/embed/${youtubeTrailer.videoId}" frameborder="0" allowfullscreen></iframe>`;
     } else {
-      elements.modalTrailer.innerHTML = "<p>No hay tráiler disponible.</p>";
+      // Si no se encuentra en YouTube, intentar buscar en Vimeo
+      const vimeoTrailer = await fetch(`/api/vimeo-trailer?title=${encodeURIComponent(originalTitle)}`).then(response => response.json());
+      if (vimeoTrailer.videoId) {
+        elements.modalTrailer.innerHTML = `<iframe src="https://player.vimeo.com/video/${vimeoTrailer.videoId}" frameborder="0" allowfullscreen></iframe>`;
+      } else {
+        elements.modalTrailer.innerHTML = "<p>No hay tráiler disponible.</p>";
+      }
     }
 
     // Mostrar los detalles adicionales (Géneros, Temporadas, Estado, Plataformas, Valoración)
@@ -404,34 +410,12 @@ function renderStars(voteAverage) {
   return stars;
 }
 
-
-
-
-// Función para buscar un tráiler en Vimeo
-async function fetchVimeoTrailer(movieTitle) {
-  const searchUrl = `https://api.vimeo.com/videos?query=${encodeURIComponent(movieTitle)}&per_page=1&access_token=0f71c71042a935a28f001427100c2edf`;
-  
-  try {
-    const response = await fetch(searchUrl);
-    const data = await response.json();
-
-    if (data && data.data && data.data.length > 0) {
-      const vimeoTrailerId = data.data[0].uri.split('/').pop(); // Extraer el ID del video
-      return vimeoTrailerId; // Devolver el ID del video para incrustarlo
-    }
-  } catch (error) {
-    console.error("Error fetching Vimeo trailer:", error);
-  }
-
-  return null; // No se encontró tráiler
-}
-
 // Función para obtener torrents de YTS según el título de la película
 async function fetchTorrents(movieTitle) {
   try {
     // Haz la solicitud a tu servidor, que a su vez pedirá los datos a YTS
     const response = await fetch(`/api/torrents?movieTitle=${encodeURIComponent(movieTitle)}`);
-    
+
     // Verifica si la respuesta es válida
     if (!response.ok) {
       throw new Error('Error fetching torrents');
@@ -504,7 +488,7 @@ function applyFilters() {
 const btcButton = document.getElementById('btc-button');
 
 // Agregar un evento al botón para copiar la dirección al portapapeles
-btcButton.addEventListener('click', function() {
+btcButton.addEventListener('click', function () {
   // Obtener la dirección de Bitcoin del atributo data-btc-address
   const btcAddress = btcButton.getAttribute('data-btc-address');
 
@@ -519,7 +503,7 @@ btcButton.addEventListener('click', function() {
   // Cambiar el texto del botón temporalmente a "Address copied!"
   const originalText = btcButton.innerHTML;
   btcButton.innerHTML = '<i class="fab fa-bitcoin"></i> Address copied!';
-  
+
   // Restaurar el texto original después de 2 segundos
   setTimeout(() => {
     btcButton.innerHTML = originalText;
@@ -532,6 +516,6 @@ getTitles();
 fetchGenres();
 fetchProviders("movie"); // Cargar proveedores iniciales de películas (por defecto)
 
-window.onload = function() {
+window.onload = function () {
   updateGenreSelect();  // Cargar los géneros iniciales (por ejemplo, películas)
 };
