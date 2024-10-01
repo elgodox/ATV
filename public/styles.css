@@ -38,23 +38,42 @@
   border-color: #f6851b;
 }
 
+
 #filters .filter-group {
   display: flex;
   flex-direction: column;
 }
-/* Contenedor para alinear el buscador y el toggle */
+/* Contenedor para alinear el buscador y el toggle en pantallas grandes */
 .search-favorite-container {
   display: flex;
-  justify-content: center; /* Alineamos ambos elementos en el centro horizontal */
-  align-items: center; /* Alineación vertical */
+  justify-content: center; /* Alineación horizontal centrada */
+  align-items: center; /* Alineación vertical centrada */
   gap: 20px; /* Espacio entre el buscador y el toggle */
   width: 100%; /* Ocupar el 100% del espacio disponible */
   margin-bottom: 20px; /* Espacio inferior para separar de otros elementos */
 }
 
-/* Estilo del buscador */
+/* Ajustes para pantallas móviles */
+@media (max-width: 768px) {
+  .search-favorite-container {
+    flex-direction: column; /* Cambia la disposición a columnas (uno debajo del otro) */
+    justify-content: flex-start; /* Alinea hacia arriba en lugar de centrado */
+    align-items: center; /* Alinea al centro en lugar de estirar el contenido */
+    gap: 10px; /* Reduce el espacio entre los elementos */
+    margin-bottom: 15px; /* Ajusta el margen inferior */
+  }
+
+  /* Aseguramos que el toggle también esté centrado */
+  .toggle {
+    margin: 0 auto; /* Asegura que el toggle esté centrado */
+  }
+}
+
+
+
+/* Estilo del buscador para pantallas grandes */
 #search-bar {
-  width: 400px; /* Puedes ajustar este tamaño si lo deseas */
+  width: 400px; /* Ancho del buscador en pantallas grandes */
   padding: 10px 15px;
   font-size: 1em;
   border: none;
@@ -63,15 +82,30 @@
   color: white;
   outline: none;
   transition: background-color 0.3s ease;
+  flex: 1 1 50%; /* Permite que el elemento se ajuste dinámicamente */
+  max-width: 50%; /* Evita que exceda el 50% del contenedor */
 }
 
+/* Placeholder del buscador */
 #search-bar::placeholder {
   color: rgba(255, 255, 255, 0.6);
 }
 
+/* Cambia el color de fondo cuando el campo está enfocado */
 #search-bar:focus {
   background-color: rgba(255, 255, 255, 0.2);
 }
+
+/* Adaptación del buscador para dispositivos móviles */
+@media (max-width: 768px) {
+  #search-bar {
+    width: 100%; /* En dispositivos móviles, el buscador ocupará el 100% del ancho */
+    max-width: 100%; /* Asegura que el ancho no exceda el contenedor */
+    margin-bottom: 10px; /* Añade un margen inferior para separar del resto de los elementos */
+    flex: 1 1 100%; /* Ocupa todo el ancho disponible en mobile */
+  }
+}
+
 
 /* Contenedor del toggle */
 .favorite-toggle {
@@ -164,9 +198,9 @@
 
 #top-bar .container {
   display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 10px; /* Espacio entre los botones */
+  flex-wrap: wrap; /* Ensures buttons wrap on small screens */
+  justify-content: center; /* Centers buttons */
+  gap: 10px; /* Adds some space between buttons */
 }
 
 #top-bar .button {
@@ -179,6 +213,7 @@
   display: inline-flex;
   align-items: center;
   transition: background-color 0.3s ease;
+  
 }
 
 #top-bar .button i {
