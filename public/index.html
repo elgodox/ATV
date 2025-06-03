@@ -97,28 +97,90 @@
       <span class="close" onclick="closeModal()">&times;</span>
       <h2 id="modal-title"></h2>
       <p id="modal-description"></p>
-      <div id="player-container" style="display: none;">
-        <p id="player-loading-indicator" style="display: none;">Loading torrent...</p>
-        <p id="player-status-message" style="display: none;"></p>
-        <!-- Placeholder for video file selection if multiple are found -->
-        <div id="video-file-list-container" style="display: none; margin-bottom: 10px;">
-            <p style="color: white; font-size: 0.9em;">Multiple video files found. Please select one:</p>
-            <ul id="video-file-list" style="list-style: none; padding: 0;">
-                <!-- File items will be populated here by JS, e.g., <li><button data-file-index="0">File 1.mkv</button></li> -->
-            </ul>
-        </div>
-        <div id="torrent-stats" style="display: none;">
-          <span id="torrent-peers">Peers: 0</span> |
-          <span id="torrent-progress">Progress: 0%</span> |
-          <span id="torrent-download-speed">Speed: 0 kB/s</span>
-        </div>
-        <div id="local-subtitle-upload-container" style="display: none;">
-          <label for="subtitle-upload-input" class="button_like_label">Upload Local Subtitle (.srt, .vtt)</label>
-          <input type="file" id="subtitle-upload-input" accept=".srt,.vtt" style="display: none;">
-        </div>
-        <video id="video-player" controls autoplay width="100%"></video>
-      </div>
       <div id="modal-trailer"></div>
+    </div>
+  </div>
+
+  <!-- Modal para el reproductor de video -->
+  <div id="video-modal" class="modal">
+    <div class="video-modal-content">
+      <span class="close" onclick="closeVideoModal()">&times;</span>      <div id="video-player-container">
+        <video id="video-player" controls preload="metadata">
+          Tu navegador no soporta la reproducción de video.
+        </video>
+          <!-- Información de progreso del torrent -->
+        <div id="torrent-progress-info" class="torrent-progress-section">
+          <div id="torrent-stats" style="display: none;">
+            <div class="progress-info">
+              <span id="torrent-peers">Peers: 0</span>
+              <span id="torrent-progress">Progress: 0%</span>
+              <span id="torrent-download-speed">Speed: 0 kB/s</span>
+            </div>
+            <div id="player-loading-indicator" class="loading-spinner" style="display: none;">Loading...</div>
+            <div id="player-status-message" style="display: none;"></div>
+          </div>
+        </div>
+        
+        <!-- Controles de subtítulos -->
+        <div id="subtitle-controls">
+          <div class="subtitle-section">
+            <h4>Subtítulos del Torrent:</h4>
+            <select id="torrent-subtitle-select">
+              <option value="">Sin subtítulos</option>
+            </select>
+          </div>
+          
+          <div class="subtitle-section">
+            <h4>Buscar Subtítulos Online:</h4>
+            <div class="subtitle-search">
+              <select id="language-select">
+                <option value="es">Español</option>
+                <option value="en">English</option>
+                <option value="fr">Français</option>
+                <option value="de">Deutsch</option>
+                <option value="it">Italiano</option>
+                <option value="pt">Português</option>
+              </select>
+              <button id="search-subtitles-btn">Buscar</button>
+            </div>
+            <select id="online-subtitle-select">
+              <option value="">Sin subtítulos online</option>
+            </select>
+          </div>
+          
+          <div class="subtitle-section">
+            <h4>Subir Subtítulos:</h4>
+            <div class="subtitle-upload">
+              <input type="file" id="subtitle-file" accept=".srt,.vtt,.ass,.ssa,.sub">
+              <button id="upload-subtitle-btn">Subir</button>
+            </div>
+            <select id="uploaded-subtitle-select">
+              <option value="">Sin subtítulos subidos</option>
+            </select>
+          </div>
+          
+          <div class="subtitle-controls-buttons">
+            <button id="enable-subtitles-btn">Habilitar Subtítulos</button>
+            <button id="disable-subtitles-btn">Deshabilitar Subtítulos</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para seleccionar archivo de video del torrent -->
+  <div id="file-selection-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeFileSelectionModal()">&times;</span>
+      <h2>Seleccionar Archivo de Video</h2>
+      <div id="torrent-loading">
+        <p>Explorando torrent...</p>
+        <div class="loading-spinner"></div>
+      </div>
+      <div id="file-list" style="display: none;">
+        <h3>Archivos de Video Disponibles:</h3>
+        <div id="video-files-list"></div>
+      </div>
     </div>
   </div>
 
@@ -129,7 +191,15 @@
     </lottie-player>
   </div>
 
-
+  <!-- Notification System -->
+  <div id="notification-container">
+    <div id="notification" class="notification hidden">
+      <div class="notification-content">
+        <span id="notification-message"></span>
+        <button id="notification-close" class="notification-close">&times;</button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>

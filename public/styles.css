@@ -876,3 +876,330 @@ h1 {
   background-color: #5cb85c; /* A highlight color on hover */
   border-color: #4cae4c;
 }
+
+/* Estilos para el reproductor de video */
+.video-modal-content {
+  background-color: #1a1a1a;
+  margin: 2% auto;
+  padding: 20px;
+  border-radius: 15px;
+  width: 95%;
+  max-width: 1200px;
+  color: white;
+  position: relative;
+}
+
+#video-player-container {
+  width: 100%;
+}
+
+#video-player {
+  width: 100%;
+  height: auto;
+  min-height: 400px;
+  background-color: #000;
+  border-radius: 10px;
+}
+
+/* Estilos para información de progreso del torrent */
+.torrent-progress-section {
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  margin: 10px 0;
+  padding: 15px;
+  display: none; /* Se muestra cuando hay datos */
+}
+
+.progress-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  font-size: 0.9em;
+}
+
+.progress-info p {
+  margin: 5px 0;
+  color: #ccc;
+}
+
+/* Información del torrent */
+.torrent-info {
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-left: 4px solid #4caf50;
+}
+
+.torrent-info h4 {
+  margin: 0 0 10px 0;
+  color: #4caf50;
+}
+
+.torrent-info p {
+  margin: 5px 0;
+  color: #ccc;
+}
+
+/* Mejorar el spinner de carga */
+.loading-spinner {
+  border: 4px solid #333;
+  border-top: 4px solid #4caf50;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#subtitle-controls {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #2a2a2a;
+  border-radius: 10px;
+}
+
+.subtitle-section {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #444;
+}
+
+.subtitle-section:last-child {
+  border-bottom: none;
+}
+
+.subtitle-section h4 {
+  margin: 0 0 10px 0;
+  color: #4caf50;
+  font-size: 1.1em;
+}
+
+.subtitle-search {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.subtitle-upload {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+#subtitle-controls select,
+#subtitle-controls button,
+#subtitle-controls input[type="file"] {
+  padding: 8px 12px;
+  border: 1px solid #555;
+  border-radius: 5px;
+  background-color: #333;
+  color: white;
+  font-size: 0.9em;
+}
+
+#subtitle-controls button {
+  background-color: #4caf50;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+#subtitle-controls button:hover {
+  background-color: #45a049;
+}
+
+.subtitle-controls-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+  justify-content: center;
+}
+
+.subtitle-controls-buttons button {
+  padding: 10px 20px;
+  font-size: 1em;
+}
+
+/* Modal para selección de archivos */
+#file-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.video-file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  margin-bottom: 10px;
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.video-file-item:hover {
+  background-color: #3a3a3a;
+}
+
+.video-file-info {
+  flex-grow: 1;
+}
+
+.video-file-name {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.video-file-size {
+  color: #888;
+  font-size: 0.9em;
+}
+
+.video-file-button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.video-file-button:hover {
+  background-color: #45a049;
+}
+
+#torrent-loading {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.loading-spinner {
+  border: 4px solid #333;
+  border-top: 4px solid #4caf50;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Botón Ver Online */
+.watch-online-button {
+  background-color: #ff6b35;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin: 5px;
+}
+
+.watch-online-button:hover {
+  background-color: #e55a2b;
+}
+
+/* Notification System Styles */
+#notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+}
+
+.notification {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-width: 300px;
+  max-width: 400px;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+}
+
+.notification.show {
+  transform: translateX(0);
+}
+
+.notification.hidden {
+  display: none;
+}
+
+.notification.success {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+}
+
+.notification.error {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+}
+
+.notification.warning {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+}
+
+.notification-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  margin-left: 10px;
+  padding: 0;
+  line-height: 1;
+}
+
+.notification-close:hover {
+  opacity: 0.7;
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+  .video-modal-content {
+    width: 98%;
+    margin: 1% auto;
+    padding: 15px;
+  }
+  
+  .subtitle-search,
+  .subtitle-upload {
+    flex-direction: column;
+  }
+  
+  .subtitle-controls-buttons {
+    flex-direction: column;
+  }
+  
+  .video-file-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .video-file-button {
+    margin-top: 10px;
+    align-self: stretch;
+  }
+}

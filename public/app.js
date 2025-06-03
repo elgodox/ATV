@@ -9,7 +9,83 @@ let selectedAccount;
 let showingFavorites = false; 
 let stallTimeoutId = null;
 window.localSubtitleBlobUrls = []; // Initialize for storing local subtitle blob URLs
+let currentTorrentInfo = null;
+let currentVideoPlayer = null;
 
+// Notification System
+function showNotification(message, type = 'info', duration = 4000) {
+  const notification = document.getElementById('notification');
+  const messageElement = document.getElementById('notification-message');
+  const container = document.getElementById('notification-container');
+  
+  // Set message and type
+  messageElement.textContent = message;
+  notification.className = `notification ${type}`;
+  
+  // Show notification
+  notification.classList.remove('hidden');
+  setTimeout(() => notification.classList.add('show'), 10);
+  
+  // Auto hide after duration
+  const hideTimeout = setTimeout(() => {
+    hideNotification();
+  }, duration);
+  
+  // Setup close button
+  document.getElementById('notification-close').onclick = () => {
+    clearTimeout(hideTimeout);
+    hideNotification();
+  };
+}
+
+function hideNotification() {
+  const notification = document.getElementById('notification');
+  notification.classList.remove('show');
+  setTimeout(() => {
+    notification.classList.add('hidden');
+  }, 300);
+}
+
+// Test function for debugging and verification
+function testVideoStreamingFeatures() {
+  console.log('Testing Video Streaming Features...');
+  
+  // Test notification system
+  showNotification('Testing notification system', 'info', 2000);
+  
+  setTimeout(() => {
+    showNotification('Success notification test', 'success', 2000);
+  }, 2500);
+  
+  setTimeout(() => {
+    showNotification('Warning notification test', 'warning', 2000);
+  }, 5000);
+  
+  setTimeout(() => {
+    showNotification('Error notification test', 'error', 2000);
+  }, 7500);
+  
+  // Test subtitle controls
+  const subtitleElements = [
+    'language-select',
+    'search-subtitles-btn', 
+    'online-subtitle-select',
+    'subtitle-file',
+    'uploaded-subtitle-select',
+    'enable-subtitles-btn',
+    'disable-subtitles-btn'
+  ];
+  
+  const missingElements = subtitleElements.filter(id => !document.getElementById(id));
+  
+  if (missingElements.length > 0) {
+    console.warn('Missing subtitle elements:', missingElements);
+    showNotification(`Missing subtitle elements: ${missingElements.join(', ')}`, 'warning');
+  } else {
+    console.log('All subtitle elements found');
+    showNotification('All subtitle controls are available', 'success');
+  }
+}
 
 // Elementos del DOM
 const elements = {
@@ -594,7 +670,7 @@ async function fetchTorrents(movieTitle) {
 
 // Función para iniciar el reproductor de video WebTorrent
 function startPlayer(magnetLink, movieTitle) {
-  const playerContainer = document.getElementById('player-container');
+  const playerContainer = document.getElementById('video-player-container');
   const videoPlayer = document.getElementById('video-player');
   const torrentQuote = document.querySelector('.torrent-quote'); // Selector para el contenedor de botones de torrents
   const loadingIndicator = document.getElementById('player-loading-indicator');
@@ -606,6 +682,29 @@ function startPlayer(magnetLink, movieTitle) {
   const playerLoadingIndicator = document.getElementById('player-loading-indicator'); // Explicitly get for clarity
   const localSubtitleUploadContainer = document.getElementById('local-subtitle-upload-container');
   const subtitleUploadInput = document.getElementById('subtitle-upload-input');
+
+  // Check if essential elements exist
+  if (!playerContainer) {
+    showNotification('Error: No se encontró el contenedor del reproductor', 'error');
+    console.error('video-player-container element not found');
+    return;
+  }
+  
+  if (!videoPlayer) {
+    showNotification('Error: No se encontró el elemento de video', 'error');
+    console.error('video-player element not found');
+    return;
+  }
+
+  // Show the video modal first
+  const videoModal = document.getElementById('video-modal');
+  if (videoModal) {
+    videoModal.style.display = 'block';
+  } else {
+    showNotification('Error: No se encontró el modal de video', 'error');
+    console.error('video-modal element not found');
+    return;
+  }
 
   // Show initial broad status
   if (playerLoadingIndicator) {
@@ -625,20 +724,46 @@ function startPlayer(magnetLink, movieTitle) {
   if (torrentQuote) {
     torrentQuote.style.display = 'none'; // Ocultar contenedor de botones de torrents
   }
-  playerContainer.style.display = 'block'; // Mostrar contenedor del reproductor
-
+  
+  // The playerContainer is already visible within the modal, no need to show it separately
   const client = new WebTorrent();
   window.currentTorrentClient = client; // Guardar cliente globalmente
 
-  client.add(magnetLink, torrent => {
+  // Add error handling for the WebTorrent client
+  client.on('error', (err) => {
+    console.error('WebTorrent client error:', err);
+    showNotification('Error del cliente torrent: ' + err.message, 'error');
+    if (playerLoadingIndicator) playerLoadingIndicator.style.display = 'none';
+    if (playerStatusMessage) {
+      playerStatusMessage.textContent = 'Error de conexión torrent';
+      playerStatusMessage.style.display = 'block';
+    }
+  });
+
+  showNotification('Conectando al torrent...', 'info', 3000);  client.add(magnetLink, (torrent) => {
+    showNotification(`Torrent conectado: ${torrent.name}`, 'success');
+    
+    // Add error handling for the torrent
+    torrent.on('error', (err) => {
+      console.error('Torrent error:', err);
+      showNotification('Error del torrent: ' + err.message, 'error');
+      if (playerLoadingIndicator) playerLoadingIndicator.style.display = 'none';
+      if (playerStatusMessage) {
+        playerStatusMessage.textContent = 'Error del torrent';
+        playerStatusMessage.style.display = 'block';
+      }
+    });
+
     if (playerLoadingIndicator) { // Use the more specific variable name
       playerLoadingIndicator.textContent = 'Video loading...'; // General status that video is now the focus
-    }
-
-    if (torrentStatsDiv) {
+    }    if (torrentStatsDiv) {
       torrentStatsDiv.style.display = 'block'; // Mostrar estadísticas
     }
-    torrentPeersSpan.textContent = `Peers: ${torrent.numPeers}`; // Initial peer count
+    
+    // Add null checks for torrent stat elements
+    if (torrentPeersSpan) {
+      torrentPeersSpan.textContent = `Peers: ${torrent.numPeers}`; // Initial peer count
+    }
 
     if (playerStatusMessage) {
       if (torrent.numPeers === 0) {
@@ -663,12 +788,16 @@ function startPlayer(magnetLink, movieTitle) {
             }
             if (torrentStatsDiv) torrentStatsDiv.style.display = 'block';
         }
-    }, STALL_TIMEOUT_DURATION);
-
-    torrent.on('download', bytes => {
-      torrentDownloadSpeedSpan.textContent = `Speed: ${(torrent.downloadSpeed / 1024).toFixed(2)} kB/s`;
-      torrentProgressSpan.textContent = `Progress: ${(torrent.progress * 100).toFixed(2)}%`;
-      torrentPeersSpan.textContent = `Peers: ${torrent.numPeers}`;
+    }, STALL_TIMEOUT_DURATION);    torrent.on('download', bytes => {
+      if (torrentDownloadSpeedSpan) {
+        torrentDownloadSpeedSpan.textContent = `Speed: ${(torrent.downloadSpeed / 1024).toFixed(2)} kB/s`;
+      }
+      if (torrentProgressSpan) {
+        torrentProgressSpan.textContent = `Progress: ${(torrent.progress * 100).toFixed(2)}%`;
+      }
+      if (torrentPeersSpan) {
+        torrentPeersSpan.textContent = `Peers: ${torrent.numPeers}`;
+      }
     });
 
     torrent.on('upload', bytes => {
@@ -680,16 +809,16 @@ function startPlayer(magnetLink, movieTitle) {
             playerStatusMessage.textContent = `Connected to ${torrent.numPeers} peers.`;
             playerStatusMessage.style.display = 'block';
         }
-        torrentPeersSpan.textContent = `Peers: ${torrent.numPeers}`;
+        if (torrentPeersSpan) {
+          torrentPeersSpan.textContent = `Peers: ${torrent.numPeers}`;
+        }
     });
 
     // Enhanced file selection logic starts
     const videoExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm', '.flv', '.wmv'];
     let videoFiles = torrent.files.filter(f => {
         return videoExtensions.some(ext => f.name.toLowerCase().endsWith(ext));
-    });
-
-    if (videoFiles.length === 0) {
+    });    if (videoFiles.length === 0) {
         clearTimeout(stallTimeoutId);
         if (playerLoadingIndicator) playerLoadingIndicator.style.display = 'none';
         if (playerStatusMessage) {
@@ -697,6 +826,7 @@ function startPlayer(magnetLink, movieTitle) {
             playerStatusMessage.style.display = 'block';
         }
         if (torrentStatsDiv) torrentStatsDiv.style.display = 'none';
+        showNotification('No se encontraron archivos de video en este torrent', 'error');
         return; // Exit from client.add callback
     }
 
@@ -721,9 +851,7 @@ function startPlayer(magnetLink, movieTitle) {
         //     playerStatusMessage.textContent = `Auto-selected: ${selectedFile.name}. Playing...`;
         //     playerStatusMessage.style.display = 'block';
         // }
-    }
-
-    if (!selectedFile) {
+    }    if (!selectedFile) {
         clearTimeout(stallTimeoutId);
         if (playerLoadingIndicator) playerLoadingIndicator.style.display = 'none';
         if (playerStatusMessage) {
@@ -731,6 +859,7 @@ function startPlayer(magnetLink, movieTitle) {
             playerStatusMessage.style.display = 'block';
         }
         if (torrentStatsDiv) torrentStatsDiv.style.display = 'none';
+        showNotification('No se pudo seleccionar un archivo de video', 'error');
         return; // Exit from client.add callback
     }
 
@@ -813,7 +942,6 @@ function startPlayer(magnetLink, movieTitle) {
     });
     // Enhanced file selection logic ends
   });
-
   client.on('error', err => {
     clearTimeout(stallTimeoutId);
     console.error('Torrent client error:', err);
@@ -821,11 +949,18 @@ function startPlayer(magnetLink, movieTitle) {
       playerLoadingIndicator.style.display = 'none';
     }
     let specificError = 'Error loading torrent. Please try another one.';
+    let notificationMessage = 'Error cargando torrent. Intenta con otro.';
+    
     if (err.message.includes('invalid magnet URI') || err.message.includes('Invalid torrent identifier')) {
         specificError = 'Invalid torrent link. Please try another one.';
+        notificationMessage = 'Enlace de torrent inválido. Intenta con otro.';
     } else if (err.message.includes('connection error') || err.message.includes('timed out')) {
         specificError = 'Network connection error. Check your internet and try again.';
+        notificationMessage = 'Error de conexión. Verifica tu internet e intenta de nuevo.';
     }
+    
+    showNotification(notificationMessage, 'error');
+    
     if (playerStatusMessage) {
       playerStatusMessage.textContent = specificError;
       playerStatusMessage.style.display = 'block';
@@ -1156,3 +1291,548 @@ window.showTorrentOptions = function(magnetLink, movieTitle) {
     document.body.removeChild(modal);
   };
 };
+
+// Función para explorar archivos en el torrent y mostrar el modal de selección
+async function watchOnline(magnetURI, movieTitle) {
+  // Mostrar modal de selección de archivos
+  document.getElementById('file-selection-modal').style.display = 'block';
+  document.getElementById('torrent-loading').style.display = 'block';
+  document.getElementById('file-list').style.display = 'none';
+
+  try {
+    // Mostrar mensaje de carga más detallado
+    document.getElementById('torrent-loading').innerHTML = `
+      <p>Explorando torrent...</p>
+      <div class="loading-spinner"></div>
+      <p id="loading-status">Conectando con peers...</p>
+    `;
+
+    const response = await fetch('/api/torrent/explore', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ magnetURI })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Error explorando el torrent');
+    }
+
+    const torrentInfo = await response.json();
+    currentTorrentInfo = torrentInfo;
+
+    // Ocultar loading y mostrar lista de archivos
+    document.getElementById('torrent-loading').style.display = 'none';
+    document.getElementById('file-list').style.display = 'block';
+
+    // Mostrar información del torrent
+    const torrentInfoHtml = `
+      <div class="torrent-info">
+        <h4>Información del Torrent:</h4>
+        <p><strong>Nombre:</strong> ${torrentInfo.name}</p>
+        <p><strong>Tamaño:</strong> ${formatBytes(torrentInfo.length)}</p>
+        <p><strong>Peers:</strong> ${torrentInfo.numPeers}</p>
+        <p><strong>Progreso:</strong> ${(torrentInfo.progress * 100).toFixed(1)}%</p>
+      </div>
+    `;
+
+    // Mostrar archivos de video disponibles
+    const videoFilesList = document.getElementById('video-files-list');
+    videoFilesList.innerHTML = torrentInfoHtml;
+
+    if (torrentInfo.videoFiles.length === 0) {
+      videoFilesList.innerHTML += '<p>No se encontraron archivos de video en este torrent.</p>';
+      return;
+    }
+
+    const videoFilesHtml = '<h3>Archivos de Video Disponibles:</h3>';
+    videoFilesList.innerHTML += videoFilesHtml;
+
+    torrentInfo.videoFiles.forEach((file, index) => {
+      const fileItem = document.createElement('div');
+      fileItem.className = 'video-file-item';
+      
+      const fileSize = formatBytes(file.length);
+      
+      fileItem.innerHTML = `
+        <div class="video-file-info">
+          <div class="video-file-name">${file.name}</div>
+          <div class="video-file-size">${fileSize}</div>
+        </div>
+        <button class="video-file-button" onclick="playVideoFile(${file.index})" data-file-index="${file.index}">
+          Reproducir
+        </button>
+      `;
+      
+      videoFilesList.appendChild(fileItem);
+    });
+
+  } catch (error) {
+    console.error('Error explorando torrent:', error);
+    document.getElementById('torrent-loading').innerHTML = `
+      <p style="color: red;">Error explorando el torrent: ${error.message}</p>
+      <button onclick="closeFileSelectionModal()" style="margin-top: 10px; padding: 8px 16px; background-color: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Cerrar</button>
+    `;
+  }
+}
+
+// Función auxiliar para formatear bytes
+function formatBytes(bytes, decimals = 2) {
+  if (bytes === 0) return '0 Bytes';
+
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+// Función para reproducir un archivo de video específico
+function playVideoFile(fileIndex) {
+  if (!currentTorrentInfo) {
+    alert('Error: Información del torrent no disponible');
+    return;
+  }
+
+  // Cerrar modal de selección de archivos
+  closeFileSelectionModal();
+
+  // Mostrar modal del reproductor de video
+  document.getElementById('video-modal').style.display = 'block';
+  
+  const videoPlayer = document.getElementById('video-player');
+  currentVideoPlayer = videoPlayer;
+
+  // Mostrar indicador de carga
+  const loadingIndicator = document.createElement('div');
+  loadingIndicator.id = 'video-loading-indicator';
+  loadingIndicator.innerHTML = `
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 8px; text-align: center;">
+      <div class="loading-spinner" style="margin: 0 auto 10px;"></div>
+      <p>Cargando video...</p>
+      <p id="video-loading-status">Preparando stream...</p>
+    </div>
+  `;
+  loadingIndicator.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; background: rgba(0,0,0,0.5);';
+  
+  const videoContainer = document.getElementById('video-player-container');
+  videoContainer.style.position = 'relative';
+  videoContainer.appendChild(loadingIndicator);
+
+  // Configurar la URL del stream
+  const streamUrl = `/api/torrent/stream/${currentTorrentInfo.infoHash}/${fileIndex}`;
+  videoPlayer.src = streamUrl;
+
+  // Limpiar subtítulos anteriores
+  clearSubtitles();
+
+  // Cargar subtítulos del torrent si están disponibles
+  loadTorrentSubtitles();
+
+  // Configurar controles de subtítulos
+  setupSubtitleControls();
+
+  // Manejar eventos del video
+  videoPlayer.addEventListener('loadstart', () => {
+    document.getElementById('video-loading-status').textContent = 'Iniciando descarga...';
+  });
+
+  videoPlayer.addEventListener('progress', () => {
+    if (videoPlayer.buffered.length > 0) {
+      const buffered = (videoPlayer.buffered.end(0) / videoPlayer.duration * 100).toFixed(1);
+      document.getElementById('video-loading-status').textContent = `Buffer: ${buffered}%`;
+    }
+  });
+
+  videoPlayer.addEventListener('canplay', () => {
+    // Remover indicador de carga cuando el video puede reproducirse
+    const loadingIndicator = document.getElementById('video-loading-indicator');
+    if (loadingIndicator) {
+      loadingIndicator.remove();
+    }
+  });
+
+  videoPlayer.addEventListener('error', (e) => {
+    console.error('Error en el reproductor de video:', e);
+    const loadingIndicator = document.getElementById('video-loading-indicator');
+    if (loadingIndicator) {
+      loadingIndicator.innerHTML = `
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255,0,0,0.8); color: white; padding: 20px; border-radius: 8px; text-align: center;">
+          <p>Error cargando el video</p>
+          <button onclick="closeVideoModal()" style="margin-top: 10px; padding: 8px 16px; background-color: #fff; color: #333; border: none; border-radius: 4px; cursor: pointer;">Cerrar</button>
+        </div>
+      `;
+    }
+  });
+
+  // Iniciar progreso tracking
+  startProgressTracking();
+
+  videoPlayer.load();
+}
+
+// Función para rastrear el progreso del torrent
+function startProgressTracking() {
+  if (!currentTorrentInfo) return;
+
+  const progressInterval = setInterval(async () => {
+    try {
+      const response = await fetch(`/api/torrent/progress/${currentTorrentInfo.infoHash}`);
+      if (response.ok) {
+        const progressData = await response.json();
+        
+        // Actualizar información de progreso si hay un elemento para mostrarla
+        const progressElement = document.getElementById('torrent-progress-info');
+        if (progressElement) {
+          progressElement.innerHTML = `
+            <div class="progress-info">
+              <p>Descarga: ${(progressData.progress * 100).toFixed(1)}%</p>
+              <p>Velocidad: ${formatBytes(progressData.downloadSpeed)}/s</p>
+              <p>Peers: ${progressData.numPeers}</p>
+              <p>Descargado: ${formatBytes(progressData.downloaded)} / ${formatBytes(progressData.length)}</p>
+            </div>
+          `;
+        }
+      }
+    } catch (error) {
+      console.error('Error obteniendo progreso del torrent:', error);
+    }
+
+    // Detener el tracking si el modal se cierra
+    if (document.getElementById('video-modal').style.display === 'none') {
+      clearInterval(progressInterval);
+    }
+  }, 2000); // Actualizar cada 2 segundos
+}
+
+// Función para limpiar subtítulos anteriores
+function clearSubtitles() {
+  const videoPlayer = document.getElementById('video-player');
+  const tracks = videoPlayer.querySelectorAll('track');
+  tracks.forEach(track => track.remove());
+
+  // Limpiar selectores
+  document.getElementById('torrent-subtitle-select').innerHTML = '<option value="">Sin subtítulos</option>';
+  document.getElementById('online-subtitle-select').innerHTML = '<option value="">Sin subtítulos online</option>';
+  document.getElementById('uploaded-subtitle-select').innerHTML = '<option value="">Sin subtítulos subidos</option>';
+}
+
+// Función para cargar subtítulos del torrent
+function loadTorrentSubtitles() {
+  if (!currentTorrentInfo || !currentTorrentInfo.subtitleFiles) return;
+
+  const select = document.getElementById('torrent-subtitle-select');
+  
+  currentTorrentInfo.subtitleFiles.forEach((subtitle, index) => {
+    const option = document.createElement('option');
+    option.value = index;
+    option.textContent = subtitle.name;
+    select.appendChild(option);
+  });
+}
+
+// Función para configurar los controles de subtítulos
+function setupSubtitleControls() {
+  // Búsqueda de subtítulos online
+  document.getElementById('search-subtitles-btn').onclick = async function() {
+    const language = document.getElementById('language-select').value;
+    await searchOnlineSubtitles(language);
+  };
+
+  // Subir subtítulos
+  document.getElementById('upload-subtitle-btn').onclick = function() {
+    const fileInput = document.getElementById('subtitle-file');
+    fileInput.click();
+  };
+
+  document.getElementById('subtitle-file').onchange = function(event) {
+    uploadSubtitle(event.target.files[0]);
+  };
+
+  // Habilitar/deshabilitar subtítulos
+  document.getElementById('enable-subtitles-btn').onclick = enableSubtitles;
+  document.getElementById('disable-subtitles-btn').onclick = disableSubtitles;
+
+  // Cambio de subtítulos del torrent
+  document.getElementById('torrent-subtitle-select').onchange = function() {
+    if (this.value) {
+      loadTorrentSubtitle(this.value);
+    }
+  };
+
+  // Cambio de subtítulos online
+  document.getElementById('online-subtitle-select').onchange = function() {
+    if (this.value) {
+      loadOnlineSubtitle(this.value);
+    }
+  };
+
+  // Cambio de subtítulos subidos
+  document.getElementById('uploaded-subtitle-select').onchange = function() {
+    if (this.value) {
+      loadUploadedSubtitle(this.value);
+    }
+  };
+}
+
+// Función para cargar subtítulo del torrent
+async function loadTorrentSubtitle(subtitleIndex) {
+  if (!currentTorrentInfo) {
+    showNotification('No hay información del torrent disponible', 'error');
+    return;
+  }
+
+  try {
+    showNotification('Cargando subtítulo del torrent...', 'info', 2000);
+    const subtitleUrl = `/api/torrent/subtitle/${currentTorrentInfo.infoHash}/${subtitleIndex}`;
+    addSubtitleTrack(subtitleUrl, `Torrent Subtitle ${subtitleIndex}`, 'es');
+    showNotification('Subtítulo del torrent cargado exitosamente', 'success');
+  } catch (error) {
+    console.error('Error cargando subtítulo del torrent:', error);
+    showNotification('Error al cargar el subtítulo del torrent', 'error');
+  }
+}
+
+// Función para buscar subtítulos online
+async function searchOnlineSubtitles(language) {
+  const searchBtn = document.getElementById('search-subtitles-btn');
+  const originalText = searchBtn.textContent;
+  
+  try {
+    // Show loading state
+    searchBtn.textContent = 'Buscando...';
+    searchBtn.disabled = true;
+    showNotification('Buscando subtítulos online...', 'info', 2000);
+    
+    // Obtener el título original de la variable global
+    const movieTitle = originalTitle || 'Unknown Movie';
+    
+    const response = await fetch(`/api/subtitles/search?movieTitle=${encodeURIComponent(movieTitle)}&language=${language}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const subtitles = await response.json();
+
+    const select = document.getElementById('online-subtitle-select');
+    select.innerHTML = '<option value="">Seleccionar subtítulo online</option>';
+
+    if (subtitles && subtitles.length > 0) {
+      subtitles.forEach((subtitle, index) => {
+        const option = document.createElement('option');
+        option.value = subtitle.downloadUrl;
+        option.textContent = `${subtitle.languageName} - ${subtitle.filename} (${subtitle.rating || 'N/A'})`;
+        select.appendChild(option);
+      });
+      
+      showNotification(`Se encontraron ${subtitles.length} subtítulos para "${movieTitle}"`, 'success');
+    } else {
+      showNotification(`No se encontraron subtítulos online para "${movieTitle}" en ${language}`, 'warning');
+    }
+
+  } catch (error) {
+    console.error('Error buscando subtítulos online:', error);
+    showNotification('Error al buscar subtítulos online. Por favor, inténtalo de nuevo.', 'error');
+  } finally {
+    // Reset button state
+    searchBtn.textContent = originalText;
+    searchBtn.disabled = false;
+  }
+}
+
+// Función para cargar subtítulo online
+function loadOnlineSubtitle(subtitleUrl) {
+  addSubtitleTrack(subtitleUrl, 'Online Subtitle', 'es');
+  showNotification('Subtítulo online cargado', 'success');
+}
+
+// Función para subir subtítulo
+async function uploadSubtitle(file) {
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('subtitle', file);
+  formData.append('language', document.getElementById('language-select').value);
+
+  try {
+    showNotification('Subiendo subtítulo...', 'info', 2000);
+    
+    const response = await fetch('/api/subtitles/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    // Agregar al selector de subtítulos subidos
+    const select = document.getElementById('uploaded-subtitle-select');
+    const option = document.createElement('option');
+    option.value = result.path;
+    option.textContent = result.originalName;
+    select.appendChild(option);
+
+    showNotification(`Subtítulo "${result.originalName}" subido exitosamente`, 'success');
+
+  } catch (error) {
+    console.error('Error subiendo subtítulo:', error);
+    showNotification('Error al subir el subtítulo. Por favor, inténtalo de nuevo.', 'error');
+  }
+}
+
+// Función para cargar subtítulo subido
+function loadUploadedSubtitle(subtitlePath) {
+  addSubtitleTrack(subtitlePath, 'Uploaded Subtitle', 'es');
+  showNotification('Subtítulo subido cargado', 'success');
+}
+
+// Función para agregar track de subtítulo al video
+function addSubtitleTrack(src, label, language) {
+  const videoPlayer = document.getElementById('video-player');
+  
+  if (!videoPlayer) {
+    showNotification('No se encontró el reproductor de video', 'error');
+    return;
+  }
+  
+  try {
+    // Remover tracks anteriores del mismo tipo
+    const existingTracks = videoPlayer.querySelectorAll('track');
+    existingTracks.forEach(track => track.remove());
+
+    // Crear nuevo track
+    const track = document.createElement('track');
+    track.kind = 'subtitles';
+    track.src = src;
+    track.srclang = language;
+    track.label = label;
+    track.default = true;
+
+    // Agregar event listeners para el track
+    track.addEventListener('load', () => {
+      console.log('Subtítulo cargado exitosamente');
+    });
+    
+    track.addEventListener('error', (e) => {
+      console.error('Error cargando subtítulo:', e);
+      showNotification('Error al cargar el archivo de subtítulo', 'error');
+    });
+
+    videoPlayer.appendChild(track);
+    
+    // Habilitar automáticamente los subtítulos cuando se cargan
+    setTimeout(() => {
+      if (videoPlayer.textTracks.length > 0) {
+        videoPlayer.textTracks[0].mode = 'showing';
+      }
+    }, 100);
+    
+  } catch (error) {
+    console.error('Error agregando track de subtítulo:', error);
+    showNotification('Error al agregar el subtítulo al video', 'error');
+  }
+}
+
+// Función para habilitar subtítulos
+function enableSubtitles() {
+  const videoPlayer = document.getElementById('video-player');
+  const tracks = videoPlayer.textTracks;
+  
+  let tracksEnabled = 0;
+  for (let i = 0; i < tracks.length; i++) {
+    tracks[i].mode = 'showing';
+    tracksEnabled++;
+  }
+  
+  if (tracksEnabled > 0) {
+    showNotification(`${tracksEnabled} pista(s) de subtítulos habilitadas`, 'success');
+  } else {
+    showNotification('No hay subtítulos disponibles para habilitar', 'warning');
+  }
+}
+
+// Función para deshabilitar subtítulos
+function disableSubtitles() {
+  const videoPlayer = document.getElementById('video-player');
+  const tracks = videoPlayer.textTracks;
+  
+  let tracksDisabled = 0;
+  for (let i = 0; i < tracks.length; i++) {
+    tracks[i].mode = 'hidden';
+    tracksDisabled++;
+  }
+  
+  if (tracksDisabled > 0) {
+    showNotification('Subtítulos deshabilitados', 'info');
+  } else {
+    showNotification('No hay subtítulos para deshabilitar', 'warning');
+  }
+}
+
+// Función para cerrar el modal del reproductor de video
+function closeVideoModal() {
+  document.getElementById('video-modal').style.display = 'none';
+  
+  if (currentVideoPlayer) {
+    currentVideoPlayer.pause();
+    currentVideoPlayer.src = '';
+    currentVideoPlayer.load();
+    currentVideoPlayer = null;
+  }
+  
+  currentTorrentInfo = null;
+}
+
+// Función para cerrar el modal de selección de archivos
+function closeFileSelectionModal() {
+  document.getElementById('file-selection-modal').style.display = 'none';
+}
+
+// Add test function to window for manual testing
+window.testVideoStreamingFeatures = testVideoStreamingFeatures;
+
+// Test server API endpoints
+async function testServerAPIs() {
+  console.log('Testing Server APIs...');
+  showNotification('Testing server APIs...', 'info');
+  
+  try {
+    // Test subtitle search API
+    const subtitleResponse = await fetch('/api/subtitles/search?movieTitle=Test Movie&language=es');
+    if (subtitleResponse.ok) {
+      const subtitles = await subtitleResponse.json();
+      console.log('Subtitle search API working:', subtitles);
+      showNotification('Subtitle search API working', 'success');
+    } else {
+      throw new Error('Subtitle search API failed');
+    }
+    
+    // Test a simple health check if available
+    try {
+      const healthResponse = await fetch('/api/health');
+      if (healthResponse.ok) {
+        console.log('Health check API working');
+      }
+    } catch (e) {
+      console.log('Health check API not available (this is normal)');
+    }
+    
+    console.log('All available server APIs are working');
+    showNotification('Server APIs are functioning correctly', 'success');
+    
+  } catch (error) {
+    console.error('Server API test failed:', error);
+    showNotification('Server API test failed: ' + error.message, 'error');
+  }
+}
+
+// Add to window for manual testing
+window.testServerAPIs = testServerAPIs;
