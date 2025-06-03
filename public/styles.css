@@ -773,6 +773,38 @@ h1 {
 }
 }
 
+/* Torrent Player Messages and Stats */
+#player-loading-indicator {
+  font-size: 1em;
+  color: #eee;
+  text-align: center;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+#player-status-message {
+  font-size: 0.9em;
+  font-weight: bold;
+  color: #ffc107; /* Default color for warnings/status */
+  text-align: center;
+  margin-top: 8px;
+  margin-bottom: 8px; /* Add some bottom margin too */
+  padding: 5px;
+  /* background-color: rgba(0,0,0,0.2); Optional: subtle background */
+}
+
+#torrent-stats {
+  font-size: 0.8em; /* Slightly smaller font */
+  padding: 5px 0;   /* Add some vertical padding */
+  color: #ccc;       /* Lighter gray for less emphasis than main text */
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+#torrent-stats span { /* Style individual stat items if needed */
+  margin: 0 5px; /* Add a little space between stat items */
+}
+
 #player-container {
   margin-bottom: 15px; /* Add some space below the player */
 }

@@ -8,6 +8,7 @@ let originalTitle = '';
 let spanishTitle = '';
 let selectedAccount;
 let showingFavorites = false; 
+let stallTimeoutId = null;
 
 
 // Elementos del DOM
@@ -591,42 +592,135 @@ function startPlayer(magnetLink, movieTitle) {
   const videoPlayer = document.getElementById('video-player');
   const torrentQuote = document.querySelector('.torrent-quote'); // Selector para el contenedor de botones de torrents
   const loadingIndicator = document.getElementById('player-loading-indicator');
+  const torrentStatsDiv = document.getElementById('torrent-stats');
+  const torrentPeersSpan = document.getElementById('torrent-peers');
+  const torrentProgressSpan = document.getElementById('torrent-progress');
+  const torrentDownloadSpeedSpan = document.getElementById('torrent-download-speed');
+  const playerStatusMessage = document.getElementById('player-status-message');
+  const playerLoadingIndicator = document.getElementById('player-loading-indicator'); // Explicitly get for clarity
+
+  // Show initial broad status
+  if (playerLoadingIndicator) {
+    playerLoadingIndicator.textContent = 'Fetching torrent metadata...';
+    playerLoadingIndicator.style.display = 'block';
+  }
+  if (playerStatusMessage) {
+    playerStatusMessage.style.display = 'none'; // Ensure specific status is hidden initially
+  }
+  if (torrentStatsDiv) {
+    torrentStatsDiv.style.display = 'none';
+  }
 
   if (torrentQuote) {
     torrentQuote.style.display = 'none'; // Ocultar contenedor de botones de torrents
   }
-
   playerContainer.style.display = 'block'; // Mostrar contenedor del reproductor
-  if (loadingIndicator) {
-    loadingIndicator.textContent = 'Loading torrent...'; // Reset text
-    loadingIndicator.style.display = 'block'; // Mostrar indicador de carga
-  }
 
   const client = new WebTorrent();
   window.currentTorrentClient = client; // Guardar cliente globalmente
 
   client.add(magnetLink, torrent => {
+    if (playerLoadingIndicator) { // Use the more specific variable name
+      playerLoadingIndicator.textContent = 'Video loading...'; // General status that video is now the focus
+    }
+
+    if (torrentStatsDiv) {
+      torrentStatsDiv.style.display = 'block'; // Mostrar estadísticas
+    }
+    torrentPeersSpan.textContent = `Peers: ${torrent.numPeers}`; // Initial peer count
+
+    if (playerStatusMessage) {
+      if (torrent.numPeers === 0) {
+          playerStatusMessage.textContent = 'Waiting for peers...';
+          playerStatusMessage.style.display = 'block';
+      } else {
+          playerStatusMessage.textContent = `Connected to ${torrent.numPeers} peers.`;
+          playerStatusMessage.style.display = 'block';
+      }
+    }
+
+    const STALL_TIMEOUT_DURATION = 60000; // 60 seconds
+    if (stallTimeoutId) clearTimeout(stallTimeoutId); // Clear previous timeout just in case
+    stallTimeoutId = setTimeout(() => {
+        const currentVideoPlayer = document.getElementById('video-player'); // Re-fetch in timeout scope
+        if (currentVideoPlayer && currentVideoPlayer.paused && torrent.progress < 0.1 && torrent.numPeers < 2) {
+            console.warn('Torrent stalled, timeout reached.');
+            if (playerLoadingIndicator) playerLoadingIndicator.style.display = 'none';
+            if (playerStatusMessage) {
+                playerStatusMessage.textContent = 'Torrent seems stalled or very slow. Try another torrent or check your connection.';
+                playerStatusMessage.style.display = 'block';
+            }
+            if (torrentStatsDiv) torrentStatsDiv.style.display = 'block';
+        }
+    }, STALL_TIMEOUT_DURATION);
+
+    torrent.on('download', bytes => {
+      torrentDownloadSpeedSpan.textContent = `Speed: ${(torrent.downloadSpeed / 1024).toFixed(2)} kB/s`;
+      torrentProgressSpan.textContent = `Progress: ${(torrent.progress * 100).toFixed(2)}%`;
+      torrentPeersSpan.textContent = `Peers: ${torrent.numPeers}`;
+    });
+
+    torrent.on('upload', bytes => {
+      // Opcional: Mostrar velocidad de subida
+    });
+
+    torrent.on('wire', function onWire(wire, addr) {
+        if (playerStatusMessage) {
+            playerStatusMessage.textContent = `Connected to ${torrent.numPeers} peers.`;
+            playerStatusMessage.style.display = 'block';
+        }
+        torrentPeersSpan.textContent = `Peers: ${torrent.numPeers}`;
+    });
+
     const file = torrent.files.find(file => file.name.endsWith('.mp4') || file.name.endsWith('.mkv'));
     if (file) {
       file.appendTo(videoPlayer);
-      if (loadingIndicator) {
-        loadingIndicator.style.display = 'none'; // Ocultar indicador de carga
-      }
+
+      videoPlayer.oncanplay = () => {
+          if (playerLoadingIndicator) playerLoadingIndicator.style.display = 'none';
+          if (playerStatusMessage) playerStatusMessage.style.display = 'none';
+      };
+
+      videoPlayer.onplaying = () => {
+          clearTimeout(stallTimeoutId);
+          if (playerLoadingIndicator) playerLoadingIndicator.style.display = 'none';
+          if (playerStatusMessage) playerStatusMessage.style.display = 'none';
+      };
+
     } else {
+      clearTimeout(stallTimeoutId);
       console.error("No se encontró un archivo de video compatible en el torrent.");
-      if (loadingIndicator) {
-        loadingIndicator.textContent = 'No compatible video file found in this torrent.';
+      if (playerLoadingIndicator) {
+        playerLoadingIndicator.style.display = 'none';
       }
-      // Opcional: Ocultar el reproductor y mostrar los botones de torrent nuevamente
-      // playerContainer.style.display = 'none';
-      // if (torrentQuote) torrentQuote.style.display = 'block';
+      if (playerStatusMessage) {
+        playerStatusMessage.textContent = 'No compatible video file found in this torrent.';
+        playerStatusMessage.style.display = 'block';
+      }
+      if (torrentStatsDiv) {
+        torrentStatsDiv.style.display = 'none';
+      }
     }
   });
 
   client.on('error', err => {
+    clearTimeout(stallTimeoutId);
     console.error('Torrent client error:', err);
-    if (loadingIndicator) {
-      loadingIndicator.textContent = 'Error loading torrent. Please try another one.';
+    if (playerLoadingIndicator) {
+      playerLoadingIndicator.style.display = 'none';
+    }
+    let specificError = 'Error loading torrent. Please try another one.';
+    if (err.message.includes('invalid magnet URI') || err.message.includes('Invalid torrent identifier')) {
+        specificError = 'Invalid torrent link. Please try another one.';
+    } else if (err.message.includes('connection error') || err.message.includes('timed out')) {
+        specificError = 'Network connection error. Check your internet and try again.';
+    }
+    if (playerStatusMessage) {
+      playerStatusMessage.textContent = specificError;
+      playerStatusMessage.style.display = 'block';
+    }
+    if (torrentStatsDiv) {
+      torrentStatsDiv.style.display = 'none'; // Hide stats on error
     }
     // Opcional: Ocultar el reproductor y mostrar los botones de torrent nuevamente
     // playerContainer.style.display = 'none';
@@ -640,6 +734,11 @@ function closeModal() {
   elements.modal.style.display = "none";
   elements.modalTrailer.innerHTML = ""; // Limpiar tráiler cuando se cierra el modal
 
+  if (stallTimeoutId) {
+    clearTimeout(stallTimeoutId);
+    stallTimeoutId = null;
+  }
+
   // Lógica para limpiar el reproductor de WebTorrent
   if (window.currentTorrentClient) {
     window.currentTorrentClient.destroy(err => {
@@ -650,25 +749,40 @@ function closeModal() {
     const playerContainer = document.getElementById('player-container');
     const videoPlayer = document.getElementById('video-player');
     const torrentQuote = document.querySelector('.torrent-quote');
-    const loadingIndicator = document.getElementById('player-loading-indicator');
+    const playerLoadingIndicator = document.getElementById('player-loading-indicator'); // Get element
+    const torrentStatsDiv = document.getElementById('torrent-stats');
+    const playerStatusMessage = document.getElementById('player-status-message');
 
-    if (loadingIndicator) {
-        loadingIndicator.textContent = 'Loading torrent...';
-        loadingIndicator.style.display = 'none';
+    if (playerLoadingIndicator) {
+        playerLoadingIndicator.textContent = 'Loading torrent...';
+        playerLoadingIndicator.style.display = 'none';
+    }
+    if (playerStatusMessage) {
+        playerStatusMessage.textContent = '';
+        playerStatusMessage.style.display = 'none';
+    }
+
+    if (torrentStatsDiv) {
+        torrentStatsDiv.style.display = 'none';
+        document.getElementById('torrent-peers').textContent = 'Peers: 0';
+        document.getElementById('torrent-progress').textContent = 'Progress: 0%';
+        document.getElementById('torrent-download-speed').textContent = 'Speed: 0 kB/s';
     }
 
     playerContainer.style.display = 'none';
     if (videoPlayer) {
       videoPlayer.pause();
       videoPlayer.src = '';
-      videoPlayer.load(); // Vuelve a cargar el elemento de video para resetearlo
-      // Eliminar todos los elementos <source> hijos si existen
+      // Detach event listeners
+      videoPlayer.onplaying = null;
+      videoPlayer.oncanplay = null;
+      videoPlayer.load();
       while (videoPlayer.firstChild) {
         videoPlayer.removeChild(videoPlayer.firstChild);
       }
     }
     if (torrentQuote) {
-      torrentQuote.style.display = 'block'; // Mostrar contenedor de botones de torrents nuevamente
+      torrentQuote.style.display = 'block';
     }
   }
 }

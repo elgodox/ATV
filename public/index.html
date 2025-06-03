@@ -98,7 +98,13 @@
       <h2 id="modal-title"></h2>
       <p id="modal-description"></p>
       <div id="player-container" style="display: none;">
-        <p id="player-loading-indicator" style="display: none; color: white; text-align: center;">Loading torrent...</p>
+        <p id="player-loading-indicator" style="display: none;">Loading torrent...</p>
+        <p id="player-status-message" style="display: none;"></p>
+        <div id="torrent-stats" style="display: none;">
+          <span id="torrent-peers">Peers: 0</span> |
+          <span id="torrent-progress">Progress: 0%</span> |
+          <span id="torrent-download-speed">Speed: 0 kB/s</span>
+        </div>
         <video id="video-player" controls autoplay width="100%"></video>
       </div>
       <div id="modal-trailer"></div>
