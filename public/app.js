@@ -1,4 +1,3 @@
-
 let currentPage = 1;
 let totalResults = 0;
 let isLoading = false;
@@ -535,45 +534,46 @@ function renderStars(voteAverage) {
 // Función para obtener torrents de YTS según el título de la película
 async function fetchTorrents(movieTitle) {
   try {
-    // Haz la solicitud a tu servidor, que a su vez pedirá los datos a YTS
     const response = await fetch(`/api/torrents?movieTitle=${encodeURIComponent(movieTitle)}`);
 
-    // Verifica si la respuesta es válida
     if (!response.ok) {
-      throw new Error('Error fetching torrents');
+      // Manejar 404 (no torrents encontrados) de forma amigable
+      if (response.status === 404) {
+        elements.modalDescription.insertAdjacentHTML(
+          "beforeend",
+          "<p>No hay torrents disponibles para esta película.</p>"
+        );
+        return;
+      } else {
+        throw new Error('Error fetching torrents');
+      }
     }
 
     const data = await response.json();
 
     if (data.length > 0) {
-      const movie = data[0]; // Obtén la primera coincidencia de película
+      const movie = data[0];
       const torrents = movie.torrents;
-
-      // Ordenar los torrents por calidad (4K, 1080p, 720p)
       torrents.sort((a, b) => {
         const qualityOrder = ["4K", "1080p", "720p"];
         return qualityOrder.indexOf(a.quality) - qualityOrder.indexOf(b.quality);
       });
-
-      // Crear el estilo de Quote para los torrents disponibles
       let torrentButtons = `
         <blockquote class="torrent-quote">
           <h3>Torrents disponibles:</h3>
           <div class="torrent-buttons">
       `;
-
       torrents.forEach((torrent) => {
         const magnetLink = `magnet:?xt=urn:btih:${torrent.hash}&dn=${encodeURIComponent(movieTitle)}&tr=udp://tracker.openbittorrent.com:80/announce`;
         torrentButtons += `
-          <button class="torrent-button" onclick="startPlayer('${magnetLink}', '${movieTitle}')">
-            ${torrent.quality} - ${torrent.size}
-          </button>
+          <div style="display:inline-block; margin: 0 5px 10px 0;">
+            <button class="torrent-button" onclick="showTorrentOptions('${magnetLink}', '${movieTitle}')">
+              ${torrent.quality} - ${torrent.size}
+            </button>
+          </div>
         `;
       });
-
       torrentButtons += `</div></blockquote>`;
-
-      // Agregar los botones al modal dentro de la cita
       elements.modalDescription.insertAdjacentHTML("beforeend", torrentButtons);
     } else {
       elements.modalDescription.insertAdjacentHTML(
@@ -582,6 +582,11 @@ async function fetchTorrents(movieTitle) {
       );
     }
   } catch (error) {
+    // Mostrar mensaje de error amigable en el modal
+    elements.modalDescription.insertAdjacentHTML(
+      "beforeend",
+      `<p style='color:red;'>No se pudieron obtener torrents. Intenta más tarde.</p>`
+    );
     console.error("Error fetching torrents:", error);
   }
 }
@@ -939,4 +944,60 @@ window.onload = async function () {
     }
 }
   updateGenreSelect();  // Cargar los géneros iniciales (por ejemplo, películas)
+};
+
+// Agregar función para mostrar opciones de ver online o descargar
+window.showTorrentOptions = function(magnetLink, movieTitle) {
+  // Crear modal profesional con opciones
+  const modal = document.createElement('div');
+  modal.style.position = 'fixed';
+  modal.style.top = '0';
+  modal.style.left = '0';
+  modal.style.width = '100vw';
+  modal.style.height = '100vh';
+  modal.style.background = 'rgba(0,0,0,0.55)';
+  modal.style.display = 'flex';
+  modal.style.alignItems = 'center';
+  modal.style.justifyContent = 'center';
+  modal.style.zIndex = '99999';
+
+  const box = document.createElement('div');
+  box.style.background = '#23272f';
+  box.style.padding = '32px 28px 24px 28px';
+  box.style.borderRadius = '16px';
+  box.style.textAlign = 'center';
+  box.style.minWidth = '320px';
+  box.style.maxWidth = '90vw';
+  box.style.boxShadow = '0 8px 32px rgba(0,0,0,0.25)';
+  box.style.color = '#f5f5f5';
+  box.style.position = 'relative';
+
+  box.innerHTML = `
+    <h2 style="margin-bottom:18px;font-size:1.25em;font-weight:600;letter-spacing:0.5px;">¿Qué deseas hacer con el torrent?</h2>
+    <p style="margin-bottom:28px;color:#b0b0b0;font-size:1em;">Puedes ver la película online o descargar el archivo torrent para usarlo en tu cliente favorito.</p>
+    <div style="display:flex;justify-content:center;gap:18px;margin-bottom:18px;flex-wrap:wrap;">
+      <button id="ver-online" style="padding:12px 28px;border-radius:8px;background:#1f80e0;color:white;border:none;font-size:1em;font-weight:500;cursor:pointer;transition:background 0.2s;box-shadow:0 2px 8px rgba(31,128,224,0.08);">Ver online</button>
+      <a id="descargar-torrent" href="${magnetLink}" style="padding:12px 28px;border-radius:8px;background:#4caf50;color:white;text-decoration:none;font-size:1em;font-weight:500;display:inline-block;transition:background 0.2s;box-shadow:0 2px 8px rgba(76,175,80,0.08);" download>Descargar torrent</a>
+    </div>
+    <button id="cerrar-torrent-modal" style="margin-top:8px;padding:7px 22px;border-radius:6px;background:#444;color:#eee;border:none;font-size:0.95em;cursor:pointer;transition:background 0.2s;">Cancelar</button>
+    <span style="position:absolute;top:12px;right:18px;font-size:1.5em;cursor:pointer;color:#aaa;" id="close-torrent-x" title="Cerrar">&times;</span>
+  `;
+
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+
+  document.getElementById('ver-online').onclick = function() {
+    document.body.removeChild(modal);
+    startPlayer(magnetLink, movieTitle);
+  };
+  document.getElementById('descargar-torrent').onclick = function() {
+    document.body.removeChild(modal);
+    // El enlace ya inicia la descarga
+  };
+  document.getElementById('cerrar-torrent-modal').onclick = function() {
+    document.body.removeChild(modal);
+  };
+  document.getElementById('close-torrent-x').onclick = function() {
+    document.body.removeChild(modal);
+  };
 };
