@@ -100,10 +100,21 @@
       <div id="player-container" style="display: none;">
         <p id="player-loading-indicator" style="display: none;">Loading torrent...</p>
         <p id="player-status-message" style="display: none;"></p>
+        <!-- Placeholder for video file selection if multiple are found -->
+        <div id="video-file-list-container" style="display: none; margin-bottom: 10px;">
+            <p style="color: white; font-size: 0.9em;">Multiple video files found. Please select one:</p>
+            <ul id="video-file-list" style="list-style: none; padding: 0;">
+                <!-- File items will be populated here by JS, e.g., <li><button data-file-index="0">File 1.mkv</button></li> -->
+            </ul>
+        </div>
         <div id="torrent-stats" style="display: none;">
           <span id="torrent-peers">Peers: 0</span> |
           <span id="torrent-progress">Progress: 0%</span> |
           <span id="torrent-download-speed">Speed: 0 kB/s</span>
+        </div>
+        <div id="local-subtitle-upload-container" style="display: none;">
+          <label for="subtitle-upload-input" class="button_like_label">Upload Local Subtitle (.srt, .vtt)</label>
+          <input type="file" id="subtitle-upload-input" accept=".srt,.vtt" style="display: none;">
         </div>
         <video id="video-player" controls autoplay width="100%"></video>
       </div>

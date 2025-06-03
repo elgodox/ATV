@@ -813,3 +813,66 @@ h1 {
   max-height: 70vh; /* Limit player height to 70% of viewport height */
   background-color: #000; /* Black background for the player */
 }
+
+.button_like_label {
+  padding: 8px 12px;
+  background-color: #555; /* Example background */
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8em;
+  display: inline-block; /* To allow padding and look like a button */
+}
+
+.button_like_label:hover {
+  background-color: #777; /* Example hover background */
+}
+
+#local-subtitle-upload-container {
+  text-align: center;
+  margin-top: 10px;
+  margin-bottom: 10px; /* Add some bottom margin for spacing */
+}
+
+/* Placeholder Styling for Video File Selection List */
+#video-file-list-container {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.2); /* Subtle background */
+  border-radius: 4px;
+  /* display: none; is handled inline for JS control */
+}
+
+#video-file-list-container p { /* The instruction text like "Multiple video files found..." */
+  color: #eee;
+  font-size: 0.9em;
+  margin-bottom: 8px;
+  text-align: left; /* Align instruction text to the left */
+}
+
+#video-file-list {
+  list-style: none;
+  padding: 0;
+  max-height: 150px; /* Limit height and make it scrollable if many files */
+  overflow-y: auto;
+}
+
+#video-file-list li button { /* Style for buttons if we use them for selection */
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 5px;
+  background-color: #444;
+  color: white;
+  border: 1px solid #555;
+  border-radius: 3px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+#video-file-list li button:hover {
+  background-color: #5cb85c; /* A highlight color on hover */
+  border-color: #4cae4c;
+}
