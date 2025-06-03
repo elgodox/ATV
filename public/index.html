@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-
+  <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
 </head>
 
 <body>
@@ -97,6 +97,10 @@
       <span class="close" onclick="closeModal()">&times;</span>
       <h2 id="modal-title"></h2>
       <p id="modal-description"></p>
+      <div id="player-container" style="display: none;">
+        <p id="player-loading-indicator" style="display: none; color: white; text-align: center;">Loading torrent...</p>
+        <video id="video-player" controls autoplay width="100%"></video>
+      </div>
       <div id="modal-trailer"></div>
     </div>
   </div>

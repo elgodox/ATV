@@ -772,3 +772,12 @@ h1 {
   margin-right: 2px;  /* Ajustar el espacio entre estrellas */
 }
 }
+
+#player-container {
+  margin-bottom: 15px; /* Add some space below the player */
+}
+
+#video-player {
+  max-height: 70vh; /* Limit player height to 70% of viewport height */
+  background-color: #000; /* Black background for the player */
+}

@@ -562,8 +562,9 @@ async function fetchTorrents(movieTitle) {
       `;
 
       torrents.forEach((torrent) => {
+        const magnetLink = `magnet:?xt=urn:btih:${torrent.hash}&dn=${encodeURIComponent(movieTitle)}&tr=udp://tracker.openbittorrent.com:80/announce`;
         torrentButtons += `
-          <button class="torrent-button" onclick="window.open('magnet:?xt=urn:btih:${torrent.hash}&dn=${encodeURIComponent(movieTitle)}&tr=udp://tracker.openbittorrent.com:80/announce', '_blank')">
+          <button class="torrent-button" onclick="startPlayer('${magnetLink}', '${movieTitle}')">
             ${torrent.quality} - ${torrent.size}
           </button>
         `;
@@ -584,13 +585,92 @@ async function fetchTorrents(movieTitle) {
   }
 }
 
+// Función para iniciar el reproductor de video WebTorrent
+function startPlayer(magnetLink, movieTitle) {
+  const playerContainer = document.getElementById('player-container');
+  const videoPlayer = document.getElementById('video-player');
+  const torrentQuote = document.querySelector('.torrent-quote'); // Selector para el contenedor de botones de torrents
+  const loadingIndicator = document.getElementById('player-loading-indicator');
 
+  if (torrentQuote) {
+    torrentQuote.style.display = 'none'; // Ocultar contenedor de botones de torrents
+  }
+
+  playerContainer.style.display = 'block'; // Mostrar contenedor del reproductor
+  if (loadingIndicator) {
+    loadingIndicator.textContent = 'Loading torrent...'; // Reset text
+    loadingIndicator.style.display = 'block'; // Mostrar indicador de carga
+  }
+
+  const client = new WebTorrent();
+  window.currentTorrentClient = client; // Guardar cliente globalmente
+
+  client.add(magnetLink, torrent => {
+    const file = torrent.files.find(file => file.name.endsWith('.mp4') || file.name.endsWith('.mkv'));
+    if (file) {
+      file.appendTo(videoPlayer);
+      if (loadingIndicator) {
+        loadingIndicator.style.display = 'none'; // Ocultar indicador de carga
+      }
+    } else {
+      console.error("No se encontró un archivo de video compatible en el torrent.");
+      if (loadingIndicator) {
+        loadingIndicator.textContent = 'No compatible video file found in this torrent.';
+      }
+      // Opcional: Ocultar el reproductor y mostrar los botones de torrent nuevamente
+      // playerContainer.style.display = 'none';
+      // if (torrentQuote) torrentQuote.style.display = 'block';
+    }
+  });
+
+  client.on('error', err => {
+    console.error('Torrent client error:', err);
+    if (loadingIndicator) {
+      loadingIndicator.textContent = 'Error loading torrent. Please try another one.';
+    }
+    // Opcional: Ocultar el reproductor y mostrar los botones de torrent nuevamente
+    // playerContainer.style.display = 'none';
+    // if (torrentQuote) torrentQuote.style.display = 'block';
+  });
+}
 
 
 // Función para cerrar el modal
 function closeModal() {
   elements.modal.style.display = "none";
   elements.modalTrailer.innerHTML = ""; // Limpiar tráiler cuando se cierra el modal
+
+  // Lógica para limpiar el reproductor de WebTorrent
+  if (window.currentTorrentClient) {
+    window.currentTorrentClient.destroy(err => {
+      if (err) console.error("Error destruyendo el cliente de WebTorrent:", err);
+    });
+    window.currentTorrentClient = null;
+
+    const playerContainer = document.getElementById('player-container');
+    const videoPlayer = document.getElementById('video-player');
+    const torrentQuote = document.querySelector('.torrent-quote');
+    const loadingIndicator = document.getElementById('player-loading-indicator');
+
+    if (loadingIndicator) {
+        loadingIndicator.textContent = 'Loading torrent...';
+        loadingIndicator.style.display = 'none';
+    }
+
+    playerContainer.style.display = 'none';
+    if (videoPlayer) {
+      videoPlayer.pause();
+      videoPlayer.src = '';
+      videoPlayer.load(); // Vuelve a cargar el elemento de video para resetearlo
+      // Eliminar todos los elementos <source> hijos si existen
+      while (videoPlayer.firstChild) {
+        videoPlayer.removeChild(videoPlayer.firstChild);
+      }
+    }
+    if (torrentQuote) {
+      torrentQuote.style.display = 'block'; // Mostrar contenedor de botones de torrents nuevamente
+    }
+  }
 }
 
 // Evento para actualizar los resultados cuando el usuario busca
