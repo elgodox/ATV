@@ -439,6 +439,8 @@ async function fetchTVDetails(tvId) {
 
 
 
+let currentImdbId = null; // Variable global para guardar el ID de IMDb
+
 // Función para obtener detalles y mostrar el modal
 async function showDetails(id, type, movieCard) {
 
@@ -455,6 +457,9 @@ async function showDetails(id, type, movieCard) {
     // Cargar los detalles en el idioma original
     const urlOriginal = `/api/titles/details?id=${id}&type=${type}&language=en`;
     const dataOriginal = await fetch(urlOriginal).then(response => response.json());
+
+    // Guardar el ID de IMDb
+    currentImdbId = dataOriginal.imdb_id;
 
     // Cargar los detalles en español
     const urlSpanish = `/api/titles/details?id=${id}&type=${type}&language=es`;
@@ -1715,9 +1720,9 @@ function loadTorrentSubtitles() {
 
   const select = document.getElementById('torrent-subtitle-select');
   
-  currentTorrentInfo.subtitleFiles.forEach((subtitle, index) => {
+  currentTorrentInfo.subtitleFiles.forEach(subtitle => {
     const option = document.createElement('option');
-    option.value = index;
+    option.value = subtitle.index;
     option.textContent = subtitle.name;
     select.appendChild(option);
   });
@@ -1796,10 +1801,17 @@ async function searchOnlineSubtitles(language) {
     searchBtn.disabled = true;
     showNotification('Buscando subtítulos online...', 'info', 2000);
     
-    // Obtener el título original de la variable global
+    // Obtener el título original y el ID de IMDb de las variables globales
     const movieTitle = originalTitle || 'Unknown Movie';
+    const imdbId = currentImdbId || null;
     
-    const response = await fetch(`/api/subtitles/search?movieTitle=${encodeURIComponent(movieTitle)}&language=${language}`);
+    // Construir la URL con los parámetros necesarios
+    let searchUrl = `/api/subtitles/search?movieTitle=${encodeURIComponent(movieTitle)}&language=${language}`;
+    if (imdbId) {
+      searchUrl += `&imdbId=${encodeURIComponent(imdbId)}`;
+    }
+    
+    const response = await fetch(searchUrl);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -1814,13 +1826,23 @@ async function searchOnlineSubtitles(language) {
       subtitles.forEach((subtitle, index) => {
         const option = document.createElement('option');
         option.value = subtitle.downloadUrl;
-        option.textContent = `${subtitle.languageName} - ${subtitle.filename} (${subtitle.rating || 'N/A'})`;
+        
+        // Agregar indicador si es demo
+        const demoIndicator = subtitle.isDemo ? ' [DEMO]' : '';
+        option.textContent = `${subtitle.languageName} - ${subtitle.filename} (${subtitle.rating || 'N/A'})${demoIndicator}`;
         select.appendChild(option);
       });
       
-      showNotification(`Se encontraron ${subtitles.length} subtítulos para "${movieTitle}"`, 'success');
+      const demoCount = subtitles.filter(s => s.isDemo).length;
+      const realCount = subtitles.length - demoCount;
+      
+      if (demoCount > 0 && realCount === 0) {
+        showNotification(`Se encontraron ${subtitles.length} subtítulos de demostración para "${movieTitle}". Para subtítulos reales, se requiere integración con APIs externas.`, 'info');
+      } else {
+        showNotification(`Se encontraron ${subtitles.length} subtítulos para "${movieTitle}"`, 'success');
+      }
     } else {
-      showNotification(`No se encontraron subtítulos online para "${movieTitle}" en ${language}`, 'warning');
+      showNotification(`No se encontraron subtítulos online para "${movieTitle}" en ${language}. La búsqueda de subtítulos requiere integración con APIs externas como OpenSubtitles.`, 'warning');
     }
 
   } catch (error) {
@@ -1834,9 +1856,80 @@ async function searchOnlineSubtitles(language) {
 }
 
 // Función para cargar subtítulo online
-function loadOnlineSubtitle(subtitleUrl) {
-  addSubtitleTrack(subtitleUrl, 'Online Subtitle', 'es');
-  showNotification('Subtítulo online cargado', 'success');
+async function loadOnlineSubtitle(subtitleUrl) {
+  try {
+    showNotification('Cargando subtítulo online...', 'info', 2000);
+    
+    // Primero verificar que la URL del subtítulo sea válida
+    if (!subtitleUrl || subtitleUrl.includes('undefined')) {
+      throw new Error('URL de subtítulo inválida. Por favor, selecciona otro subtítulo.');
+    }
+    
+    console.log('Loading subtitle from URL:', subtitleUrl);
+    
+    // Determine if this is an OpenSubtitles URL (our backend endpoint) or external URL
+    let finalUrl;
+    if (subtitleUrl.startsWith('/api/subtitles/opensubtitles-download/')) {
+      // This is already our backend OpenSubtitles endpoint, use it directly
+      finalUrl = subtitleUrl;
+    } else {
+      // This is an external URL, use the proxy
+      finalUrl = `/api/subtitles/proxy?url=${encodeURIComponent(subtitleUrl)}`;
+    }
+    
+    console.log('Final URL for subtitle loading:', finalUrl);
+    
+    // Verificar que el endpoint puede acceder al subtítulo
+    const response = await fetch(finalUrl);
+    
+    if (!response.ok) {
+      let errorMessage = `Error del servidor: ${response.status}`;
+      
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // Si no se puede parsear JSON, usar el status text
+        errorMessage = response.statusText || errorMessage;
+      }
+      
+      // Proporcionar mensajes más específicos según el error
+      if (response.status === 404) {
+        errorMessage = 'Subtítulo no encontrado. Es posible que la URL haya expirado o que el subtítulo ya no esté disponible.';
+      } else if (response.status === 403) {
+        errorMessage = 'Acceso denegado al subtítulo. El servidor de subtítulos no permite el acceso.';
+      } else if (response.status >= 500) {
+        errorMessage = 'Error del servidor de subtítulos. Intenta más tarde.';
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    // Verificar que el contenido es válido
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      // Si recibimos JSON, es probable que sea un error
+      const jsonResponse = await response.json();
+      throw new Error(jsonResponse.message || 'Respuesta inesperada del servidor');
+    }
+    
+    // Si llegamos aquí, el subtítulo se puede cargar
+    addSubtitleTrack(finalUrl, 'Online Subtitle', 'es');
+    showNotification('Subtítulo online cargado exitosamente', 'success');
+    
+  } catch (error) {
+    console.error('Error loading online subtitle:', error);
+    
+    // Proporcionar sugerencias adicionales
+    let suggestion = '';
+    if (error.message.includes('404') || error.message.includes('no encontrado')) {
+      suggestion = ' Prueba subiendo tu propio archivo de subtítulos o busca en otro idioma.';
+    } else if (error.message.includes('integración')) {
+      suggestion = ' Esta aplicación necesita configuración adicional para acceder a fuentes de subtítulos reales.';
+    }
+    
+    showNotification(`Error al cargar subtítulo: ${error.message}${suggestion}`, 'error', 8000);
+  }
 }
 
 // Función para subir subtítulo
@@ -1891,6 +1984,11 @@ function addSubtitleTrack(src, label, language) {
     return;
   }
   
+  if (!src || src.includes('undefined')) {
+    showNotification('URL de subtítulo inválida', 'error');
+    return;
+  }
+  
   try {
     // Remover tracks anteriores del mismo tipo
     const existingTracks = videoPlayer.querySelectorAll('track');
@@ -1906,12 +2004,26 @@ function addSubtitleTrack(src, label, language) {
 
     // Agregar event listeners para el track
     track.addEventListener('load', () => {
-      console.log('Subtítulo cargado exitosamente');
+      console.log('Subtítulo cargado exitosamente:', src);
+      showNotification('Subtítulos activados', 'success');
     });
     
     track.addEventListener('error', (e) => {
-      console.error('Error cargando subtítulo:', e);
-      showNotification('Error al cargar el archivo de subtítulo', 'error');
+      console.error('Error cargando subtítulo:', {
+        error: e,
+        src: src,
+        track: track
+      });
+      
+      // Proporcionar mensaje de error más específico
+      let errorMessage = 'Error al cargar el archivo de subtítulo';
+      if (src.includes('undefined')) {
+        errorMessage = 'URL de subtítulo inválida (contiene "undefined")';
+      } else if (!src.startsWith('http') && !src.startsWith('/')) {
+        errorMessage = 'URL de subtítulo no válida';
+      }
+      
+      showNotification(errorMessage, 'error');
     });
 
     videoPlayer.appendChild(track);
@@ -1920,6 +2032,7 @@ function addSubtitleTrack(src, label, language) {
     setTimeout(() => {
       if (videoPlayer.textTracks.length > 0) {
         videoPlayer.textTracks[0].mode = 'showing';
+        console.log('Subtítulos habilitados automáticamente');
       }
     }, 100);
     
@@ -2200,3 +2313,86 @@ window.addEventListener('beforeunload', () => {
     window.localSubtitleBlobUrls = [];
   }
 });
+
+// Función para actualizar el estado de los subtítulos en la UI
+function updateSubtitleStatus(status, type = 'info') {
+  const statusElement = document.getElementById('subtitle-status');
+  if (statusElement) {
+    statusElement.textContent = status;
+    
+    // Actualizar color según el tipo
+    statusElement.className = '';
+    switch(type) {
+      case 'success':
+        statusElement.style.color = '#4caf50';
+        break;
+      case 'error':
+        statusElement.style.color = '#f44336';
+        break;
+      case 'warning':
+        statusElement.style.color = '#ffa726';
+        break;
+      default:
+        statusElement.style.color = '#2196f3';
+    }
+  }
+}
+
+// Función de prueba para verificar la funcionalidad de subtítulos
+async function testSubtitleFunctionality() {
+  console.log('🧪 Testing subtitle functionality...');
+  updateSubtitleStatus('Probando funcionalidad...', 'info');
+  
+  try {
+    // Test 1: Buscar subtítulos de demostración
+    console.log('Testing subtitle search...');
+    const searchResponse = await fetch('/api/subtitles/search?movieTitle=Test Movie&language=es&imdbId=tt1234567');
+    
+    if (searchResponse.ok) {
+      const subtitles = await searchResponse.json();
+      console.log('✅ Subtitle search working:', subtitles);
+      
+      if (subtitles.length > 0) {
+        // Test 2: Probar el proxy con URL de demo
+        const demoUrl = subtitles[0].downloadUrl;
+        if (demoUrl) {
+          console.log('Testing subtitle proxy with demo URL...');
+          const proxyResponse = await fetch(`/api/subtitles/proxy?url=${encodeURIComponent(demoUrl)}`);
+          
+          if (proxyResponse.ok) {
+            const content = await proxyResponse.text();
+            console.log('✅ Subtitle proxy working, content length:', content.length);
+            updateSubtitleStatus('Funcionalidad verificada - Sistema operativo', 'success');
+            showNotification('✅ Sistema de subtítulos funcionando correctamente', 'success');
+          } else {
+            console.error('❌ Subtitle proxy failed:', proxyResponse.status);
+            updateSubtitleStatus('Error en proxy de subtítulos', 'error');
+          }
+        } else {
+          console.error('❌ No demo URL found');
+          updateSubtitleStatus('URLs de demo no disponibles', 'warning');
+        }
+      } else {
+        console.log('ℹ️ No subtitles found (expected for demo)');
+        updateSubtitleStatus('Búsqueda retorna resultados vacíos', 'warning');
+      }
+    } else {
+      console.error('❌ Subtitle search failed:', searchResponse.status);
+      updateSubtitleStatus('Error en búsqueda de subtítulos', 'error');
+    }
+    
+  } catch (error) {
+    console.error('❌ Subtitle test failed:', error);
+    updateSubtitleStatus('Error en prueba del sistema', 'error');
+    showNotification('❌ Error probando sistema de subtítulos: ' + error.message, 'error');
+  }
+}
+
+// Ejecutar la prueba cuando se carga la página
+document.addEventListener('DOMContentLoaded', () => {
+  // Esperar un poco para que todo esté cargado
+  setTimeout(testSubtitleFunctionality, 2000);
+});
+
+// Exponer función de prueba para uso manual
+window.testSubtitleFunctionality = testSubtitleFunctionality;

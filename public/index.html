@@ -141,6 +141,21 @@
         
         <!-- Controles de subtítulos -->
         <div id="subtitle-controls">
+          <!-- Información sobre subtítulos -->
+          <div class="subtitle-info">
+            <h4>ℹ️ Información de Subtítulos</h4>
+            <div class="subtitle-info-content">
+              <p><strong>Estado:</strong> <span id="subtitle-status">Búsqueda en modo demostración</span></p>
+              <p><strong>Opciones disponibles:</strong></p>
+              <ul>
+                <li>📁 <strong>Subtítulos del torrent:</strong> Automáticamente detectados del archivo torrent</li>
+                <li>🌐 <strong>Búsqueda online:</strong> Actualmente en modo demo - retorna subtítulos de ejemplo</li>
+                <li>📤 <strong>Subir archivo:</strong> Sube tus propios archivos .srt, .vtt, etc.</li>
+              </ul>
+              <p class="subtitle-help">💡 <strong>Tip:</strong> Para subtítulos reales, se requiere integración con APIs como OpenSubtitles.</p>
+            </div>
+          </div>
+          
           <div class="subtitle-section">
             <h4>Subtítulos del Torrent:</h4>
             <select id="torrent-subtitle-select">

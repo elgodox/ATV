@@ -1239,3 +1239,56 @@ h1 {
 #torrent-upload-speed {
   color: #9c27b0 !important;
 }
+
+/* Subtitle Info Section Styles */
+.subtitle-info {
+  margin-bottom: 25px;
+  padding: 15px;
+  background-color: #1e1e1e;
+  border-radius: 8px;
+  border-left: 4px solid #2196f3;
+}
+
+.subtitle-info h4 {
+  margin: 0 0 12px 0;
+  color: #2196f3;
+  font-size: 1.1em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subtitle-info-content {
+  color: #ccc;
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+
+.subtitle-info-content p {
+  margin: 8px 0;
+}
+
+.subtitle-info-content ul {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.subtitle-info-content li {
+  margin: 6px 0;
+  color: #ddd;
+}
+
+.subtitle-help {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background-color: #2a4a2a;
+  border-radius: 5px;
+  border-left: 3px solid #4caf50;
+  color: #e8f5e8;
+  font-size: 0.85em;
+}
+
+#subtitle-status {
+  color: #ffa726;
+  font-weight: bold;
+}

@@ -17,6 +17,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const API_KEY = process.env.API_KEY; // Cargar la API key desde el .env
 const VIMEO_ACCESS_TOKEN = process.env.VIMEO_ACCESS_TOKEN;
+const OPENSUBTITLES_API_KEY = process.env.OPENSUBTITLES_API_KEY;
 
 // Crear cliente de WebTorrent
 const client = new WebTorrent();
@@ -740,70 +741,380 @@ app.get('/api/subtitles/search', async (req, res) => {
   const { imdbId, movieTitle, language = 'es' } = req.query;
   
   try {
-    // Intentar buscar en OpenSubtitles usando una API básica
-    // Esta es una implementación simulada - en producción usarías la API real de OpenSubtitles
+    // Verificar que tenemos al menos el título de la película
+    if (!movieTitle) {
+      return res.status(400).json({ message: 'movieTitle is required' });
+    }
+    
+    console.log(`Searching subtitles for: ${movieTitle} (imdbId: ${imdbId || 'N/A'}) in ${language}`);
+    
     let subtitles = [];
     
-    // Simulamos diferentes respuestas según el idioma
-    if (language === 'es') {
-      subtitles.push({
-        id: '1',
-        language: 'es',
-        languageName: 'Español',
-        filename: `${movieTitle}.es.srt`,
-        downloadUrl: `https://dl.opensubtitles.org/en/download/file/${imdbId}.es.srt`,
-        encoding: 'utf-8',
-        downloads: 1250,
-        rating: 4.5
-      });
+    // Si tenemos la API key de OpenSubtitles, usar la API real
+    if (OPENSUBTITLES_API_KEY) {
+      try {
+        subtitles = await searchOpenSubtitles(movieTitle, imdbId, language);
+        console.log(`Found ${subtitles.length} real subtitles from OpenSubtitles`);
+      } catch (error) {
+        console.error('Error with OpenSubtitles API:', error);
+        // Si falla la API real, usar subtítulos de prueba como fallback
+        subtitles = generateDemoSubtitles(movieTitle, language);
+      }
+    } else {
+      console.log('No OpenSubtitles API key found, using demo subtitles');
+      subtitles = generateDemoSubtitles(movieTitle, language);
     }
     
-    if (language === 'en' || language === '') {
-      subtitles.push({
-        id: '2',
-        language: 'en',
-        languageName: 'English',
-        filename: `${movieTitle}.en.srt`,
-        downloadUrl: `https://dl.opensubtitles.org/en/download/file/${imdbId}.en.srt`,
-        encoding: 'utf-8',
-        downloads: 2340,
-        rating: 4.8
-      });
-    }
-    
-    // Agregar más idiomas si se solicitan
-    const additionalLanguages = ['fr', 'de', 'it', 'pt'];
-    if (additionalLanguages.includes(language)) {
-      subtitles.push({
-        id: '3',
-        language: language,
-        languageName: getLanguageName(language),
-        filename: `${movieTitle}.${language}.srt`,
-        downloadUrl: `https://dl.opensubtitles.org/en/download/file/${imdbId}.${language}.srt`,
-        encoding: 'utf-8',
-        downloads: 450,
-        rating: 4.2
-      });
-    }
-    
+    console.log(`Returning ${subtitles.length} subtitles`);
     res.json(subtitles);
+    
   } catch (error) {
     console.error('Error searching subtitles:', error);
     res.status(500).json({ message: 'Error searching subtitles' });
   }
 });
 
+// Función para buscar subtítulos en OpenSubtitles
+async function searchOpenSubtitles(movieTitle, imdbId, language) {
+  const subtitles = [];
+  
+  try {
+    console.log('Searching OpenSubtitles with API key...');
+    
+    // Construir parámetros de búsqueda
+    let searchParams = `languages=${language}`;
+    
+    if (imdbId) {
+      // Si tenemos el ID de IMDb, usarlo (más preciso)
+      const cleanImdbId = imdbId.replace('tt', '');
+      searchParams += `&imdb_id=${cleanImdbId}`;
+      console.log(`Searching by IMDb ID: ${cleanImdbId}`);
+    } else {
+      // Si no, buscar por título
+      searchParams += `&query=${encodeURIComponent(movieTitle)}`;
+      console.log(`Searching by title: ${movieTitle}`);
+    }
+    
+    // Buscar subtítulos directamente (sin login para API key)
+    const searchUrl = `https://api.opensubtitles.com/api/v1/subtitles?${searchParams}`;
+    console.log(`Making request to: ${searchUrl}`);
+    
+    const searchResponse = await fetch(searchUrl, {
+      headers: {
+        'Api-Key': OPENSUBTITLES_API_KEY,
+        'User-Agent': 'ATV v1.0',
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log(`OpenSubtitles response status: ${searchResponse.status}`);
+    
+    if (!searchResponse.ok) {
+      const errorText = await searchResponse.text();
+      console.error(`OpenSubtitles API error: ${searchResponse.status} - ${errorText}`);
+      throw new Error(`Search failed: ${searchResponse.status} - ${errorText}`);
+    }
+    
+    const searchData = await searchResponse.json();
+    console.log(`OpenSubtitles returned ${searchData.data ? searchData.data.length : 0} results`);
+    
+    // Procesar resultados
+    if (searchData.data && Array.isArray(searchData.data)) {
+      searchData.data.forEach((subtitle, index) => {
+        try {
+          if (subtitle.attributes && subtitle.attributes.files && subtitle.attributes.files.length > 0) {
+            const file = subtitle.attributes.files[0];
+            const attributes = subtitle.attributes;
+            
+            // Debug: Log para ver la estructura de datos
+            console.log(`Subtitle ${index}:`, {
+              id: subtitle.id,
+              fileId: file.file_id,
+              fileName: file.file_name,
+              url: attributes.url
+            });
+            
+            // Incluir el file_id en la URL para usarlo directamente
+            // Usar una URL directa sin pasar por el proxy
+            const downloadUrl = `/api/subtitles/opensubtitles-download/${subtitle.id}/${file.file_id}`;
+            
+            subtitles.push({
+              id: subtitle.id,
+              language: attributes.language,
+              languageName: getLanguageName(attributes.language),
+              filename: file.file_name,
+              downloadUrl: downloadUrl,
+              encoding: attributes.encoding || 'utf-8',
+              downloads: attributes.download_count || 0,
+              rating: attributes.rating || 0,
+              isDemo: false
+            });
+          }
+        } catch (itemError) {
+          console.error(`Error processing subtitle item ${index}:`, itemError);
+        }
+      });
+    }
+    
+    console.log(`Successfully processed ${subtitles.length} subtitles`);
+    
+  } catch (error) {
+    console.error('OpenSubtitles API error:', error);
+    throw error;
+  }
+  
+  return subtitles;
+}
+
 // Función auxiliar para obtener nombres de idiomas
-function getLanguageName(lang) {
-  const languages = {
+function getLanguageName(langCode) {
+  const languageNames = {
+    'es': 'Español',
+    'en': 'English',
     'fr': 'Français',
     'de': 'Deutsch',
     'it': 'Italiano',
     'pt': 'Português',
     'ru': 'Русский',
+    'ja': '日本語',
+    'ko': '한국어',
     'zh': '中文'
   };
-  return languages[lang] || lang.toUpperCase();
+  
+  return languageNames[langCode] || langCode.toUpperCase();
+}
+
+// Function to convert SRT format to WebVTT format for browser compatibility
+function convertSrtToWebVtt(srtContent) {
+  // Start with WEBVTT header
+  let webvtt = 'WEBVTT\n\n';
+  
+  // Split content into subtitle blocks
+  const blocks = srtContent.trim().split(/\n\s*\n/);
+  
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length >= 3) {
+      // Skip the subtitle number (first line)
+      const timeLine = lines[1];
+      const textLines = lines.slice(2);
+      
+      // Convert time format from SRT (00:00:00,000) to WebVTT (00:00:00.000)
+      const webvttTime = timeLine.replace(/,/g, '.');
+      
+      // Add the subtitle entry
+      webvtt += webvttTime + '\n';
+      webvtt += textLines.join('\n') + '\n\n';
+    }
+  }
+  
+  return webvtt;
+}
+
+// ...existing code...
+
+// API para hacer proxy de subtítulos y evitar problemas de CORS
+app.get('/api/subtitles/proxy', async (req, res) => {
+  const { url } = req.query;
+
+  if (!url) {
+    return res.status(400).json({ message: 'URL is required' });
+  }
+
+  console.log(`Proxying subtitle from: ${url}`);
+
+  try {
+    // Verificar si es una URL interna (demo o opensubtitles)
+    if (url.startsWith('/api/subtitles/demo')) {
+      // Redirigir a la ruta demo interna
+      const demoParams = new URL(url, 'http://localhost').search;
+      return res.redirect(`/api/subtitles/demo${demoParams}`);
+    }
+    
+    if (url.startsWith('/api/subtitles/opensubtitles-download/')) {
+      // En lugar de redirigir, procesar directamente
+      console.log(`Processing OpenSubtitles download directly: ${url}`);
+      
+      // Extraer subtitleId y fileId de la URL
+      const urlParts = url.split('/');
+      const subtitleId = urlParts[4]; // /api/subtitles/opensubtitles-download/SUBTITLE_ID/FILE_ID
+      const fileId = urlParts[5];
+      
+      if (!subtitleId || !fileId) {
+        return res.status(400).json({ message: 'Invalid OpenSubtitles URL format' });
+      }
+      
+      // Redirigir internamente al endpoint
+      return res.redirect(`/api/subtitles/opensubtitles-download/${subtitleId}/${fileId}`);
+    }
+
+    // Para URLs externas, verificar que sean válidas
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return res.status(400).json({ 
+        message: 'Invalid URL format. URL must start with http:// or https://',
+        url: url
+      });
+    }
+
+    // Configurar headers basados en la fuente
+    const headers = {
+      'User-Agent': 'ATV v1.0',
+      'Accept': 'text/plain, text/vtt, application/x-subrip, */*',
+      'Accept-Encoding': 'identity'
+    };
+
+    // Si es una URL de OpenSubtitles, agregar autenticación
+    if (url.includes('opensubtitles.com') && OPENSUBTITLES_API_KEY) {
+      headers['Api-Key'] = OPENSUBTITLES_API_KEY;
+      console.log('Added OpenSubtitles API key to headers');
+    }
+
+    // Para URLs externas, intentar fetch con headers apropiados
+    const response = await fetch(url, {
+      headers: headers,
+      timeout: 15000 // 15 segundos de timeout
+    });
+    
+    console.log(`Response status: ${response.status} ${response.statusText}`);
+    console.log(`Response headers:`, Object.fromEntries(response.headers.entries()));
+    
+    if (!response.ok) {
+      console.error(`Failed to fetch subtitle: ${response.status} ${response.statusText}`);
+      
+      let errorMessage = 'Failed to fetch subtitle';
+      if (response.status === 404) {
+        errorMessage = 'Subtitle not found (404). The URL may be invalid or the subtitle may have been removed.';
+      } else if (response.status === 403) {
+        errorMessage = 'Access denied (403). The subtitle server does not allow access.';
+      } else if (response.status === 500) {
+        errorMessage = 'Subtitle server error (500). Try again later.';
+      } else {
+        errorMessage = `Subtitle server responded with ${response.status}: ${response.statusText}`;
+      }
+      
+      return res.status(response.status).json({ 
+        message: errorMessage,
+        originalStatus: response.status,
+        originalUrl: url
+      });
+    }
+    
+    // Obtener el contenido del subtítulo
+    const content = await response.text();
+    console.log(`Subtitle content length: ${content.length} characters`);
+    
+    // Detectar si es SRT o VTT y establecer el content type apropiado
+    const isVTT = content.includes('WEBVTT') || url.includes('.vtt');
+    const contentType = isVTT ? 'text/vtt; charset=utf-8' : 'text/plain; charset=utf-8';
+    
+    // Establecer las cabeceras para indicar que es un archivo de subtítulos
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    // Si el contenido está vacío o es muy corto, considerarlo como error
+    if (!content || content.length < 10) {
+      console.error('Subtitle content is empty or too short');
+      return res.status(404).json({ 
+        message: 'Subtitle content not found or invalid',
+        contentLength: content.length
+      });
+    }
+
+    // Verificar si el contenido parece ser HTML (error page)
+    if (content.toLowerCase().includes('<html>') || content.toLowerCase().includes('<!doctype')) {
+      console.error('Received HTML instead of subtitle content');
+      return res.status(404).json({ 
+        message: 'Received HTML page instead of subtitle file. The URL may be incorrect.',
+        contentPreview: content.substring(0, 200)
+      });
+    }
+
+    // Enviar el contenido del subtítulo al cliente
+    res.send(content);
+
+  } catch (error) {
+    console.error('Error proxying subtitle:', error);
+    
+    let errorMessage = 'Error proxying subtitle';
+    if (error.name === 'AbortError' || error.code === 'ECONNABORTED') {
+      errorMessage = 'Request timeout. The subtitle server is taking too long to respond.';
+    } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+      errorMessage = 'Cannot connect to subtitle server. Check the URL or try again later.';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    res.status(500).json({ 
+      message: errorMessage,
+      error: error.message,
+      url: url
+    });
+  }
+});
+
+// API para generar subtítulos de demostración (solo para testing)
+app.get('/api/subtitles/demo', (req, res) => {
+  const { title, lang = 'es' } = req.query;
+  
+  if (!title) {
+    return res.status(400).json({ message: 'title parameter is required' });
+  }
+  
+  // Generar contenido SRT de ejemplo
+  const demoSubtitleContent = generateDemoSRT(title, lang);
+  
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Content-Disposition', `attachment; filename="${title}.${lang}.srt"`);
+  
+  res.send(demoSubtitleContent);
+});
+
+// Función para generar contenido SRT de demostración
+function generateDemoSRT(movieTitle, language) {
+  const messages = {
+    es: [
+      'Esta es una demostración de subtítulos.',
+      `Estás viendo: ${movieTitle}`,
+      'Los subtítulos se cargarían desde fuentes reales',
+      'como OpenSubtitles, Subscene, etc.',
+      'Esta función está lista para integración.',
+      'Fin de la demostración.'
+    ],
+    en: [
+      'This is a subtitle demonstration.',
+      `You are watching: ${movieTitle}`,
+      'Subtitles would be loaded from real sources',
+      'like OpenSubtitles, Subscene, etc.',
+      'This feature is ready for integration.',
+      'End of demonstration.'
+    ]
+  };
+  
+  const lines = messages[language] || messages['en'];
+  let srtContent = '';
+  
+  lines.forEach((line, index) => {
+    const startTime = index * 3; // 3 segundos por línea
+    const endTime = startTime + 3;
+    
+    srtContent += `${index + 1}\n`;
+    srtContent += `${formatSRTTime(startTime)} --> ${formatSRTTime(endTime)}\n`;
+    srtContent += `${line}\n\n`;
+  });
+  
+  return srtContent;
+}
+
+// Función auxiliar para formatear tiempo en formato SRT
+function formatSRTTime(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  const milliseconds = 0;
+  
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${milliseconds.toString().padStart(3, '0')}`;
 }
 
 // API para subir subtítulos manualmente
@@ -821,6 +1132,33 @@ app.post('/api/subtitles/upload', upload.single('subtitle'), (req, res) => {
   };
 
   res.json(subtitleInfo);
+});
+
+// API para actuar como proxy y descargar subtítulos, evitando problemas de CORS
+app.get('/api/subtitles/download', async (req, res) => {
+  const { url } = req.query;
+
+  if (!url) {
+    return res.status(400).json({ message: 'Subtitle URL is required' });
+  }
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch subtitle from external source: ${response.statusText}`);
+    }
+    
+    // Establecer las cabeceras adecuadas para que el cliente lo interprete como un archivo de texto
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    // Enviar el contenido del subtítulo al cliente
+    response.body.pipe(res);
+
+  } catch (error) {
+    console.error('Error proxying subtitle:', error);
+    res.status(500).json({ message: 'Error proxying subtitle' });
+  }
 });
 
 // Ruta para hacer streaming de video a través de WebTorrent
@@ -955,6 +1293,151 @@ const additionalTrackers = [
   'udp://open.stealth.si:80/announce',
   'udp://bt.xxx-tracker.com:2710/announce'
 ];
+
+// Cache para subtítulos descargados (evitar descargas duplicadas)
+const subtitleCache = new Map();
+
+// API específica para descargar subtítulos de OpenSubtitles
+app.get('/api/subtitles/opensubtitles-download/:subtitleId/:fileId', async (req, res) => {
+  const { subtitleId, fileId } = req.params;
+  
+  if (!OPENSUBTITLES_API_KEY) {
+    return res.status(500).json({ message: 'OpenSubtitles API key not configured' });
+  }
+  
+  // Crear clave de caché
+  const cacheKey = `${subtitleId}-${fileId}`;
+  
+  // Verificar si ya está en caché (válido por 1 hora)
+  if (subtitleCache.has(cacheKey)) {
+    const cached = subtitleCache.get(cacheKey);
+    const isExpired = Date.now() - cached.timestamp > 3600000; // 1 hora
+    
+    if (!isExpired) {
+      console.log(`Serving cached subtitle: ${subtitleId} with file_id: ${fileId}`);
+      
+      // Establecer headers apropiados
+      res.setHeader('Content-Type', 'text/vtt; charset=utf-8');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      
+      return res.send(cached.content);
+    } else {
+      // Limpiar caché expirado
+      subtitleCache.delete(cacheKey);
+    }
+  }
+  
+  try {
+    console.log(`Downloading OpenSubtitles subtitle: ${subtitleId} with file_id: ${fileId}`);
+    
+    // Usar directamente el file_id que ya tenemos
+    const downloadResponse = await fetch(`https://api.opensubtitles.com/api/v1/download`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Api-Key': OPENSUBTITLES_API_KEY,
+        'User-Agent': 'ATV v1.0'
+      },
+      body: JSON.stringify({
+        file_id: parseInt(fileId)
+      })
+    });
+    
+    if (!downloadResponse.ok) {
+      const errorText = await downloadResponse.text();
+      console.error(`OpenSubtitles download error: ${downloadResponse.status} - ${errorText}`);
+      
+      // Manejar errores específicos
+      if (downloadResponse.status === 406) {
+        return res.status(406).json({ 
+          message: 'OpenSubtitles download quota exceeded. Please try again later or upgrade your OpenSubtitles account.',
+          details: errorText
+        });
+      } else if (downloadResponse.status === 402) {
+        return res.status(402).json({ 
+          message: 'OpenSubtitles requires payment for downloads. Please upgrade your account.',
+          details: errorText
+        });
+      } else if (downloadResponse.status === 429) {
+        return res.status(429).json({ 
+          message: 'Too many requests. Please wait a moment and try again.',
+          details: errorText
+        });
+      }
+      
+      return res.status(downloadResponse.status).json({ 
+        message: `OpenSubtitles download failed: ${downloadResponse.status}`,
+        details: errorText
+      });
+    }
+    
+    const downloadData = await downloadResponse.json();
+    console.log('Download response:', downloadData);
+    
+    if (!downloadData.link) {
+      return res.status(404).json({ message: 'Download link not available' });
+    }
+    
+    // Descargar el archivo del enlace temporal
+    const fileResponse = await fetch(downloadData.link, {
+      headers: {
+        'User-Agent': 'ATV v1.0',
+        'Accept': 'text/plain, application/x-subrip, */*'
+      }
+    });
+    
+    if (!fileResponse.ok) {
+      console.error(`Failed to download file from link: ${fileResponse.status}`);
+      return res.status(fileResponse.status).json({ 
+        message: `Failed to download subtitle file: ${fileResponse.status}` 
+      });
+    }
+    
+    const content = await fileResponse.text();
+    console.log(`Successfully downloaded subtitle content: ${content.length} characters`);
+    
+    // Convert SRT to WebVTT if needed
+    let processedContent = content;
+    
+    // Check if content is SRT format and convert to WebVTT
+    if (content.includes('-->') && !content.startsWith('WEBVTT')) {
+      processedContent = convertSrtToWebVtt(content);
+      console.log('Converted SRT to WebVTT format');
+    }
+    
+    // Guardar en caché
+    subtitleCache.set(cacheKey, {
+      content: processedContent,
+      timestamp: Date.now()
+    });
+    
+    // Establecer headers apropiados para evitar problemas de CORS
+    res.setHeader('Content-Type', 'text/vtt; charset=utf-8');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    
+    res.send(processedContent);
+    
+  } catch (error) {
+    console.error('Error downloading OpenSubtitles subtitle:', error);
+    res.status(500).json({ 
+      message: 'Error downloading subtitle: ' + error.message 
+    });
+  }
+});
+
+// Manejar preflight requests para OpenSubtitles
+app.options('/api/subtitles/opensubtitles-download/:subtitleId/:fileId', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.status(200).end();
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
