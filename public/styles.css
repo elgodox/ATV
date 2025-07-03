@@ -1176,30 +1176,66 @@ h1 {
   opacity: 0.7;
 }
 
-/* Responsive para móviles */
-@media (max-width: 768px) {
-  .video-modal-content {
-    width: 98%;
-    margin: 1% auto;
-    padding: 15px;
-  }
-  
-  .subtitle-search,
-  .subtitle-upload {
-    flex-direction: column;
-  }
-  
-  .subtitle-controls-buttons {
-    flex-direction: column;
-  }
-  
-  .video-file-item {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .video-file-button {
-    margin-top: 10px;
-    align-self: stretch;
-  }
+/* Estilos para la nueva interfaz de progreso de torrents */
+.torrent-stat-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+}
+
+.torrent-stat-row span {
+  flex: 1;
+  text-align: center;
+  color: #ccc;
+  padding: 2px 5px;
+}
+
+.progress-bar-container {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  gap: 10px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 20px;
+  background-color: #333;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #45a049);
+  transition: width 0.3s ease;
+  border-radius: 10px;
+}
+
+#progress-percentage {
+  min-width: 40px;
+  text-align: center;
+  font-weight: bold;
+  color: #4caf50;
+}
+
+/* Mejorar la visualización de seeds/leechers */
+#torrent-seeds {
+  color: #4caf50 !important;
+  font-weight: bold;
+}
+
+#torrent-leechers {
+  color: #ff9800 !important;
+  font-weight: bold;
+}
+
+#torrent-download-speed {
+  color: #2196f3 !important;
+}
+
+#torrent-upload-speed {
+  color: #9c27b0 !important;
 }

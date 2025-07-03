@@ -112,9 +112,27 @@
         <div id="torrent-progress-info" class="torrent-progress-section">
           <div id="torrent-stats" style="display: none;">
             <div class="progress-info">
-              <span id="torrent-peers">Peers: 0</span>
-              <span id="torrent-progress">Progress: 0%</span>
-              <span id="torrent-download-speed">Speed: 0 kB/s</span>
+              <div class="torrent-stat-row">
+                <span id="torrent-seeds">Seeds: 0</span>
+                <span id="torrent-leechers">Leechers: 0</span>
+                <span id="torrent-peers">Peers: 0</span>
+              </div>
+              <div class="torrent-stat-row">
+                <span id="torrent-progress">Progress: 0%</span>
+                <span id="torrent-download-speed">↓ 0 kB/s</span>
+                <span id="torrent-upload-speed">↑ 0 kB/s</span>
+              </div>
+              <div class="torrent-stat-row">
+                <span id="torrent-downloaded">Downloaded: 0 MB</span>
+                <span id="torrent-uploaded">Uploaded: 0 MB</span>
+                <span id="torrent-time-remaining">ETA: --:--</span>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar">
+                  <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+                <span id="progress-percentage">0%</span>
+              </div>
             </div>
             <div id="player-loading-indicator" class="loading-spinner" style="display: none;">Loading...</div>
             <div id="player-status-message" style="display: none;"></div>

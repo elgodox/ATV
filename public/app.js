@@ -11,6 +11,23 @@ let stallTimeoutId = null;
 window.localSubtitleBlobUrls = []; // Initialize for storing local subtitle blob URLs
 let currentTorrentInfo = null;
 let currentVideoPlayer = null;
+let statsInterval = null; // Variable global para el interval de estadísticas
+
+// Variables para controlar solicitudes concurrentes
+let pendingTorrentRequests = new Map();
+
+// Función auxiliar para formatear bytes a tamaños legibles
+function formatBytes(bytes, decimals = 2) {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
 
 // Notification System
 function showNotification(message, type = 'info', duration = 4000) {
@@ -1278,7 +1295,8 @@ window.showTorrentOptions = function(magnetLink, movieTitle) {
 
   document.getElementById('ver-online').onclick = function() {
     document.body.removeChild(modal);
-    startPlayer(magnetLink, movieTitle);
+    // Usar la nueva función que incluye información de seeds/leechers
+    watchOnlineWithStats(magnetLink, movieTitle);
   };
   document.getElementById('descargar-torrent').onclick = function() {
     document.body.removeChild(modal);
@@ -1378,21 +1396,209 @@ async function watchOnline(magnetURI, movieTitle) {
   }
 }
 
-// Función auxiliar para formatear bytes
-function formatBytes(bytes, decimals = 2) {
-  if (bytes === 0) return '0 Bytes';
+// Nueva función para ver online con estadísticas mejoradas
+async function watchOnlineWithStats(magnetURI, movieTitle) {
+  // Extraer hash del torrent para identificar solicitudes duplicadas
+  const torrentHash = magnetURI.match(/xt=urn:btih:([^&]+)/i)?.[1] || magnetURI;
+  
+  // Verificar si ya hay una solicitud pendiente para este torrent
+  if (pendingTorrentRequests.has(torrentHash)) {
+    showNotification('Ya hay una solicitud en proceso para este torrent. Espera a que termine.', 'warning', 3000);
+    return;
+  }
+  
+  // Marcar solicitud como pendiente
+  pendingTorrentRequests.set(torrentHash, true);
+  
+  // Mostrar modal de selección de archivos
+  document.getElementById('file-selection-modal').style.display = 'block';
+  document.getElementById('torrent-loading').style.display = 'block';
+  document.getElementById('file-list').style.display = 'none';
 
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  let retryCount = 0;
+  const maxRetries = 3; // Reducir a 3 reintentos
+  let currentTimeout = 5000; // Timeout inicial de 5 segundos
 
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const attemptExplore = async () => {
+    try {
+      // Mostrar mensaje de carga más detallado
+      const retryText = retryCount > 0 ? ` (Intento ${retryCount + 1}/${maxRetries + 1})` : '';
+      const statusMessages = [
+        'Conectando con la red torrent...',
+        'Buscando peers disponibles...',
+        'Descargando metadatos del torrent...',
+        'Verificando archivos del torrent...'
+      ];
+      
+      const statusMessage = statusMessages[Math.min(retryCount, statusMessages.length - 1)];
+      
+      document.getElementById('torrent-loading').innerHTML = `
+        <p>🔍 Explorando torrent...</p>
+        <div class="loading-spinner"></div>
+        <p id="loading-status">${statusMessage}${retryText}</p>
+        <p style="font-size: 0.9em; color: #ccc; margin-top: 10px;">
+          ⏱️ Los torrents pueden tardar 30-60 segundos en cargar dependiendo de la cantidad de peers disponibles.
+        </p>
+        <p style="font-size: 0.8em; color: #888; margin-top: 5px;">
+          💡 Si un torrent no carga, intenta con otra calidad (720p suele ser más rápido que 1080p).
+        </p>
+      `;
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // Aumentar a 30 segundos de timeout por request
+
+      const response = await fetch('/api/torrent/explore', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ magnetURI }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        
+        // Si es un error 503 (torrent cargando), reintentar con backoff exponencial
+        if (response.status === 503 && retryCount < maxRetries) {
+          retryCount++;
+          currentTimeout = Math.min(currentTimeout * 1.2, 8000); // Máximo 8 segundos
+          
+          document.getElementById('loading-status').textContent = 
+            `⏳ El torrent está cargando, reintentando en ${Math.ceil(currentTimeout/1000)} segundos... (${retryCount}/${maxRetries + 1})`;
+          
+          setTimeout(attemptExplore, currentTimeout);
+          return;
+        }
+        
+        // Si es timeout (408), sugerir otro torrent
+        if (response.status === 408) {
+          throw new Error('⏰ El torrent está tardando demasiado en responder. Puede ser un torrent lento o sin peers activos. Intenta con otra calidad (720p suele ser más rápido).');
+        }
+        
+        throw new Error(errorData.message || 'Error explorando el torrent');
+      }
+
+      const torrentInfo = await response.json();
+      currentTorrentInfo = torrentInfo;
+
+      // Limpiar solicitud pendiente
+      pendingTorrentRequests.delete(torrentHash);
+
+      // Ocultar loading y mostrar lista de archivos
+      document.getElementById('torrent-loading').style.display = 'none';
+      document.getElementById('file-list').style.display = 'block';
+
+      // Mostrar información detallada del torrent
+      const torrentInfoHtml = `
+        <div class="torrent-info">
+          <h4>✅ Torrent Cargado Exitosamente:</h4>
+          <p><strong>📝 Nombre:</strong> ${torrentInfo.name}</p>
+          <p><strong>📦 Tamaño:</strong> ${formatBytes(torrentInfo.length)}</p>
+          <p><strong>🌱 Seeds:</strong> <span style="color: #4caf50; font-weight: bold;">${torrentInfo.seeds || 0}</span></p>
+          <p><strong>📥 Leechers:</strong> <span style="color: #ff9800; font-weight: bold;">${torrentInfo.leechers || 0}</span></p>
+          <p><strong>👥 Peers totales:</strong> <span style="color: #2196f3;">${torrentInfo.numPeers}</span></p>
+          <p><strong>📊 Progreso:</strong> <span style="color: #4caf50;">${(torrentInfo.progress * 100).toFixed(1)}%</span></p>
+          <p><strong>⬇️ Velocidad descarga:</strong> <span style="color: #2196f3;">${formatSpeed(torrentInfo.downloadSpeed)}</span></p>
+          <p><strong>⬆️ Velocidad subida:</strong> <span style="color: #9c27b0;">${formatSpeed(torrentInfo.uploadSpeed)}</span></p>
+        </div>
+      `;
+
+      // Mostrar archivos de video disponibles
+      const videoFilesList = document.getElementById('video-files-list');
+      videoFilesList.innerHTML = torrentInfoHtml;
+
+      if (torrentInfo.videoFiles.length === 0) {
+        videoFilesList.innerHTML += `
+          <div style="color: #ff4444; margin-top: 15px; padding: 15px; background: #2a1f1f; border-radius: 8px;">
+            <p><strong>⚠️ No se encontraron archivos de video en este torrent.</strong></p>
+            <p>Este torrent puede contener otros tipos de archivos. Intenta con otro torrent.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const videoFilesHtml = '<h3>🎬 Archivos de Video Disponibles:</h3>';
+      videoFilesList.innerHTML += videoFilesHtml;
+
+      torrentInfo.videoFiles.forEach((file, index) => {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'video-file-item';
+        
+        const fileSize = formatBytes(file.length);
+        
+        fileItem.innerHTML = `
+          <div class="video-file-info">
+            <div class="video-file-name">🎥 ${file.name}</div>
+            <div class="video-file-size">📦 ${fileSize}</div>
+          </div>
+          <button class="video-file-button" onclick="playVideoFileWithStats(${file.index})" data-file-index="${file.index}">
+            ▶️ Reproducir
+          </button>
+        `;
+        
+        videoFilesList.appendChild(fileItem);
+      });
+
+      showNotification('¡Torrent cargado exitosamente! 🎉 Selecciona un archivo para reproducir.', 'success', 4000);
+
+    } catch (error) {
+      console.error('Error explorando torrent:', error);
+      
+      // Limpiar solicitud pendiente en caso de error
+      pendingTorrentRequests.delete(torrentHash);
+      
+      let errorMessage = error.message;
+      let suggestions = '';
+      
+      if (error.name === 'AbortError') {
+        errorMessage = '⏰ La petición fue cancelada por timeout (30 segundos).';
+        suggestions = 'El torrent puede estar muy lento o sin peers activos. Intenta con otra calidad.';
+      } else if (error.message.includes('503')) {
+        errorMessage = '⏳ El torrent está tardando en cargar.';
+        suggestions = 'Esto es normal para algunos torrents. Puedes intentar nuevamente o probar con otra calidad.';
+      } else if (error.message.includes('timeout') || error.message.includes('408')) {
+        errorMessage = '⏰ El torrent está tardando demasiado en responder.';
+        suggestions = 'Puede ser un torrent lento o sin peers activos. Te recomendamos probar con otra calidad (720p en lugar de 1080p, por ejemplo).';
+      } else if (error.message.includes('No peers found')) {
+        errorMessage = '👥 No se encontraron peers para este torrent.';
+        suggestions = 'El torrent puede estar muerto o ser muy raro. Intenta con otra calidad o otra fuente.';
+      }
+      
+      document.getElementById('torrent-loading').innerHTML = `
+        <div style="color: #ff4444; text-align: center;">
+          <h4>❌ Error explorando el torrent</h4>
+          <p><strong>Error:</strong> ${errorMessage}</p>
+          ${suggestions ? `<p style="color: #ccc; margin-top: 10px;"><strong>💡 Sugerencia:</strong> ${suggestions}</p>` : ''}
+          <div style="margin-top: 20px;">
+            <button onclick="closeFileSelectionModal()" style="padding: 8px 16px; background-color: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">❌ Cerrar</button>
+            <button onclick="watchOnlineWithStats('${magnetURI}', '${movieTitle}')" style="padding: 8px 16px; background-color: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer;">🔄 Reintentar</button>
+          </div>
+        </div>
+      `;
+      showNotification('Error explorando torrent: ' + errorMessage, 'error', 6000);
+    }
+  };
+
+  // Iniciar el proceso de exploración
+  attemptExplore();
 }
 
-// Función para reproducir un archivo de video específico
-function playVideoFile(fileIndex) {
+// Función auxiliar para formatear velocidad
+function formatSpeed(bytesPerSecond) {
+  if (!bytesPerSecond || bytesPerSecond === 0) return '0 B/s';
+  
+  const k = 1024;
+  const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+  const i = Math.floor(Math.log(bytesPerSecond) / Math.log(k));
+  
+  return parseFloat((bytesPerSecond / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Nueva función para reproducir archivo with estadísticas en tiempo real
+function playVideoFileWithStats(fileIndex) {
   if (!currentTorrentInfo) {
     alert('Error: Información del torrent no disponible');
     return;
@@ -1407,25 +1613,40 @@ function playVideoFile(fileIndex) {
   const videoPlayer = document.getElementById('video-player');
   currentVideoPlayer = videoPlayer;
 
-  // Mostrar indicador de carga
-  const loadingIndicator = document.createElement('div');
-  loadingIndicator.id = 'video-loading-indicator';
-  loadingIndicator.innerHTML = `
-    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 8px; text-align: center;">
-      <div class="loading-spinner" style="margin: 0 auto 10px;"></div>
-      <p>Cargando video...</p>
-      <p id="video-loading-status">Preparando stream...</p>
-    </div>
-  `;
-  loadingIndicator.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; background: rgba(0,0,0,0.5);';
-  
-  const videoContainer = document.getElementById('video-player-container');
-  videoContainer.style.position = 'relative';
-  videoContainer.appendChild(loadingIndicator);
-
   // Configurar la URL del stream
   const streamUrl = `/api/torrent/stream/${currentTorrentInfo.infoHash}/${fileIndex}`;
   videoPlayer.src = streamUrl;
+
+  // Mostrar y configurar estadísticas
+  const torrentStatsDiv = document.getElementById('torrent-stats');
+  if (torrentStatsDiv) {
+    torrentStatsDiv.style.display = 'block';
+  }
+
+  // Inicializar estadísticas
+  updateTorrentStats(currentTorrentInfo);
+
+  // Limpiar interval anterior si existe
+  if (statsInterval) {
+    clearInterval(statsInterval);
+  }
+
+  // Configurar actualización periódica de estadísticas
+  statsInterval = setInterval(() => {
+    updateTorrentStatsFromServer(currentTorrentInfo.infoHash);
+  }, 2000); // Actualizar cada 2 segundos
+
+  // Limpiar interval cuando se cierre el modal
+  const videoModal = document.getElementById('video-modal');
+  const originalCloseFunction = window.closeVideoModal;
+  window.closeVideoModal = function() {
+    if (statsInterval) {
+      clearInterval(statsInterval);
+      statsInterval = null;
+    }
+    if (originalCloseFunction) originalCloseFunction();
+    window.closeVideoModal = originalCloseFunction; // Restaurar función original
+  };
 
   // Limpiar subtítulos anteriores
   clearSubtitles();
@@ -1436,43 +1657,10 @@ function playVideoFile(fileIndex) {
   // Configurar controles de subtítulos
   setupSubtitleControls();
 
-  // Manejar eventos del video
-  videoPlayer.addEventListener('loadstart', () => {
-    document.getElementById('video-loading-status').textContent = 'Iniciando descarga...';
-  });
+  // Configurar eventos del reproductor
+  setupVideoPlayerEvents();
 
-  videoPlayer.addEventListener('progress', () => {
-    if (videoPlayer.buffered.length > 0) {
-      const buffered = (videoPlayer.buffered.end(0) / videoPlayer.duration * 100).toFixed(1);
-      document.getElementById('video-loading-status').textContent = `Buffer: ${buffered}%`;
-    }
-  });
-
-  videoPlayer.addEventListener('canplay', () => {
-    // Remover indicador de carga cuando el video puede reproducirse
-    const loadingIndicator = document.getElementById('video-loading-indicator');
-    if (loadingIndicator) {
-      loadingIndicator.remove();
-    }
-  });
-
-  videoPlayer.addEventListener('error', (e) => {
-    console.error('Error en el reproductor de video:', e);
-    const loadingIndicator = document.getElementById('video-loading-indicator');
-    if (loadingIndicator) {
-      loadingIndicator.innerHTML = `
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255,0,0,0.8); color: white; padding: 20px; border-radius: 8px; text-align: center;">
-          <p>Error cargando el video</p>
-          <button onclick="closeVideoModal()" style="margin-top: 10px; padding: 8px 16px; background-color: #fff; color: #333; border: none; border-radius: 4px; cursor: pointer;">Cerrar</button>
-        </div>
-      `;
-    }
-  });
-
-  // Iniciar progreso tracking
-  startProgressTracking();
-
-  videoPlayer.load();
+  showNotification('Iniciando reproducción con estadísticas en tiempo real', 'info', 3000);
 }
 
 // Función para rastrear el progreso del torrent
@@ -1794,6 +1982,159 @@ function closeVideoModal() {
 // Función para cerrar el modal de selección de archivos
 function closeFileSelectionModal() {
   document.getElementById('file-selection-modal').style.display = 'none';
+  // Limpiar solicitudes pendientes al cerrar
+  pendingTorrentRequests.clear();
+}
+
+// Función para actualizar estadísticas del torrent
+function updateTorrentStats(torrentInfo) {
+  // Actualizar seeds y leechers
+  const seedsElement = document.getElementById('torrent-seeds');
+  const leechersElement = document.getElementById('torrent-leechers');
+  const peersElement = document.getElementById('torrent-peers');
+  
+  if (seedsElement) seedsElement.textContent = `Seeds: ${torrentInfo.seeds || 0}`;
+  if (leechersElement) leechersElement.textContent = `Leechers: ${torrentInfo.leechers || 0}`;
+  if (peersElement) peersElement.textContent = `Peers: ${torrentInfo.numPeers || 0}`;
+
+  // Actualizar progreso
+  const progressElement = document.getElementById('torrent-progress');
+  const progressBarFill = document.getElementById('progress-bar-fill');
+  const progressPercentage = document.getElementById('progress-percentage');
+  
+  const progress = (torrentInfo.progress * 100).toFixed(1);
+  if (progressElement) progressElement.textContent = `Progress: ${progress}%`;
+  if (progressBarFill) progressBarFill.style.width = `${progress}%`;
+  if (progressPercentage) progressPercentage.textContent = `${progress}%`;
+
+  // Actualizar velocidades
+  const downloadSpeedElement = document.getElementById('torrent-download-speed');
+  const uploadSpeedElement = document.getElementById('torrent-upload-speed');
+  
+  if (downloadSpeedElement) downloadSpeedElement.textContent = `↓ ${formatSpeed(torrentInfo.downloadSpeed)}`;
+  if (uploadSpeedElement) uploadSpeedElement.textContent = `↑ ${formatSpeed(torrentInfo.uploadSpeed)}`;
+
+  // Actualizar datos descargados/subidos
+  const downloadedElement = document.getElementById('torrent-downloaded');
+  const uploadedElement = document.getElementById('torrent-uploaded');
+  const timeRemainingElement = document.getElementById('torrent-time-remaining');
+  
+  if (downloadedElement) downloadedElement.textContent = `Downloaded: ${formatBytes(torrentInfo.downloaded || 0)}`;
+  if (uploadedElement) uploadedElement.textContent = `Uploaded: ${formatBytes(torrentInfo.uploaded || 0)}`;
+  if (timeRemainingElement) {
+    const eta = torrentInfo.timeRemaining ? formatTime(torrentInfo.timeRemaining) : '--:--';
+    timeRemainingElement.textContent = `ETA: ${eta}`;
+  }
+}
+
+// Función para obtener estadísticas actualizadas del servidor
+async function updateTorrentStatsFromServer(infoHash) {
+  try {
+    const response = await fetch(`/api/torrent/stats/${infoHash}`);
+    if (response.ok) {
+      const stats = await response.json();
+      updateTorrentStats(stats);
+    } else if (response.status === 503) {
+      console.warn('Torrent no está listo para estadísticas');
+    } else {
+      console.warn('No se pudieron obtener estadísticas actualizadas del torrent');
+    }
+  } catch (error) {
+    // Si hay error de conexión, limpiar el interval para evitar spam
+    if (error.message.includes('Failed to fetch') || error.message.includes('net::ERR_CONNECTION_REFUSED')) {
+      if (statsInterval) {
+        clearInterval(statsInterval);
+        statsInterval = null;
+        console.warn('Servidor desconectado, pausando actualización de estadísticas');
+      }
+    } else {
+      console.error('Error obteniendo estadísticas del torrent:', error);
+    }
+  }
+}
+
+// Función auxiliar para formatear tiempo
+function formatTime(seconds) {
+  if (!seconds || seconds === Infinity) return '--:--';
+  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  } else {
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  }
+}
+
+// Función para configurar eventos del reproductor de video
+function setupVideoPlayerEvents() {
+  const videoPlayer = document.getElementById('video-player');
+  const playerLoadingIndicator = document.getElementById('player-loading-indicator');
+  const playerStatusMessage = document.getElementById('player-status-message');
+  
+  if (!videoPlayer) return;
+
+  // Mostrar indicador de carga inicial
+  if (playerLoadingIndicator) {
+    playerLoadingIndicator.textContent = 'Cargando video...';
+    playerLoadingIndicator.style.display = 'block';
+  }
+
+  videoPlayer.addEventListener('loadstart', () => {
+    if (playerStatusMessage) {
+      playerStatusMessage.textContent = 'Iniciando descarga...';
+      playerStatusMessage.style.display = 'block';
+    }
+  });
+
+  videoPlayer.addEventListener('progress', () => {
+    if (videoPlayer.buffered.length > 0) {
+      const buffered = (videoPlayer.buffered.end(0) / videoPlayer.duration * 100).toFixed(1);
+      if (playerStatusMessage) {
+        playerStatusMessage.textContent = `Buffer: ${buffered}%`;
+      }
+    }
+  });
+
+  videoPlayer.addEventListener('canplay', () => {
+    if (playerLoadingIndicator) {
+      playerLoadingIndicator.style.display = 'none';
+    }
+    if (playerStatusMessage) {
+      playerStatusMessage.textContent = 'Listo para reproducir';
+      setTimeout(() => {
+        playerStatusMessage.style.display = 'none';
+      }, 2000);
+    }
+    showNotification('Video listo para reproducir', 'success', 2000);
+  });
+
+  videoPlayer.addEventListener('error', (e) => {
+    if (playerLoadingIndicator) {
+      playerLoadingIndicator.style.display = 'none';
+    }
+    if (playerStatusMessage) {
+      playerStatusMessage.textContent = 'Error al cargar el video';
+      playerStatusMessage.style.display = 'block';
+    }
+    showNotification('Error al cargar el video', 'error');
+    console.error('Error del reproductor de video:', e);
+  });
+
+  videoPlayer.addEventListener('waiting', () => {
+    if (playerStatusMessage) {
+      playerStatusMessage.textContent = 'Buffering...';
+      playerStatusMessage.style.display = 'block';
+    }
+  });
+
+  videoPlayer.addEventListener('playing', () => {
+    if (playerStatusMessage) {
+      playerStatusMessage.style.display = 'none';
+    }
+  });
 }
 
 // Add test function to window for manual testing
@@ -1836,3 +2177,26 @@ async function testServerAPIs() {
 
 // Add to window for manual testing
 window.testServerAPIs = testServerAPIs;
+
+// Limpiar recursos al cerrar o navegar fuera de la página
+window.addEventListener('beforeunload', () => {
+  if (statsInterval) {
+    clearInterval(statsInterval);
+    statsInterval = null;
+  }
+  
+  // Limpiar solicitudes pendientes
+  pendingTorrentRequests.clear();
+  
+  // Limpiar URLs de blobs
+  if (window.localSubtitleBlobUrls) {
+    window.localSubtitleBlobUrls.forEach(url => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        // Ignorar errores al limpiar URLs
+      }
+    });
+    window.localSubtitleBlobUrls = [];
+  }
+});
