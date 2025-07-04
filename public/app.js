@@ -471,21 +471,28 @@ async function showDetails(id, type, movieCard) {
     originalDescription = dataOriginal.overview || "No description available in English.";
     spanishDescription = dataSpanish.overview || "No hay descripción disponible en español.";
 
-    // Mostrar el título con la traducción entre paréntesis y el toggle a la izquierda
+    // Mostrar el título con el nuevo switcher de idioma más intuitivo
     elements.modalTitle.innerHTML = `
   <div class="modal-header-content">
-    <span id="modal-title-text">${originalTitle} <span id="translated-title">(${spanishTitle})</span></span>
-    <div class="header-controls">
-      <div class="toggle-container">
-  <input type="checkbox" id="toggle-language" class="toggle" onclick="toggleDescriptionLanguage()">
-  <label for="toggle-language" class="toggle-switch"></label>
-</div>
-
+    <div class="modal-title-main">
+      <span id="modal-title-text">${originalTitle}</span>
+      <span id="translated-title" class="translated-title">(${spanishTitle})</span>
+    </div>
+    <div class="language-switcher">
+      <span class="current-language" id="current-lang">ES</span>
+      <button class="language-toggle-btn" onclick="toggleDescriptionLanguage()" id="lang-toggle-btn" title="Cambiar idioma">
+        ⇄
+      </button>
+    </div>
   </div>
 `;
 
-    // Mostrar la descripción en español inicialmente
-    elements.modalDescription.innerHTML = `<p id="description-text">${spanishDescription}</p>`;
+    // Mostrar la descripción en español inicialmente con el nuevo contenedor
+    elements.modalDescription.innerHTML = `
+      <div class="description-container">
+        <p id="description-text" class="description-text">${spanishDescription}</p>
+      </div>
+    `;
 
     // Intentar buscar tráiler en el servidor (primero YouTube, luego Vimeo)
 
@@ -593,21 +600,56 @@ async function fetchProvider(movieId, type) {
 }
 
 
-// Función para alternar entre la descripción en español y la descripción original
+// Variable para controlar el idioma actual
+let currentLanguage = 'es'; // Por defecto en español
+
+// Función para alternar entre idiomas con animación deslizante
 function toggleDescriptionLanguage() {
   const descriptionText = document.getElementById('description-text');
   const translatedTitle = document.getElementById('translated-title');
-  const toggleLanguage = document.getElementById('toggle-language');
+  const currentLangElement = document.getElementById('current-lang');
+  const toggleBtn = document.getElementById('lang-toggle-btn');
 
-  if (!toggleLanguage.checked) {
-    // Mostrar en español cuando el toggle está desactivado (es)
-    descriptionText.textContent = spanishDescription;
-    translatedTitle.textContent = `(${spanishTitle})`;
-  } else {
-    // Mostrar en inglés cuando el toggle está activado (en)
-    descriptionText.textContent = originalDescription;
-    translatedTitle.textContent = "";
-  }
+  // Añadir clase de animación de salida
+  descriptionText.classList.add('sliding-out');
+  
+  // Animación del botón
+  toggleBtn.style.transform = 'scale(0.8) rotateY(180deg)';
+  
+  setTimeout(() => {
+    if (currentLanguage === 'es') {
+      // Cambiar a inglés
+      currentLanguage = 'en';
+      descriptionText.textContent = originalDescription;
+      translatedTitle.textContent = `(${originalTitle})`;
+      translatedTitle.style.display = spanishTitle !== originalTitle ? 'inline' : 'none';
+      currentLangElement.textContent = 'EN';
+      toggleBtn.title = 'Switch to Spanish';
+    } else {
+      // Cambiar a español
+      currentLanguage = 'es';
+      descriptionText.textContent = spanishDescription;
+      translatedTitle.textContent = `(${spanishTitle})`;
+      translatedTitle.style.display = spanishTitle !== originalTitle ? 'inline' : 'none';
+      currentLangElement.textContent = 'ES';
+      toggleBtn.title = 'Switch to English';
+    }
+    
+    // Remover clase de salida y añadir de entrada
+    descriptionText.classList.remove('sliding-out');
+    descriptionText.classList.add('sliding-in');
+    
+    // Restaurar botón
+    setTimeout(() => {
+      toggleBtn.style.transform = 'scale(1) rotateY(0deg)';
+    }, 100);
+    
+    // Limpiar clases de animación
+    setTimeout(() => {
+      descriptionText.classList.remove('sliding-in');
+    }, 400);
+    
+  }, 150); // Tiempo para la animación de salida
 }
 
 
