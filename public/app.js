@@ -676,7 +676,7 @@ async function fetchTorrents(movieTitle) {
                 <span class="action-text">Ver Online</span>
               </button>
               <a class="action-button download-torrent" href="${magnetLink}" download>
-                <span class="action-icon">💾</span>
+                <span class="action-icon">🧲</span>
                 <span class="action-text">Descargar</span>
               </a>
             </div>
