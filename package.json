@@ -15,7 +15,12 @@
     "express": "^4.21.0",
     "multer": "^2.0.0",
     "node-fetch": "^2.7.0",
-    "webtorrent": "^2.6.8"
+    "webtorrent": "^2.6.10"
+  },
+  "overrides": {
+    "webtorrent": {
+      "ip": "2.0.1"
+    }
   },
   "description": ""
 }
