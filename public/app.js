@@ -471,28 +471,28 @@ async function showDetails(id, type, movieCard) {
     originalDescription = dataOriginal.overview || "No description available in English.";
     spanishDescription = dataSpanish.overview || "No hay descripción disponible en español.";
 
-    // Mostrar el título con el nuevo switcher de idioma más intuitivo
+    // Mostrar el título con la traducción entre paréntesis y el selector de idioma
     elements.modalTitle.innerHTML = `
   <div class="modal-header-content">
-    <div class="modal-title-main">
-      <span id="modal-title-text">${originalTitle}</span>
-      <span id="translated-title" class="translated-title">(${spanishTitle})</span>
-    </div>
-    <div class="language-switcher">
-      <span class="current-language" id="current-lang">ES</span>
-      <button class="language-toggle-btn" onclick="toggleDescriptionLanguage()" id="lang-toggle-btn" title="Cambiar idioma">
-        ⇄
-      </button>
+    <span id="modal-title-text">${originalTitle} <span id="translated-title">(${spanishTitle})</span></span>
+    <div class="header-controls">
+      <div class="language-selector">
+        <div class="language-option active" data-lang="es" onclick="switchLanguage('es')">
+          <span class="lang-code">ES</span>
+          <span class="lang-name">Español</span>
+        </div>
+        <div class="language-option" data-lang="en" onclick="switchLanguage('en')">
+          <span class="lang-code">EN</span>
+          <span class="lang-name">English</span>
+        </div>
+        <div class="language-slider"></div>
+      </div>
     </div>
   </div>
 `;
 
-    // Mostrar la descripción en español inicialmente con el nuevo contenedor
-    elements.modalDescription.innerHTML = `
-      <div class="description-container">
-        <p id="description-text" class="description-text">${spanishDescription}</p>
-      </div>
-    `;
+    // Mostrar la descripción en español inicialmente
+    elements.modalDescription.innerHTML = `<p id="description-text">${spanishDescription}</p>`;
 
     // Intentar buscar tráiler en el servidor (primero YouTube, luego Vimeo)
 
@@ -600,56 +600,47 @@ async function fetchProvider(movieId, type) {
 }
 
 
-// Variable para controlar el idioma actual
-let currentLanguage = 'es'; // Por defecto en español
+// Función para cambiar el idioma del modal
+function switchLanguage(language) {
+  const descriptionText = document.getElementById('description-text');
+  const translatedTitle = document.getElementById('translated-title');
+  const languageOptions = document.querySelectorAll('.language-option');
+  const languageSlider = document.querySelector('.language-slider');
+  
+  // Remover clase active de todas las opciones
+  languageOptions.forEach(option => option.classList.remove('active'));
+  
+  // Añadir clase active a la opción seleccionada
+  const selectedOption = document.querySelector(`[data-lang="${language}"]`);
+  selectedOption.classList.add('active');
+  
+  // Mover el slider
+  if (language === 'es') {
+    languageSlider.style.transform = 'translateX(0%)';
+    descriptionText.textContent = spanishDescription;
+    translatedTitle.textContent = `(${spanishTitle})`;
+  } else {
+    languageSlider.style.transform = 'translateX(100%)';
+    descriptionText.textContent = originalDescription;
+    translatedTitle.textContent = "";
+  }
+}
 
-// Función para alternar entre idiomas con animación deslizante
+// Función para alternar entre la descripción en español y la descripción original (mantener compatibilidad)
 function toggleDescriptionLanguage() {
   const descriptionText = document.getElementById('description-text');
   const translatedTitle = document.getElementById('translated-title');
-  const currentLangElement = document.getElementById('current-lang');
-  const toggleBtn = document.getElementById('lang-toggle-btn');
+  const toggleLanguage = document.getElementById('toggle-language');
 
-  // Añadir clase de animación de salida
-  descriptionText.classList.add('sliding-out');
-  
-  // Animación del botón
-  toggleBtn.style.transform = 'scale(0.8) rotateY(180deg)';
-  
-  setTimeout(() => {
-    if (currentLanguage === 'es') {
-      // Cambiar a inglés
-      currentLanguage = 'en';
-      descriptionText.textContent = originalDescription;
-      translatedTitle.textContent = `(${originalTitle})`;
-      translatedTitle.style.display = spanishTitle !== originalTitle ? 'inline' : 'none';
-      currentLangElement.textContent = 'EN';
-      toggleBtn.title = 'Switch to Spanish';
-    } else {
-      // Cambiar a español
-      currentLanguage = 'es';
-      descriptionText.textContent = spanishDescription;
-      translatedTitle.textContent = `(${spanishTitle})`;
-      translatedTitle.style.display = spanishTitle !== originalTitle ? 'inline' : 'none';
-      currentLangElement.textContent = 'ES';
-      toggleBtn.title = 'Switch to English';
-    }
-    
-    // Remover clase de salida y añadir de entrada
-    descriptionText.classList.remove('sliding-out');
-    descriptionText.classList.add('sliding-in');
-    
-    // Restaurar botón
-    setTimeout(() => {
-      toggleBtn.style.transform = 'scale(1) rotateY(0deg)';
-    }, 100);
-    
-    // Limpiar clases de animación
-    setTimeout(() => {
-      descriptionText.classList.remove('sliding-in');
-    }, 400);
-    
-  }, 150); // Tiempo para la animación de salida
+  if (!toggleLanguage.checked) {
+    // Mostrar en español cuando el toggle está desactivado (es)
+    descriptionText.textContent = spanishDescription;
+    translatedTitle.textContent = `(${spanishTitle})`;
+  } else {
+    // Mostrar en inglés cuando el toggle está activado (en)
+    descriptionText.textContent = originalDescription;
+    translatedTitle.textContent = "";
+  }
 }
 
 

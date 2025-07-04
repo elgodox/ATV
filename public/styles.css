@@ -703,105 +703,128 @@ h1 {
   width: 100%;
 }
 
-/* Contenedor de idioma más intuitivo */
-.language-switcher {
+/* Material UI Language Selector */
+.language-selector {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 12px;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  padding: 8px 16px;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 2px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.language-switcher:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-/* Botón de cambio de idioma */
-.language-toggle-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
+.language-option {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: 8px 12px;
   cursor: pointer;
+  border-radius: 8px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 14px;
+  z-index: 2;
+  min-width: 60px;
+}
+
+.language-option .lang-code {
+  font-size: 0.75rem;
   font-weight: 600;
-  transform-style: preserve-3d;
-}
-
-.language-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
-}
-
-.language-toggle-btn:active {
-  transform: scale(0.95);
-}
-
-/* Indicador de idioma actual */
-.current-language {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);
-  min-width: 20px;
-  text-align: center;
-}
-
-/* Contenedor de descripción con transición deslizante */
-.description-container {
-  position: relative;
-  overflow: hidden;
-  min-height: 60px;
-}
-
-.description-text {
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
-  transform: translateX(0);
-  opacity: 1;
-}
-
-.description-text.sliding-out {
-  transform: translateX(-100%);
-  opacity: 0;
-}
-
-.description-text.sliding-in {
-  transform: translateX(100%);
-  opacity: 0;
-  animation: slideInFromRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-@keyframes slideInFromRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* Título con transición suave */
-.modal-title-main {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.translated-title {
   color: rgba(255, 255, 255, 0.7);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: color 0.3s ease;
+}
+
+.language-option .lang-name {
+  font-size: 0.65rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.5);
+  transition: color 0.3s ease;
+  margin-top: 1px;
+}
+
+.language-option.active .lang-code {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.language-option.active .lang-name {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.language-option:hover:not(.active) .lang-code {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.language-option:hover:not(.active) .lang-name {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.language-slider {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 2px);
+  height: calc(100% - 8px);
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive styles for language selector */
+@media (max-width: 768px) {
+  .language-selector {
+    border-radius: 10px;
+    padding: 3px;
+  }
+  
+  .language-option {
+    padding: 6px 10px;
+    min-width: 50px;
+  }
+  
+  .language-option .lang-code {
+    font-size: 0.7rem;
+  }
+  
+  .language-option .lang-name {
+    font-size: 0.6rem;
+  }
+  
+  .language-slider {
+    border-radius: 7px;
+  }
+}
+
+@media (max-width: 480px) {
+  .language-selector {
+    border-radius: 8px;
+    padding: 2px;
+  }
+  
+  .language-option {
+    padding: 4px 8px;
+    min-width: 45px;
+  }
+  
+  .language-option .lang-code {
+    font-size: 0.65rem;
+  }
+  
+  .language-option .lang-name {
+    font-size: 0.55rem;
+  }
+  
+  .language-slider {
+    border-radius: 6px;
+  }
 }
 
 .movie-card .fa-star {
@@ -1727,57 +1750,3 @@ h1 {
   background: transparent;
   margin-top: 8px;
 }
-
-/* Language switcher responsive - Mobile */
-.language-switcher {
-  padding: 6px 12px;
-  gap: 8px;
-}
-
-.language-toggle-btn {
-  width: 28px;
-  height: 28px;
-  font-size: 12px;
-}
-
-.current-language {
-  font-size: 0.8rem;
-  min-width: 18px;
-}
-
-.modal-header-content {
-  flex-direction: column;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.modal-title-main {
-  order: 1;
-}
-
-.language-switcher {
-  order: 2;
-  align-self: flex-end;
-}
-
-/* Language switcher responsive - Tablet */
-  .language-switcher {
-    padding: 7px 14px;
-    gap: 10px;
-  }
-  
-  .language-toggle-btn {
-    width: 30px;
-    height: 30px;
-    font-size: 13px;
-  }
-  
-  .current-language {
-    font-size: 0.85rem;
-    min-width: 19px;
-  }
-  
-  .modal-header-content {
-    flex-direction: row;
-    align-items: center;
-  }
