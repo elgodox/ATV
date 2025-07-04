@@ -514,43 +514,71 @@ h1 {
   cursor: pointer;
 }
 
-/* Responsive blockquote for Torrents */
+/* Minimalist torrent section styling */
 .torrent-quote {
-  border-left: 5px solid #4caf50;
-  background-color: #2a2a2a;
-  padding: 15px;
-  margin: 20px 0;
-  font-style: italic;
-  color: #fff;
-  font-family: 'Poppins', sans-serif;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  position: relative;
 }
 
 .torrent-quote h3 {
-  margin-top: 0;
+  margin: 0 0 12px 0;
   font-size: 1em;
-  color: #4caf50;
+  color: #ffffff;
+  font-weight: 500;
 }
 
-/* Botones de torrents en desktop, en fila */
+/* Minimalist torrent buttons grid */
 .torrent-buttons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap; /* Mantener botones en fila en desktop */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .torrent-button {
-  background-color: #1f80e0;
+  background: #2a2a2a;
   color: white;
-  border: none;
-  padding: 7px;
-  border-radius: 5px;
-  font-size: 1em;
+  border: 1px solid #404040;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85em;
+  font-weight: 400;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
 }
 
 .torrent-button:hover {
-  background-color: #145ba0;
+  background: #333;
+  border-color: #555;
+  transform: translateY(-1px);
+}
+
+.torrent-button:active {
+  transform: translateY(0);
+}
+
+/* Minimalist quality badges */
+.torrent-quality {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: 500;
+}
+
+.torrent-size {
+  opacity: 0.8;
+  font-size: 0.8em;
 }
 
 /* Aumentar el tamaño del video del tráiler */
@@ -687,15 +715,16 @@ h1 {
     font-size: 1em;
   }
 
-  /* Botones de torrents estilo menú en mobile */
+  /* Minimalist torrent buttons for mobile */
   .torrent-buttons {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 
   .torrent-button {
-    width: 100%;
-    padding: 10px;
-    font-size: .8em;
+    padding: 10px 12px;
+    font-size: 0.8em;
+    min-height: 40px;
   }
 
   /* Texto más pequeño en las tarjetas de películas */
@@ -745,15 +774,16 @@ h1 {
     font-size: 1em;
   }
 
-  /* Botones de torrents en fila en tablet */
+  /* Minimalist torrent buttons for tablet */
   .torrent-buttons {
-    flex-wrap: wrap;
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
   }
 
   .torrent-button {
-    padding: 12px;
-    font-size: 1em;
+    padding: 8px 10px;
+    font-size: 0.8em;
+    min-height: 38px;
   }
 
   /* Texto en las tarjetas de películas */
@@ -1291,4 +1321,84 @@ h1 {
 #subtitle-status {
   color: #ffa726;
   font-weight: bold;
+}
+
+/* Subtle quality-specific button colors */
+.torrent-button[data-quality="4K"] {
+  border-color: #9c27b0;
+}
+
+.torrent-button[data-quality="4K"]:hover {
+  background: #333;
+  border-color: #ba68c8;
+}
+
+.torrent-button[data-quality="1080p"] {
+  border-color: #4caf50;
+}
+
+.torrent-button[data-quality="1080p"]:hover {
+  background: #333;
+  border-color: #81c784;
+}
+
+.torrent-button[data-quality="720p"] {
+  border-color: #ff9800;
+}
+
+.torrent-button[data-quality="720p"]:hover {
+  background: #333;
+  border-color: #ffb74d;
+}
+
+/* Loading state for torrent section */
+.torrent-quote.loading {
+  position: relative;
+}
+
+.torrent-quote.loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Minimalist focus and accessibility */
+.torrent-button:focus-visible {
+  outline: 1px solid #666;
+  outline-offset: 1px;
+}
+
+/* Minimalist no torrents message */
+.no-torrents-message {
+  background: #2a2a2a;
+  border: 1px solid #404040;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 16px 0;
+  text-align: center;
+  color: #999;
+  font-size: 0.9em;
+}
+
+/* Minimalist responsive text sizing */
+@media (max-width: 480px) {
+  .torrent-quote h3 {
+    font-size: 0.95em;
+  }
+  
+  .torrent-quality {
+    font-size: 0.7em;
+  }
+  
+  .torrent-size {
+    font-size: 0.75em;
+  }
 }

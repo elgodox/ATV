@@ -658,33 +658,35 @@ async function fetchTorrents(movieTitle) {
         return qualityOrder.indexOf(a.quality) - qualityOrder.indexOf(b.quality);
       });
       let torrentButtons = `
-        <blockquote class="torrent-quote">
-          <h3>Torrents disponibles:</h3>
+        <div class="torrent-quote">
+          <h3>Torrents disponibles</h3>
           <div class="torrent-buttons">
       `;
       torrents.forEach((torrent) => {
         const magnetLink = `magnet:?xt=urn:btih:${torrent.hash}&dn=${encodeURIComponent(movieTitle)}&tr=udp://tracker.openbittorrent.com:80/announce`;
         torrentButtons += `
-          <div style="display:inline-block; margin: 0 5px 10px 0;">
-            <button class="torrent-button" onclick="showTorrentOptions('${magnetLink}', '${movieTitle}')">
-              ${torrent.quality} - ${torrent.size}
+            <button class="torrent-button" data-quality="${torrent.quality}" onclick="showTorrentOptions('${magnetLink}', '${movieTitle}')">
+              <span class="torrent-quality">${torrent.quality}</span>
+              <span class="torrent-size">${torrent.size}</span>
             </button>
-          </div>
         `;
       });
-      torrentButtons += `</div></blockquote>`;
+      torrentButtons += `</div></div>`;
       elements.modalDescription.insertAdjacentHTML("beforeend", torrentButtons);
     } else {
       elements.modalDescription.insertAdjacentHTML(
         "beforeend",
-        "<p>No hay torrents disponibles para esta película.</p>"
+        '<div class="no-torrents-message">No hay torrents disponibles para esta película.</div>'
       );
     }
   } catch (error) {
     // Mostrar mensaje de error amigable en el modal
     elements.modalDescription.insertAdjacentHTML(
       "beforeend",
-      `<p style='color:red;'>No se pudieron obtener torrents. Intenta más tarde.</p>`
+      `<div class="no-torrents-message" style="background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%); border-color: #f44336; color: #ffebee;">
+        <span style="font-size: 2em; display: block; margin-bottom: 10px;">⚠️</span>
+        No se pudieron obtener torrents. Intenta más tarde.
+      </div>`
     );
     console.error("Error fetching torrents:", error);
   }
