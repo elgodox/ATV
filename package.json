@@ -15,6 +15,7 @@
     "express": "^4.21.0",
     "multer": "^2.0.0",
     "node-fetch": "^2.7.0",
+    "nodemon": "^3.1.10",
     "webtorrent": "^2.6.10"
   },
   "overrides": {

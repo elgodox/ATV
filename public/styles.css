@@ -536,15 +536,16 @@ h1 {
 .torrent-buttons {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 8px;
+  gap: 8px 8px;
   margin-top: 12px;
+  align-items: start;
 }
 
 .torrent-button {
   background: #2a2a2a;
   color: white;
   border: 1px solid #404040;
-  padding: 8px 12px;
+  padding: 8px 20px 8px 12px;
   border-radius: 6px;
   font-size: 0.85em;
   font-weight: 400;
@@ -555,12 +556,33 @@ h1 {
   justify-content: center;
   gap: 6px;
   min-height: 36px;
+  position: relative;
+}
+
+.torrent-button::after {
+  content: '⌄';
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8em;
+  opacity: 0.6;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.torrent-button.active::after {
+  transform: translateY(-50%) rotate(180deg);
+  opacity: 0.8;
 }
 
 .torrent-button:hover {
   background: #333;
   border-color: #555;
   transform: translateY(-1px);
+}
+
+.torrent-button:hover::after {
+  opacity: 0.8;
 }
 
 .torrent-button:active {
@@ -722,7 +744,7 @@ h1 {
   }
 
   .torrent-button {
-    padding: 10px 12px;
+    padding: 10px 24px 10px 12px;
     font-size: 0.8em;
     min-height: 40px;
   }
@@ -781,7 +803,7 @@ h1 {
   }
 
   .torrent-button {
-    padding: 8px 10px;
+    padding: 8px 20px 8px 10px;
     font-size: 0.8em;
     min-height: 38px;
   }
@@ -800,7 +822,7 @@ h1 {
 .movie-card .fa-star-half-alt {
   font-size: 10px;  /* Reducir el tamaño en pantallas pequeñas */
   margin-right: 2px;  /* Ajustar el espacio entre estrellas */
-}
+  }
 }
 
 /* Torrent Player Messages and Stats */
@@ -1401,4 +1423,156 @@ h1 {
   .torrent-size {
     font-size: 0.75em;
   }
+}
+
+/* Torrent actions container */
+.torrent-actions {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 4px;
+  justify-content: center;
+  align-items: stretch;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.torrent-actions.active {
+  max-height: 80px;
+}
+
+/* Action buttons */
+.action-button {
+  background: #2a2a2a;
+  color: white;
+  border: 1px solid #404040;
+  padding: 6px 20px 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  justify-content: center;
+  min-height: 32px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.action-button:hover {
+  background: #333;
+  border-color: #555;
+  transform: translateY(-1px);
+}
+
+.action-button.watch-online {
+  border-color: #2196f3;
+  background: #2a2a2a;
+}
+
+.action-button.watch-online:hover {
+  border-color: #42a5f5;
+  background: #333;
+}
+
+.action-button.download-torrent {
+  border-color: #4caf50;
+  background: #2a2a2a;
+}
+
+.action-button.download-torrent:hover {
+  border-color: #66bb6a;
+  background: #333;
+}
+
+.action-icon {
+  font-size: 0.9em;
+  opacity: 0.9;
+}
+
+.action-text {
+  font-size: 0.8em;
+  font-weight: 500;
+}
+
+/* Active torrent button state */
+.torrent-button.active {
+  background: #333;
+  border-color: #666;
+  transform: none;
+}
+
+.torrent-button.active:hover {
+  background: #333;
+  border-color: #666;
+  transform: none;
+}
+
+/* Action buttons responsive */
+  .torrent-actions {
+    gap: 3px;
+    margin-top: 6px;
+  }
+  
+  .action-button {
+    padding: 8px 10px;
+    font-size: 0.8em;
+    min-height: 36px;
+  }
+  
+  .action-text {
+    font-size: 0.75em;
+  }
+  
+  .torrent-actions.active {
+    max-height: 85px;
+  }  /* Action buttons responsive for tablet */
+  .action-button {
+    padding: 6px 10px;
+    font-size: 0.8em;
+    min-height: 34px;
+  }
+  
+  .torrent-actions.active {
+    max-height: 82px;
+  }
+
+/* Download button specific styles */
+.action-button.download-torrent .action-text {
+  display: none;
+}
+
+.action-button.download-torrent {
+  justify-content: center;
+  gap: 0;
+}
+
+.action-button.download-torrent .action-icon {
+  font-size: 1.1em;
+}
+
+/* Torrent item container - exact width matching */
+.torrent-item {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  align-items: stretch;
+}
+
+.torrent-item .torrent-button {
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.torrent-item .torrent-actions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: transparent;
+  margin-top: 8px;
 }

@@ -665,10 +665,22 @@ async function fetchTorrents(movieTitle) {
       torrents.forEach((torrent) => {
         const magnetLink = `magnet:?xt=urn:btih:${torrent.hash}&dn=${encodeURIComponent(movieTitle)}&tr=udp://tracker.openbittorrent.com:80/announce`;
         torrentButtons += `
-            <button class="torrent-button" data-quality="${torrent.quality}" onclick="showTorrentOptions('${magnetLink}', '${movieTitle}')">
+          <div class="torrent-item">
+            <button class="torrent-button" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${movieTitle}" onclick="toggleTorrentActions(this)">
               <span class="torrent-quality">${torrent.quality}</span>
               <span class="torrent-size">${torrent.size}</span>
             </button>
+            <div class="torrent-actions" style="display: none;">
+              <button class="action-button watch-online" onclick="watchOnlineWithStats('${magnetLink}', '${movieTitle}')">
+                <span class="action-icon">▶</span>
+                <span class="action-text">Ver Online</span>
+              </button>
+              <a class="action-button download-torrent" href="${magnetLink}" download>
+                <span class="action-icon">💾</span>
+                <span class="action-text">Descargar</span>
+              </a>
+            </div>
+          </div>
         `;
       });
       torrentButtons += `</div></div>`;
@@ -2166,16 +2178,10 @@ async function closeVideoModal() {
   // Limpiar cliente WebTorrent local si existe
   if (window.currentTorrentClient) {
     try {
-      window.currentTorrentClient.destroy((err) => {
-        if (err) {
-          console.error("Error destruyendo el cliente local de WebTorrent:", err);
-        } else {
-          console.log("Cliente local WebTorrent destruido correctamente");
-        }
-      });
+      window.currentTorrentClient.destroy();
       window.currentTorrentClient = null;
     } catch (error) {
-      console.error("Error al destruir cliente WebTorrent local:", error);
+      console.error('Error cleaning up WebTorrent client on unload:', error);
     }
   }
   
@@ -2430,150 +2436,69 @@ window.addEventListener('beforeunload', () => {
   }
 });
 
-// Función para actualizar el estado de los subtítulos en la UI
-function updateSubtitleStatus(status, type = 'info') {
-  const statusElement = document.getElementById('subtitle-status');
-  if (statusElement) {
-    statusElement.textContent = status;
-    
-    // Actualizar color según el tipo
-    statusElement.className = '';
-    switch(type) {
-      case 'success':
-        statusElement.style.color = '#4caf50';
-        break;
-      case 'error':
-        statusElement.style.color = '#f44336';
-        break;
-      case 'warning':
-        statusElement.style.color = '#ffa726';
-        break;
-      default:
-        statusElement.style.color = '#2196f3';
-    }
-  }
-}
-
-// Función de prueba para verificar la funcionalidad de subtítulos
-async function testSubtitleFunctionality() {
-  console.log('🧪 Testing subtitle functionality...');
-  updateSubtitleStatus('Probando funcionalidad...', 'info');
+// Función para alternar las acciones del torrent
+window.toggleTorrentActions = function(button) {
+  const torrentItem = button.closest('.torrent-item');
+  const actionsDiv = torrentItem.querySelector('.torrent-actions');
+  const allActions = document.querySelectorAll('.torrent-actions');
+  const allButtons = document.querySelectorAll('.torrent-button');
   
-  try {
-    // Test 1: Buscar subtítulos de demostración
-    console.log('Testing subtitle search...');
-    const searchResponse = await fetch('/api/subtitles/search?movieTitle=Test Movie&language=es&imdbId=tt1234567');
-    
-    if (searchResponse.ok) {
-      const subtitles = await searchResponse.json();
-      console.log('✅ Subtitle search working:', subtitles);
-      
-      if (subtitles.length > 0) {
-        // Test 2: Probar el proxy con URL de demo
-        const demoUrl = subtitles[0].downloadUrl;
-        if (demoUrl) {
-          console.log('Testing subtitle proxy with demo URL...');
-          const proxyResponse = await fetch(`/api/subtitles/proxy?url=${encodeURIComponent(demoUrl)}`);
-          
-          if (proxyResponse.ok) {
-            const content = await proxyResponse.text();
-            console.log('✅ Subtitle proxy working, content length:', content.length);
-            updateSubtitleStatus('Funcionalidad verificada - Sistema operativo', 'success');
-            showNotification('✅ Sistema de subtítulos funcionando correctamente', 'success');
-          } else {
-            console.error('❌ Subtitle proxy failed:', proxyResponse.status);
-            updateSubtitleStatus('Error en proxy de subtítulos', 'error');
-          }
-        } else {
-          console.error('❌ No demo URL found');
-          updateSubtitleStatus('URLs de demo no disponibles', 'warning');
-        }
-      } else {
-        console.log('ℹ️ No subtitles found (expected for demo)');
-        updateSubtitleStatus('Búsqueda retorna resultados vacíos', 'warning');
-      }
-    } else {
-      console.error('❌ Subtitle search failed:', searchResponse.status);
-      updateSubtitleStatus('Error en búsqueda de subtítulos', 'error');
+  // Cerrar todas las otras acciones abiertas
+  allActions.forEach(actions => {
+    if (actions !== actionsDiv && actions.classList.contains('active')) {
+      actions.classList.remove('active');
+      actions.style.maxHeight = '0px';
+      setTimeout(() => {
+        actions.style.display = 'none';
+      }, 300);
     }
-    
-  } catch (error) {
-    console.error('❌ Subtitle test failed:', error);
-    updateSubtitleStatus('Error en prueba del sistema', 'error');
-    showNotification('❌ Error probando sistema de subtítulos: ' + error.message, 'error');
-  }
-}
-
-// Ejecutar la prueba cuando se carga la página
-document.addEventListener('DOMContentLoaded', () => {
-  // Esperar un poco para que todo esté cargado
-  setTimeout(testSubtitleFunctionality, 2000);
-});
-
-// Exponer función de prueba para uso manual
-window.testSubtitleFunctionality = testSubtitleFunctionality;
-
-// Función para limpiar recursos cuando el usuario cierra la pestaña o navega fuera
-function cleanupOnPageUnload() {
-  // Detener torrent del servidor si hay uno activo
-  if (currentTorrentInfo && currentTorrentInfo.infoHash) {
-    try {
-      // Usar sendBeacon para enviar la solicitud de limpieza de manera confiable
-      // incluso cuando la página se está cerrando
-      const data = JSON.stringify({ infoHash: currentTorrentInfo.infoHash });
-      const beaconSent = navigator.sendBeacon(`/api/torrent/stop/${currentTorrentInfo.infoHash}`, data);
-      
-      if (beaconSent) {
-        console.log('Cleanup beacon sent successfully for torrent:', currentTorrentInfo.infoHash);
-      } else {
-        console.log('Failed to send cleanup beacon for torrent:', currentTorrentInfo.infoHash);
-        // Fallback: intento síncrono rápido
-        try {
-          fetch(`/api/torrent/stop/${currentTorrentInfo.infoHash}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            keepalive: true // Intenta mantener la conexión durante el unload
-          }).catch(() => {}); // Ignorar errores ya que la página se está cerrando
-        } catch (e) {}
-      }
-    } catch (error) {
-      console.error('Error during page unload cleanup:', error);
-    }
-  }
+  });
   
-  // Limpiar cliente WebTorrent local
-  if (window.currentTorrentClient) {
-    try {
-      window.currentTorrentClient.destroy();
-      window.currentTorrentClient = null;
-    } catch (error) {
-      console.error('Error cleaning up WebTorrent client on unload:', error);
+  // Remover estado activo de otros botones
+  allButtons.forEach(btn => {
+    if (btn !== button) {
+      btn.classList.remove('active');
     }
-  }
+  });
   
-  // Limpiar URLs de blob
-  if (window.localSubtitleBlobUrls && window.localSubtitleBlobUrls.length > 0) {
-    window.localSubtitleBlobUrls.forEach(url => URL.revokeObjectURL(url));
-    window.localSubtitleBlobUrls = [];
+  // Toggle del botón y acciones actuales
+  if (actionsDiv.classList.contains('active')) {
+    // Cerrar
+    button.classList.remove('active');
+    actionsDiv.classList.remove('active');
+    actionsDiv.style.maxHeight = '0px';
+    setTimeout(() => {
+      actionsDiv.style.display = 'none';
+    }, 300);
+  } else {
+    // Abrir
+    button.classList.add('active');
+    actionsDiv.style.display = 'flex';
+    actionsDiv.classList.add('active');
+    // Pequeño delay para la animación
+    setTimeout(() => {
+      actionsDiv.style.maxHeight = '80px';
+    }, 10);
   }
-}
+};
 
-// Registrar event listeners para limpieza automática
-window.addEventListener('beforeunload', cleanupOnPageUnload);
-window.addEventListener('pagehide', cleanupOnPageUnload);
-
-// También limpiar cuando la pestaña pierde visibilidad (cuando el usuario cambia de pestaña)
-document.addEventListener('visibilitychange', function() {
-  if (document.hidden && currentTorrentInfo && currentTorrentInfo.infoHash) {
-    // Pausar el torrent cuando la pestaña se oculta para ahorrar ancho de banda
-    fetch(`/api/torrent/stats/${currentTorrentInfo.infoHash}`)
-      .then(response => {
-        if (response.ok) {
-          console.log('Torrent status checked due to tab visibility change');
-        }
-      })
-      .catch(error => {
-        console.log('Error checking torrent status on visibility change:', error);
-      });
+// Cerrar acciones de torrent al hacer clic fuera
+document.addEventListener('click', function(event) {
+  // Si el clic no es en un torrent item
+  if (!event.target.closest('.torrent-item')) {
+    const allActions = document.querySelectorAll('.torrent-actions.active');
+    const allButtons = document.querySelectorAll('.torrent-button.active');
+    
+    allActions.forEach(actions => {
+      actions.classList.remove('active');
+      actions.style.maxHeight = '0px';
+      setTimeout(() => {
+        actions.style.display = 'none';
+      }, 300);
+    });
+    
+    allButtons.forEach(button => {
+      button.classList.remove('active');
+    });
   }
 });
