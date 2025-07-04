@@ -590,6 +590,26 @@ app.get('/api/torrent/stream/:infoHash/:fileIndex', (req, res) => {
 
   const fileSize = file.length;
   
+  // Detectar cuando el cliente se desconecta
+  const onClientDisconnect = () => {
+    console.log(`[${infoHash}] Client disconnected from stream`);
+    // No destruir inmediatamente el torrent ya que el usuario podría reconectarse
+    // Solo logear para propósitos de debugging
+  };
+
+  // Escuchar cuando el cliente cierra la conexión
+  res.on('close', onClientDisconnect);
+  res.on('finish', () => {
+    console.log(`[${infoHash}] Stream finished normally`);
+  });
+
+  // Limpiar listeners cuando la respuesta termine
+  const originalEnd = res.end;
+  res.end = function(...args) {
+    res.removeListener('close', onClientDisconnect);
+    return originalEnd.apply(this, args);
+  };
+  
   if (range) {
     // Manejo de range requests para streaming
     const parts = range.replace(/bytes=/, "").split("-");
@@ -602,14 +622,15 @@ app.get('/api/torrent/stream/:infoHash/:fileIndex', (req, res) => {
       'Accept-Ranges': 'bytes',
       'Content-Length': chunksize,
       'Content-Type': 'video/mp4',
-      'Access-Control-Allow-Origin': '*'
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'no-cache' // Evitar cache para streams en vivo
     });
     
     const stream = file.createReadStream({ start, end });
     
     // Manejar errores del stream
     stream.on('error', (error) => {
-      console.log(`Stream error (range): ${error.message}`);
+      console.log(`[${infoHash}] Stream error (range): ${error.message}`);
       if (!res.headersSent) {
         res.status(500).end();
       }
@@ -619,6 +640,7 @@ app.get('/api/torrent/stream/:infoHash/:fileIndex', (req, res) => {
     res.on('close', () => {
       if (stream && !stream.destroyed) {
         stream.destroy();
+        console.log(`[${infoHash}] Range stream destroyed due to client disconnect`);
       }
     });
     
@@ -627,14 +649,15 @@ app.get('/api/torrent/stream/:infoHash/:fileIndex', (req, res) => {
     res.writeHead(200, {
       'Content-Length': fileSize,
       'Content-Type': 'video/mp4',
-      'Access-Control-Allow-Origin': '*'
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'no-cache' // Evitar cache para streams en vivo
     });
     
     const stream = file.createReadStream();
     
     // Manejar errores del stream
     stream.on('error', (error) => {
-      console.log(`Stream error (full): ${error.message}`);
+      console.log(`[${infoHash}] Stream error (full): ${error.message}`);
       if (!res.headersSent) {
         res.status(500).end();
       }
@@ -644,6 +667,7 @@ app.get('/api/torrent/stream/:infoHash/:fileIndex', (req, res) => {
     res.on('close', () => {
       if (stream && !stream.destroyed) {
         stream.destroy();
+        console.log(`[${infoHash}] Full stream destroyed due to client disconnect`);
       }
     });
     
@@ -910,8 +934,6 @@ function convertSrtToWebVtt(srtContent) {
   
   return webvtt;
 }
-
-// ...existing code...
 
 // API para hacer proxy de subtítulos y evitar problemas de CORS
 app.get('/api/subtitles/proxy', async (req, res) => {
@@ -1676,3 +1698,167 @@ function findTorrentByHash(hashOrMagnet) {
     return null;
   }
 }
+
+// API para detener y limpiar un torrent específico (llamado al cerrar video)
+app.delete('/api/torrent/stop/:infoHash', (req, res) => {
+  const { infoHash } = req.params;
+  
+  if (!infoHash) {
+    return res.status(400).json({ message: 'InfoHash is required' });
+  }
+  
+  const torrentHash = infoHash.length > 20 ? infoHash : infoHash;
+  console.log(`[${torrentHash}] Stop request received`);
+  
+  try {
+    // Buscar el torrent
+    const torrent = findTorrentByHash(infoHash);
+    
+    if (!torrent) {
+      console.log(`[${torrentHash}] Torrent not found, already cleaned up`);
+      return res.json({ 
+        message: 'Torrent not found (possibly already cleaned up)',
+        success: true 
+      });
+    }
+    
+    console.log(`[${torrentHash}] Stopping torrent: ${torrent.name || 'Unknown'}`);
+    
+    // Pausar todas las descargas y uploads
+    if (torrent.pause && typeof torrent.pause === 'function') {
+      torrent.pause();
+    }
+    
+    // Desconectar todos los peers
+    if (torrent.wires && Array.isArray(torrent.wires)) {
+      torrent.wires.forEach(wire => {
+        try {
+          if (wire && wire.destroy && typeof wire.destroy === 'function') {
+            wire.destroy();
+          }
+        } catch (wireError) {
+          console.log(`[${torrentHash}] Error destroying wire:`, wireError.message);
+        }
+      });
+    }
+    
+    // Limpiar archivos temporales y streams
+    if (torrent.files && Array.isArray(torrent.files)) {
+      torrent.files.forEach(file => {
+        try {
+          if (file && file._streams) {
+            file._streams.forEach(stream => {
+              if (stream && stream.destroy && typeof stream.destroy === 'function') {
+                stream.destroy();
+              }
+            });
+          }
+        } catch (fileError) {
+          console.log(`[${torrentHash}] Error cleaning file streams:`, fileError.message);
+        }
+      });
+    }
+    
+    // Destruir el torrent completamente
+    const destroyPromise = new Promise((resolve, reject) => {
+      const destroyTimeout = setTimeout(() => {
+        console.log(`[${torrentHash}] Destroy timeout, forcing removal`);
+        resolve();
+      }, 5000); // 5 segundos timeout
+      
+      torrent.destroy((err) => {
+        clearTimeout(destroyTimeout);
+        if (err) {
+          console.log(`[${torrentHash}] Error during destroy:`, err.message);
+          resolve(); // Continuar a pesar del error
+        } else {
+          console.log(`[${torrentHash}] Successfully destroyed`);
+          resolve();
+        }
+      });
+    });
+    
+    destroyPromise.then(() => {
+      // Verificar que el torrent se eliminó de la lista del cliente
+      const stillExists = findTorrentByHash(infoHash);
+      if (stillExists) {
+        console.log(`[${torrentHash}] Torrent still exists after destroy, forcing removal`);
+        try {
+          client.remove(infoHash);
+        } catch (removeError) {
+          console.log(`[${torrentHash}] Error forcing removal:`, removeError.message);
+        }
+      }
+      
+      // Limpiar cache de subtítulos relacionado
+      const subtitleKeysToDelete = [];
+      for (const [key, value] of subtitleCache.entries()) {
+        if (key.includes(infoHash.toLowerCase()) || key.includes(infoHash.toUpperCase())) {
+          subtitleKeysToDelete.push(key);
+        }
+      }
+      
+      subtitleKeysToDelete.forEach(key => {
+        subtitleCache.delete(key);
+        console.log(`[${torrentHash}] Cleared subtitle cache for key: ${key}`);
+      });
+      
+      console.log(`[${torrentHash}] Complete cleanup finished`);
+      
+      res.json({ 
+        message: 'Torrent stopped and cleaned up successfully',
+        success: true,
+        subtitlesCleaned: subtitleKeysToDelete.length
+      });
+    });
+    
+  } catch (error) {
+    console.error(`[${torrentHash}] Error stopping torrent:`, error);
+    res.status(500).json({ 
+      message: 'Error stopping torrent: ' + error.message,
+      success: false
+    });
+  }
+});
+
+// API alternativa usando POST para sendBeacon (navegadores envían POST para sendBeacon)
+app.post('/api/torrent/stop/:infoHash', (req, res) => {
+  // Redirigir al método DELETE
+  console.log(`[${req.params.infoHash}] Stop request via POST (sendBeacon)`);
+  
+  // Llamar al handler del DELETE
+  const deleteReq = { 
+    params: req.params,
+    body: req.body
+  };
+  
+  // Simular la respuesta para el método DELETE
+  const mockRes = {
+    status: (code) => ({ json: (data) => console.log(`POST response ${code}:`, data) }),
+    json: (data) => console.log('POST response:', data)
+  };
+  
+  // Ejecutar la lógica de limpieza de manera asíncrona
+  setTimeout(() => {
+    try {
+      const { infoHash } = req.params;
+      const torrent = findTorrentByHash(infoHash);
+      
+      if (torrent) {
+        console.log(`[${infoHash}] Cleaning up torrent from sendBeacon: ${torrent.name || 'Unknown'}`);
+        torrent.destroy((err) => {
+          if (err) {
+            console.log(`[${infoHash}] Error destroying from sendBeacon:`, err.message);
+          } else {
+            console.log(`[${infoHash}] Successfully destroyed from sendBeacon`);
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`Error in sendBeacon cleanup:`, error);
+    }
+  }, 100);
+  
+  // Responder inmediatamente al sendBeacon
+  res.status(200).json({ message: 'Cleanup initiated', success: true });
+});

@@ -1038,13 +1038,42 @@ function startPlayer(magnetLink, movieTitle) {
 
 
 // Función para cerrar el modal
-function closeModal() {
+async function closeModal() {
   elements.modal.style.display = "none";
   elements.modalTrailer.innerHTML = ""; // Limpiar tráiler cuando se cierra el modal
 
   if (stallTimeoutId) {
     clearTimeout(stallTimeoutId);
     stallTimeoutId = null;
+  }
+
+  // Limpiar estadísticas si están corriendo
+  if (statsInterval) {
+    clearInterval(statsInterval);
+    statsInterval = null;
+  }
+
+  // Detener y limpiar el torrent del servidor si tenemos información del torrent actual
+  if (currentTorrentInfo && currentTorrentInfo.infoHash) {
+    try {
+      console.log(`Stopping torrent from modal close: ${currentTorrentInfo.infoHash}`);
+      
+      const response = await fetch(`/api/torrent/stop/${currentTorrentInfo.infoHash}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Torrent stopped from modal close:', result);
+      } else {
+        console.warn('Failed to stop torrent from modal close:', response.status);
+      }
+    } catch (error) {
+      console.error('Error stopping torrent from modal close:', error);
+    }
   }
 
   // Lógica para limpiar el reproductor de WebTorrent
@@ -1086,7 +1115,9 @@ function closeModal() {
         document.getElementById('torrent-download-speed').textContent = 'Speed: 0 kB/s';
     }
 
-    playerContainer.style.display = 'none';
+    if (playerContainer) {
+      playerContainer.style.display = 'none';
+    }
     if (videoPlayer) {
       videoPlayer.pause();
       videoPlayer.src = '';
@@ -1102,6 +1133,9 @@ function closeModal() {
       torrentQuote.style.display = 'block';
     }
   }
+
+  // Resetear información del torrent
+  currentTorrentInfo = null;
 }
 
 // Evento para actualizar los resultados cuando el usuario busca
@@ -1480,7 +1514,7 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
         
         // Si es timeout (408), sugerir otro torrent
         if (response.status === 408) {
-          throw new Error('⏰ El torrent está tardando demasiado en responder. Puede ser un torrent lento o sin peers activos. Intenta con otra calidad (720p suele ser más rápido).');
+          throw new Error('⏰ El torrent está tardando demasiado en responder. Puede ser un torrent lento o sin peers activos. Intenta con otra calidad.');
         }
         
         throw new Error(errorData.message || 'Error explorando el torrent');
@@ -2079,9 +2113,10 @@ function disableSubtitles() {
 }
 
 // Función para cerrar el modal del reproductor de video
-function closeVideoModal() {
+async function closeVideoModal() {
   document.getElementById('video-modal').style.display = 'none';
   
+  // Detener y limpiar el video player
   if (currentVideoPlayer) {
     currentVideoPlayer.pause();
     currentVideoPlayer.src = '';
@@ -2089,7 +2124,86 @@ function closeVideoModal() {
     currentVideoPlayer = null;
   }
   
+  // Limpiar estadísticas si están corriendo
+  if (statsInterval) {
+    clearInterval(statsInterval);
+    statsInterval = null;
+  }
+  
+  // Detener y limpiar el torrent del servidor si tenemos información del torrent actual
+  if (currentTorrentInfo && currentTorrentInfo.infoHash) {
+    try {
+      console.log(`Stopping torrent: ${currentTorrentInfo.infoHash}`);
+      showNotification('Deteniendo torrent y limpiando cache...', 'info', 2000);
+      
+      const response = await fetch(`/api/torrent/stop/${currentTorrentInfo.infoHash}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Torrent stopped successfully:', result);
+        if (result.subtitlesCleaned > 0) {
+          showNotification(`Torrent detenido y ${result.subtitlesCleaned} subtítulos limpiados del cache`, 'success', 3000);
+        } else {
+          showNotification('Torrent detenido y cache limpiado', 'success', 2000);
+        }
+      } else {
+        console.warn('Failed to stop torrent on server:', response.status);
+        showNotification('Advertencia: El torrent podría seguir activo en el servidor', 'warning', 3000);
+      }
+    } catch (error) {
+      console.error('Error stopping torrent:', error);
+      showNotification('Error al detener el torrent, pero el video se ha cerrado', 'warning', 3000);
+    }
+  }
+  
+  // Limpiar cliente WebTorrent local si existe
+  if (window.currentTorrentClient) {
+    try {
+      window.currentTorrentClient.destroy((err) => {
+        if (err) {
+          console.error("Error destruyendo el cliente local de WebTorrent:", err);
+        } else {
+          console.log("Cliente local WebTorrent destruido correctamente");
+        }
+      });
+      window.currentTorrentClient = null;
+    } catch (error) {
+      console.error("Error al destruir cliente WebTorrent local:", error);
+    }
+  }
+  
+  // Limpiar URLs de blob de subtítulos locales
+  if (window.localSubtitleBlobUrls && window.localSubtitleBlobUrls.length > 0) {
+    window.localSubtitleBlobUrls.forEach(url => URL.revokeObjectURL(url));
+    window.localSubtitleBlobUrls = [];
+    console.log('URLs de subtítulos locales limpiadas');
+  }
+  
+  // Resetear información del torrent
   currentTorrentInfo = null;
+  
+  // Limpiar elementos de la UI
+  const torrentStatsDiv = document.getElementById('torrent-stats');
+  if (torrentStatsDiv) {
+    torrentStatsDiv.style.display = 'none';
+    // Resetear valores de estadísticas
+    const peersElement = document.getElementById('torrent-peers');
+    const progressElement = document.getElementById('torrent-progress');
+    const downloadSpeedElement = document.getElementById('torrent-download-speed');
+    const uploadSpeedElement = document.getElementById('torrent-upload-speed');
+    
+    if (peersElement) peersElement.textContent = 'Peers: 0';
+    if (progressElement) progressElement.textContent = 'Progress: 0%';
+    if (downloadSpeedElement) downloadSpeedElement.textContent = '↓ 0 kB/s';
+    if (uploadSpeedElement) uploadSpeedElement.textContent = '↑ 0 kB/s';
+  }
+  
+  console.log('Video modal cerrado y recursos limpiados completamente');
 }
 
 // Función para cerrar el modal de selección de archivos
@@ -2396,3 +2510,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Exponer función de prueba para uso manual
 window.testSubtitleFunctionality = testSubtitleFunctionality;
+
+// Función para limpiar recursos cuando el usuario cierra la pestaña o navega fuera
+function cleanupOnPageUnload() {
+  // Detener torrent del servidor si hay uno activo
+  if (currentTorrentInfo && currentTorrentInfo.infoHash) {
+    try {
+      // Usar sendBeacon para enviar la solicitud de limpieza de manera confiable
+      // incluso cuando la página se está cerrando
+      const data = JSON.stringify({ infoHash: currentTorrentInfo.infoHash });
+      const beaconSent = navigator.sendBeacon(`/api/torrent/stop/${currentTorrentInfo.infoHash}`, data);
+      
+      if (beaconSent) {
+        console.log('Cleanup beacon sent successfully for torrent:', currentTorrentInfo.infoHash);
+      } else {
+        console.log('Failed to send cleanup beacon for torrent:', currentTorrentInfo.infoHash);
+        // Fallback: intento síncrono rápido
+        try {
+          fetch(`/api/torrent/stop/${currentTorrentInfo.infoHash}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            keepalive: true // Intenta mantener la conexión durante el unload
+          }).catch(() => {}); // Ignorar errores ya que la página se está cerrando
+        } catch (e) {}
+      }
+    } catch (error) {
+      console.error('Error during page unload cleanup:', error);
+    }
+  }
+  
+  // Limpiar cliente WebTorrent local
+  if (window.currentTorrentClient) {
+    try {
+      window.currentTorrentClient.destroy();
+      window.currentTorrentClient = null;
+    } catch (error) {
+      console.error('Error cleaning up WebTorrent client on unload:', error);
+    }
+  }
+  
+  // Limpiar URLs de blob
+  if (window.localSubtitleBlobUrls && window.localSubtitleBlobUrls.length > 0) {
+    window.localSubtitleBlobUrls.forEach(url => URL.revokeObjectURL(url));
+    window.localSubtitleBlobUrls = [];
+  }
+}
+
+// Registrar event listeners para limpieza automática
+window.addEventListener('beforeunload', cleanupOnPageUnload);
+window.addEventListener('pagehide', cleanupOnPageUnload);
+
+// También limpiar cuando la pestaña pierde visibilidad (cuando el usuario cambia de pestaña)
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden && currentTorrentInfo && currentTorrentInfo.infoHash) {
+    // Pausar el torrent cuando la pestaña se oculta para ahorrar ancho de banda
+    fetch(`/api/torrent/stats/${currentTorrentInfo.infoHash}`)
+      .then(response => {
+        if (response.ok) {
+          console.log('Torrent status checked due to tab visibility change');
+        }
+      })
+      .catch(error => {
+        console.log('Error checking torrent status on visibility change:', error);
+      });
+  }
+});
