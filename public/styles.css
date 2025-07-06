@@ -1723,11 +1723,12 @@ h1 {
   width: 100%;
   box-sizing: border-box;
   display: flex;
-  margin-top: 8px;
+  margin-top: 16px;
+  padding: 12px 0;
 }
 
 .torrent-actions.active {
-  max-height: 60px;
+  max-height: 84px;
 }
 
 /* Action buttons with glassmorphism style */
@@ -1811,7 +1812,8 @@ h1 {
 @media (max-width: 600px) {
   .torrent-actions {
     gap: 10px;
-    margin-top: 6px;
+    margin-top: 14px;
+    padding: 10px 0;
   }
   
   .action-button {
@@ -1824,7 +1826,7 @@ h1 {
   }
   
   .torrent-actions.active {
-    max-height: 55px;
+    max-height: 74px;
   }
 }
 
@@ -1839,8 +1841,13 @@ h1 {
     font-size: 1.05em;
   }
   
+  .torrent-actions {
+    margin-top: 15px;
+    padding: 11px 0;
+  }
+  
   .torrent-actions.active {
-    max-height: 57px;
+    max-height: 79px;
   }
 }
 
