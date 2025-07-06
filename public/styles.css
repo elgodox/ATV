@@ -1644,6 +1644,8 @@ h1 {
   flex-direction: column;
   width: 100%;
   box-sizing: border-box;
+  display: flex;
+  margin-top: 8px;
 }
 
 .torrent-actions.active {
@@ -1762,12 +1764,13 @@ h1 {
   font-size: 1.1em;
 }
 
-/* Torrent item container - exact width matching */
+/* Torrent item container - flowing layout within torrent-quote */
 .torrent-item {
   display: flex;
   flex-direction: column;
   position: relative;
   align-items: stretch;
+  width: 100%;
 }
 
 .torrent-item .torrent-button {
@@ -1776,11 +1779,8 @@ h1 {
 }
 
 .torrent-item .torrent-actions {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 10;
+  position: static;
+  z-index: 1;
   background: transparent;
   margin-top: 8px;
 }
