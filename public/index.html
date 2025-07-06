@@ -93,8 +93,8 @@
 
   <!-- Modal para mostrar detalles completos y tráiler -->
   <div id="modal" class="modal">
+    <span class="close" onclick="closeModal()">&times;</span>
     <div class="modal-content">
-      <span class="close" onclick="closeModal()">&times;</span>
       <h2 id="modal-title"></h2>
       <p id="modal-description"></p>
       <div id="modal-trailer"></div>
@@ -103,8 +103,9 @@
 
   <!-- Modal para el reproductor de video -->
   <div id="video-modal" class="modal">
+    <span class="close" onclick="closeVideoModal()">&times;</span>
     <div class="video-modal-content">
-      <span class="close" onclick="closeVideoModal()">&times;</span>      <div id="video-player-container">
+      <div id="video-player-container">
         <video id="video-player" controls preload="metadata">
           Tu navegador no soporta la reproducción de video.
         </video>
@@ -203,8 +204,8 @@
 
   <!-- Modal para seleccionar archivo de video del torrent -->
   <div id="file-selection-modal" class="modal">
+    <span class="close" onclick="closeFileSelectionModal()">&times;</span>
     <div class="modal-content">
-      <span class="close" onclick="closeFileSelectionModal()">&times;</span>
       <h2>Seleccionar Archivo de Video</h2>
       <div id="torrent-loading">
         <p>Explorando torrent...</p>
