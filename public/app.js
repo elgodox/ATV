@@ -599,7 +599,6 @@ async function fetchProvider(movieId, type) {
   }
 }
 
-
 // Función para cambiar el idioma del modal
 function switchLanguage(language) {
   const descriptionText = document.getElementById('description-text');
@@ -1570,8 +1569,14 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
       const torrentInfo = await response.json();
       currentTorrentInfo = torrentInfo;
 
-      // Limpiar solicitud pendiente
-      pendingTorrentRequests.delete(torrentHash);
+      // Si solo hay un archivo de video, saltar la selección y reproducir directamente
+      if (torrentInfo.videoFiles.length === 1) {
+        // Limpiar solicitud pendiente
+        pendingTorrentRequests.delete(torrentHash);
+        closeFileSelectionModal();
+        playVideoFileWithStats(torrentInfo.videoFiles[0].index);
+        return;
+      }
 
       // Ocultar loading y mostrar lista de archivos
       document.getElementById('torrent-loading').style.display = 'none';
@@ -1762,6 +1767,7 @@ function startProgressTracking() {
         // Actualizar información de progreso si hay un elemento para mostrarla
         const progressElement = document.getElementById('torrent-progress-info');
         if (progressElement) {
+
           progressElement.innerHTML = `
             <div class="progress-info">
               <p>Descarga: ${(progressData.progress * 100).toFixed(1)}%</p>
