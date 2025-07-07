@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV Torrent Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .tv-torrent-selector {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border: 2px solid #3498db;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .tv-torrent-selector h3 {
+            color: #ffffff;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        .selector-container {
+            display: flex;
+            gap: 15px;
+            align-items: end;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .selector-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+        }
+        .selector-group label {
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 0.9em;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+        .season-episode-select {
+            padding: 10px;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            font-size: 1em;
+        }
+        .search-torrents-btn {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 25px;
+            color: white;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        .search-torrents-btn:hover {
+            background: linear-gradient(135deg, #229954 0%, #27ae60 100%);
+        }
+        .torrent-results {
+            margin-top: 20px;
+        }
+        .torrent-quote {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        .torrent-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .torrent-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .torrent-button {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            padding: 10px 0;
+        }
+        .torrent-quality {
+            font-weight: bold;
+            color: #3498db;
+        }
+        .torrent-size {
+            color: #95a5a6;
+        }
+        .torrent-seeds {
+            color: #27ae60;
+        }
+        .torrent-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .action-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .watch-online {
+            background: #e74c3c;
+            color: white;
+        }
+        .download-torrent {
+            background: #9b59b6;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1>📺 TV Series Torrent Search Demo</h1>
+        <p>This demo shows the TV series torrent search functionality implemented for the ATV application.</p>
+        
+        <h2>Breaking Bad - Season & Episode Selection</h2>
+        
+        <div class="tv-torrent-selector">
+            <h3>📺 Buscar Torrents para Episodios</h3>
+            <div class="selector-container">
+                <div class="selector-group">
+                    <label for="season-selector">Temporada:</label>
+                    <select id="season-selector" class="season-episode-select">
+                        <option value="">Selecciona una temporada</option>
+                        <option value="1">Temporada 1 (7 episodios)</option>
+                        <option value="2">Temporada 2 (13 episodios)</option>
+                        <option value="3">Temporada 3 (13 episodios)</option>
+                        <option value="4">Temporada 4 (13 episodios)</option>
+                        <option value="5">Temporada 5 (16 episodios)</option>
+                    </select>
+                </div>
+                <div class="selector-group">
+                    <label for="episode-selector">Episodio:</label>
+                    <select id="episode-selector" class="season-episode-select">
+                        <option value="">Selecciona un episodio</option>
+                    </select>
+                </div>
+                <button id="search-torrents-btn" class="search-torrents-btn" onclick="searchTorrents()">🔍 Buscar Torrents</button>
+            </div>
+            <div id="torrent-results" class="torrent-results"></div>
+        </div>
+        
+        <h2>Features Implemented:</h2>
+        <ul>
+            <li>✅ Season and episode selection dropdowns</li>
+            <li>✅ Dynamic episode count based on selected season</li>
+            <li>✅ Torrent search with quality options (1080p, 720p, 480p)</li>
+            <li>✅ Seeder and file size information</li>
+            <li>✅ Stream online and download options</li>
+            <li>✅ Responsive design with blue TV series theme</li>
+            <li>✅ Integration with existing WebTorrent infrastructure</li>
+        </ul>
+    </div>
+
+    <script>
+        // Update episode selector when season changes
+        document.getElementById('season-selector').addEventListener('change', function() {
+            const episodeSelector = document.getElementById('episode-selector');
+            const seasonNumber = this.value;
+            
+            const episodeCounts = {
+                '1': 7,
+                '2': 13,
+                '3': 13,
+                '4': 13,
+                '5': 16
+            };
+            
+            if (seasonNumber && episodeCounts[seasonNumber]) {
+                let options = '<option value="">Temporada completa</option>';
+                for (let i = 1; i <= episodeCounts[seasonNumber]; i++) {
+                    options += `<option value="${i}">Episodio ${i}</option>`;
+                }
+                episodeSelector.innerHTML = options;
+            } else {
+                episodeSelector.innerHTML = '<option value="">Selecciona un episodio</option>';
+            }
+        });
+        
+        function searchTorrents() {
+            const season = document.getElementById('season-selector').value;
+            const episode = document.getElementById('episode-selector').value;
+            const resultsContainer = document.getElementById('torrent-results');
+            
+            if (!season) {
+                alert('Por favor selecciona una temporada');
+                return;
+            }
+            
+            // Show loading
+            resultsContainer.innerHTML = '<div style="text-align: center; color: #3498db;">🔍 Buscando torrents...</div>';
+            
+            // Simulate API call
+            setTimeout(() => {
+                const episodeText = episode ? `E${episode.padStart(2, '0')}` : 'Full Season';
+                const seasonText = `S${season.padStart(2, '0')}`;
+                
+                const mockTorrents = [
+                    {
+                        title: `Breaking Bad ${seasonText}${episode ? episodeText : ''} 1080p`,
+                        quality: '1080p',
+                        size: '1.5GB',
+                        seeds: 150,
+                        magnet: 'magnet:?xt=urn:btih:example1'
+                    },
+                    {
+                        title: `Breaking Bad ${seasonText}${episode ? episodeText : ''} 720p`,
+                        quality: '720p',
+                        size: '800MB',
+                        seeds: 89,
+                        magnet: 'magnet:?xt=urn:btih:example2'
+                    },
+                    {
+                        title: `Breaking Bad ${seasonText}${episode ? episodeText : ''} 480p`,
+                        quality: '480p',
+                        size: '350MB',
+                        seeds: 45,
+                        magnet: 'magnet:?xt=urn:btih:example3'
+                    }
+                ];
+                
+                let torrentButtons = `
+                    <div class="torrent-quote">
+                        <h4>Torrents encontrados</h4>
+                        <div class="torrent-buttons">
+                `;
+                
+                mockTorrents.forEach((torrent) => {
+                    torrentButtons += `
+                        <div class="torrent-item">
+                            <div class="torrent-button">
+                                <span class="torrent-quality">${torrent.quality}</span>
+                                <span class="torrent-size">${torrent.size}</span>
+                                <span class="torrent-seeds">🌱 ${torrent.seeds}</span>
+                            </div>
+                            <div class="torrent-actions">
+                                <button class="action-button watch-online" onclick="alert('Stream online functionality would be integrated with WebTorrent')">
+                                    <span class="action-icon">▶</span>
+                                    <span class="action-text">Ver Online</span>
+                                </button>
+                                <a class="action-button download-torrent" href="${torrent.magnet}">
+                                    <span class="action-icon">🧲</span>
+                                    <span class="action-text">Descargar</span>
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                torrentButtons += `</div></div>`;
+                resultsContainer.innerHTML = torrentButtons;
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
