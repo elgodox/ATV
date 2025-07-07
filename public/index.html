@@ -56,50 +56,34 @@
 </div>
 
 
-  <!-- Filtros -->
-  <div id="filters">
-    <div class="filters-header">
-      <h3>Filtros de búsqueda</h3>
-      <button id="clear-filters-btn" class="clear-filters-btn">
-        <i class="fas fa-times"></i> Limpiar filtros
+  <!-- Filtros modernos -->
+  <div id="filters" class="modern-filters">
+    <div class="filters-row">
+      <select id="type" class="modern-select">
+        <option value="">🎭 Todos los tipos</option>
+        <option value="movie">🎬 Solo Películas</option>
+        <option value="tv">📺 Solo Series de TV</option>
+      </select>
+
+      <select id="genre" class="modern-select">
+        <option value="">🎪 Todos los géneros</option>
+      </select>
+
+      <select id="platform" class="modern-select">
+        <option value="">📱 Todas las plataformas</option>
+      </select>
+
+      <select id="sort" class="modern-select">
+        <option value="popularity.desc">⭐ Popularidad</option>
+        <option value="vote_average.desc">🏆 Mejor valoradas</option>
+        <option value="release_date.desc">🆕 Más nuevas</option>
+        <option value="vote_count.desc">👁️ Más vistas</option>
+      </select>
+
+      <button id="clear-filters-btn" class="clear-filters-btn modern-clear-btn">
+        <i class="fas fa-undo"></i>
       </button>
     </div>
-    
-    <div class="filters-container">
-      <div class="filter-group">
-        <label for="type">Tipo de contenido:</label>
-        <select id="type">
-          <option value="">Todos los tipos</option>
-          <option value="movie">Solo Películas</option>
-          <option value="tv">Solo Series de TV</option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label for="genre">Género:</label>
-        <select id="genre">
-          <option value="">Todos</option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label for="platform">Plataforma:</label>
-        <select id="platform">
-          <option value="">Todas</option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label for="sort">Ordenar por:</label>
-        <select id="sort">
-          <option value="popularity.desc">Popularidad</option>
-          <option value="vote_average.desc">Mejor valoradas</option>
-          <option value="release_date.desc">Más nuevas</option>
-          <option value="vote_count.desc">Más vistas</option>
-        </select>
-      </div>
-    </div>
-
   </div>
 
   <!-- Información de resultados de búsqueda -->

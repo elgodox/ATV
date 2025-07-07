@@ -449,11 +449,11 @@ async function getTitles(page = 1) {
 
     const stars = renderStars(title.vote_average);
 
-    // Badge de tipo de contenido
-    const contentTypeBadge = contentType === 'movie' ? 'Película' : 'Serie';
+    // Tag de tipo de contenido (simplificado)
+    const contentTypeTag = contentType === 'movie' ? 'Película' : 'Serie';
     
     movieCard.innerHTML = `
-    <div class="content-type-badge ${contentType}">${contentTypeBadge}</div>
+    <div class="content-type-tag ${contentType}">${contentTypeTag}</div>
     <img src="https://image.tmdb.org/t/p/w500${title.poster_path}" alt="${titleName}">
     <h3>${titleName}</h3>
     <p><strong>Estreno:</strong> ${releaseDate}</p>
