@@ -90,6 +90,13 @@ app.get('/api/titles', async (req, res) => {
     }
     
     const data = await response.json();
+    
+    // Filter out results without poster images
+    if (data.results) {
+      data.results = data.results.filter(item => item.poster_path);
+      data.total_results = data.results.length;
+    }
+    
     res.json(data);
   } catch (error) {
     console.error('Error fetching titles:', error);
@@ -105,7 +112,7 @@ app.get('/api/titles', async (req, res) => {
 
 // Nueva ruta para búsqueda optimizada que busca en movies y TV simultáneamente
 app.get('/api/search-all', async (req, res) => {
-  const { searchQuery, genre, platform, sortBy, page = 1 } = req.query;
+  const { searchQuery, genre, platform, sortBy, page = 1, type } = req.query;
   
   if (!searchQuery || searchQuery.trim() === '') {
     return res.status(400).json({
@@ -117,34 +124,75 @@ app.get('/api/search-all', async (req, res) => {
   }
 
   try {
-    const movieUrl = `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${searchQuery}&page=${page}&language=en&with_watch_providers=${platform}&watch_region=US`;
-    const tvUrl = `https://api.themoviedb.org/3/search/tv?api_key=${API_KEY}&query=${searchQuery}&page=${page}&language=en&with_watch_providers=${platform}&watch_region=US`;
+    // Construir URLs de búsqueda basadas en filtros seleccionados
+    let movieUrl = null;
+    let tvUrl = null;
     
-    // Realizar ambas búsquedas en paralelo
-    const [movieResponse, tvResponse] = await Promise.all([
-      fetch(movieUrl),
-      fetch(tvUrl)
-    ]);
+    // Determinar qué tipo de contenido buscar basado en filtros
+    const searchMovies = !type || type === '' || type === 'movie';
+    const searchTV = !type || type === '' || type === 'tv';
     
-    if (!movieResponse.ok || !tvResponse.ok) {
-      throw new Error(`TMDb API error`);
+    // Construir parámetros de búsqueda
+    const baseParams = `api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}&page=${page}&language=en`;
+    const platformParam = platform && platform !== '' ? `&with_watch_providers=${platform}&watch_region=US` : '';
+    const genreParam = genre && genre !== '' ? `&with_genres=${genre}` : '';
+    
+    // Solo realizar búsquedas necesarias según filtros
+    if (searchMovies) {
+      movieUrl = `https://api.themoviedb.org/3/search/movie?${baseParams}${platformParam}${genreParam}`;
     }
     
-    const [movieData, tvData] = await Promise.all([
-      movieResponse.json(),
-      tvResponse.json()
-    ]);
+    if (searchTV) {
+      tvUrl = `https://api.themoviedb.org/3/search/tv?${baseParams}${platformParam}${genreParam}`;
+    }
     
-    // Agregar tipo de contenido a cada resultado
-    const moviesWithType = (movieData.results || []).map(item => ({
-      ...item,
-      content_type: 'movie'
-    }));
+    // Realizar búsquedas en paralelo solo para tipos necesarios
+    const requests = [];
+    if (movieUrl) requests.push(fetch(movieUrl));
+    if (tvUrl) requests.push(fetch(tvUrl));
     
-    const tvWithType = (tvData.results || []).map(item => ({
-      ...item,
-      content_type: 'tv'
-    }));
+    if (requests.length === 0) {
+      throw new Error('No search type specified');
+    }
+    
+    const responses = await Promise.all(requests);
+    
+    // Verificar respuestas
+    for (const response of responses) {
+      if (!response.ok) {
+        throw new Error(`TMDb API error: ${response.statusText}`);
+      }
+    }
+    
+    const dataPromises = responses.map(response => response.json());
+    const dataResults = await Promise.all(dataPromises);
+    
+    let movieData = { results: [], total_results: 0, total_pages: 0 };
+    let tvData = { results: [], total_results: 0, total_pages: 0 };
+    
+    // Asignar datos según el orden de las consultas
+    let dataIndex = 0;
+    if (searchMovies) {
+      movieData = dataResults[dataIndex++];
+    }
+    if (searchTV) {
+      tvData = dataResults[dataIndex++];
+    }
+    
+    // Filtrar resultados sin imágenes
+    const moviesWithType = (movieData.results || [])
+      .filter(item => item.poster_path) // Solo mostrar resultados con imagen
+      .map(item => ({
+        ...item,
+        content_type: 'movie'
+      }));
+    
+    const tvWithType = (tvData.results || [])
+      .filter(item => item.poster_path) // Solo mostrar resultados con imagen
+      .map(item => ({
+        ...item,
+        content_type: 'tv'
+      }));
     
     // Combinar y ordenar resultados
     const allResults = [...moviesWithType, ...tvWithType];
@@ -152,20 +200,21 @@ app.get('/api/search-all', async (req, res) => {
     // Ordenar por popularidad por defecto
     allResults.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
     
-    // Aplicar filtro de género si se especifica
-    let filteredResults = allResults;
-    if (genre && genre !== '') {
-      filteredResults = allResults.filter(item => 
-        item.genre_ids && item.genre_ids.includes(parseInt(genre))
-      );
-    }
+    // Información adicional sobre filtros activos
+    const activeFilters = {
+      platform: platform && platform !== '' ? platform : null,
+      genre: genre && genre !== '' ? genre : null,
+      type: type && type !== '' ? type : null
+    };
     
     res.json({
-      results: filteredResults,
+      results: allResults,
       total_pages: Math.max(movieData.total_pages || 0, tvData.total_pages || 0),
-      total_results: (movieData.total_results || 0) + (tvData.total_results || 0),
-      movie_results: movieData.total_results || 0,
-      tv_results: tvData.total_results || 0
+      total_results: moviesWithType.length + tvWithType.length,
+      movie_results: moviesWithType.length,
+      tv_results: tvWithType.length,
+      active_filters: activeFilters,
+      is_filtered: Boolean(activeFilters.platform || activeFilters.genre || activeFilters.type)
     });
   } catch (error) {
     console.error('Error fetching search results:', error);

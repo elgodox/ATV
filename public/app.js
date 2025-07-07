@@ -142,7 +142,37 @@ function showSearchResultsInfo(data) {
     const movieResults = data.movie_results || 0;
     const tvResults = data.tv_results || 0;
     
-    resultsCount.textContent = `${totalResults} resultado${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+    // Build results text with filtering indicators
+    let resultsText = `${totalResults} resultado${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+    
+    // Add filtering indicators
+    if (data.is_filtered && data.active_filters) {
+      const filterIndicators = [];
+      
+      if (data.active_filters.platform) {
+        const platformSelect = document.getElementById('platform');
+        const platformText = platformSelect ? platformSelect.options[platformSelect.selectedIndex].text : data.active_filters.platform;
+        filterIndicators.push(`📱 ${platformText}`);
+      }
+      
+      if (data.active_filters.genre) {
+        const genreSelect = document.getElementById('genre');
+        const genreText = genreSelect ? genreSelect.options[genreSelect.selectedIndex].text : data.active_filters.genre;
+        filterIndicators.push(`🎪 ${genreText}`);
+      }
+      
+      if (data.active_filters.type) {
+        const typeSelect = document.getElementById('type');
+        const typeText = typeSelect ? typeSelect.options[typeSelect.selectedIndex].text : data.active_filters.type;
+        filterIndicators.push(`🎭 ${typeText}`);
+      }
+      
+      if (filterIndicators.length > 0) {
+        resultsText += ` (filtrado por: ${filterIndicators.join(', ')})`;
+      }
+    }
+    
+    resultsCount.textContent = resultsText;
     
     if (movieResults > 0 && tvResults > 0) {
       resultsBreakdown.textContent = `${movieResults} película${movieResults !== 1 ? 's' : ''} • ${tvResults} serie${tvResults !== 1 ? 's' : ''}`;
@@ -346,7 +376,7 @@ async function getTitles(page = 1) {
     for (let favorite of filteredFavorites) {
         const response = await fetch(`/api/titles/details?id=${favorite.id}&type=${favorite.type}&language=en`);
         const movie = await response.json();
-        if (movie) {
+        if (movie && movie.poster_path) { // Only include results with images
             movie.content_type = favorite.type; // Asegurar que el tipo esté disponible
             data.results.push(movie);
         }
@@ -355,6 +385,7 @@ async function getTitles(page = 1) {
     // Si hay búsqueda, usar la nueva API que busca en ambos tipos
     const params = new URLSearchParams({
       searchQuery,
+      type, // Pass type filter to search API
       genre,
       platform,
       sortBy,
