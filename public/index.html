@@ -38,7 +38,12 @@
 
   <div class="search-favorite-container">
     <!-- Buscador -->
-    <input type="text" id="search-bar" placeholder="Buscar películas o series">
+    <div class="search-wrapper">
+      <input type="text" id="search-bar" placeholder="Buscar películas y series...">
+      <div id="search-loading" class="search-loading hidden">
+        <i class="fas fa-spinner fa-spin"></i>
+      </div>
+    </div>
     
     <!-- Toggle de favoritos -->
     <div class="favorite-toggle">
@@ -53,39 +58,56 @@
 
   <!-- Filtros -->
   <div id="filters">
-    <div class="filter-group">
-      <label for="type">Tipo de contenido:</label>
-      <select id="type">
-        <option value="movie">Películas</option>
-        <option value="tv">Series de TV</option>
-      </select>
+    <div class="filters-header">
+      <h3>Filtros de búsqueda</h3>
+      <button id="clear-filters-btn" class="clear-filters-btn">
+        <i class="fas fa-times"></i> Limpiar filtros
+      </button>
+    </div>
+    
+    <div class="filters-container">
+      <div class="filter-group">
+        <label for="type">Tipo de contenido:</label>
+        <select id="type">
+          <option value="">Todos los tipos</option>
+          <option value="movie">Solo Películas</option>
+          <option value="tv">Solo Series de TV</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="genre">Género:</label>
+        <select id="genre">
+          <option value="">Todos</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="platform">Plataforma:</label>
+        <select id="platform">
+          <option value="">Todas</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="sort">Ordenar por:</label>
+        <select id="sort">
+          <option value="popularity.desc">Popularidad</option>
+          <option value="vote_average.desc">Mejor valoradas</option>
+          <option value="release_date.desc">Más nuevas</option>
+          <option value="vote_count.desc">Más vistas</option>
+        </select>
+      </div>
     </div>
 
-    <div class="filter-group">
-      <label for="genre">Género:</label>
-      <select id="genre">
-        <option value="">Todos</option>
-      </select>
-    </div>
+  </div>
 
-    <div class="filter-group">
-      <label for="platform">Plataforma:</label>
-      <select id="platform">
-        <option value="">Todas</option>
-      </select>
+  <!-- Información de resultados de búsqueda -->
+  <div id="search-results-info" class="search-results-info hidden">
+    <div class="results-summary">
+      <span id="results-count">0 resultados</span>
+      <span id="results-breakdown" class="results-breakdown"></span>
     </div>
-
-    <div class="filter-group">
-      <label for="sort">Ordenar por:</label>
-      <select id="sort">
-        <option value="popularity.desc">Popularidad</option>
-        <option value="vote_average.desc">Mejor valoradas</option>
-        <option value="release_date.desc">Más nuevas</option>
-        <option value="vote_count.desc">Más vistas</option>
-      </select>
-    </div>
-    </div>
-
   </div>
 
   <!-- Resultados -->

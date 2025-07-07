@@ -103,6 +103,81 @@ app.get('/api/titles', async (req, res) => {
   }
 });
 
+// Nueva ruta para búsqueda optimizada que busca en movies y TV simultáneamente
+app.get('/api/search-all', async (req, res) => {
+  const { searchQuery, genre, platform, sortBy, page = 1 } = req.query;
+  
+  if (!searchQuery || searchQuery.trim() === '') {
+    return res.status(400).json({
+      results: [],
+      total_pages: 0,
+      total_results: 0,
+      error: 'Search query is required'
+    });
+  }
+
+  try {
+    const movieUrl = `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${searchQuery}&page=${page}&language=en&with_watch_providers=${platform}&watch_region=US`;
+    const tvUrl = `https://api.themoviedb.org/3/search/tv?api_key=${API_KEY}&query=${searchQuery}&page=${page}&language=en&with_watch_providers=${platform}&watch_region=US`;
+    
+    // Realizar ambas búsquedas en paralelo
+    const [movieResponse, tvResponse] = await Promise.all([
+      fetch(movieUrl),
+      fetch(tvUrl)
+    ]);
+    
+    if (!movieResponse.ok || !tvResponse.ok) {
+      throw new Error(`TMDb API error`);
+    }
+    
+    const [movieData, tvData] = await Promise.all([
+      movieResponse.json(),
+      tvResponse.json()
+    ]);
+    
+    // Agregar tipo de contenido a cada resultado
+    const moviesWithType = (movieData.results || []).map(item => ({
+      ...item,
+      content_type: 'movie'
+    }));
+    
+    const tvWithType = (tvData.results || []).map(item => ({
+      ...item,
+      content_type: 'tv'
+    }));
+    
+    // Combinar y ordenar resultados
+    const allResults = [...moviesWithType, ...tvWithType];
+    
+    // Ordenar por popularidad por defecto
+    allResults.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+    
+    // Aplicar filtro de género si se especifica
+    let filteredResults = allResults;
+    if (genre && genre !== '') {
+      filteredResults = allResults.filter(item => 
+        item.genre_ids && item.genre_ids.includes(parseInt(genre))
+      );
+    }
+    
+    res.json({
+      results: filteredResults,
+      total_pages: Math.max(movieData.total_pages || 0, tvData.total_pages || 0),
+      total_results: (movieData.total_results || 0) + (tvData.total_results || 0),
+      movie_results: movieData.total_results || 0,
+      tv_results: tvData.total_results || 0
+    });
+  } catch (error) {
+    console.error('Error fetching search results:', error);
+    res.status(200).json({
+      results: [],
+      total_pages: 0,
+      total_results: 0,
+      error: 'Network connectivity issue - unable to fetch search data'
+    });
+  }
+});
+
 // Ruta para buscar tráiler en YouTube
 app.get('/api/youtube-trailer', async (req, res) => {
   const title = req.query.title;

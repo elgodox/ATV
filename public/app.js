@@ -119,10 +119,104 @@ const elements = {
 
 };
 
+// Función para mostrar/ocultar indicador de carga en búsqueda
+function showSearchLoading(show) {
+  const loadingIndicator = document.getElementById('search-loading');
+  if (loadingIndicator) {
+    if (show) {
+      loadingIndicator.classList.remove('hidden');
+    } else {
+      loadingIndicator.classList.add('hidden');
+    }
+  }
+}
+
+// Función para mostrar información de resultados de búsqueda
+function showSearchResultsInfo(data) {
+  const resultsInfo = document.getElementById('search-results-info');
+  const resultsCount = document.getElementById('results-count');
+  const resultsBreakdown = document.getElementById('results-breakdown');
+  
+  if (resultsInfo && resultsCount && resultsBreakdown) {
+    const totalResults = data.total_results || 0;
+    const movieResults = data.movie_results || 0;
+    const tvResults = data.tv_results || 0;
+    
+    resultsCount.textContent = `${totalResults} resultado${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+    
+    if (movieResults > 0 && tvResults > 0) {
+      resultsBreakdown.textContent = `${movieResults} película${movieResults !== 1 ? 's' : ''} • ${tvResults} serie${tvResults !== 1 ? 's' : ''}`;
+    } else if (movieResults > 0) {
+      resultsBreakdown.textContent = `${movieResults} película${movieResults !== 1 ? 's' : ''}`;
+    } else if (tvResults > 0) {
+      resultsBreakdown.textContent = `${tvResults} serie${tvResults !== 1 ? 's' : ''}`;
+    } else {
+      resultsBreakdown.textContent = '';
+    }
+    
+    resultsInfo.classList.remove('hidden');
+  }
+}
+
+// Función para ocultar información de resultados
+function hideSearchResultsInfo() {
+  const resultsInfo = document.getElementById('search-results-info');
+  if (resultsInfo) {
+    resultsInfo.classList.add('hidden');
+  }
+}
+
+// Función para limpiar todos los filtros
+function clearAllFilters() {
+  // Limpiar campo de búsqueda
+  const searchBar = document.getElementById('search-bar');
+  if (searchBar) {
+    searchBar.value = '';
+  }
+  
+  // Resetear filtros a valores por defecto
+  const typeSelect = document.getElementById('type');
+  const genreSelect = document.getElementById('genre');
+  const platformSelect = document.getElementById('platform');
+  const sortSelect = document.getElementById('sort');
+  
+  if (typeSelect) typeSelect.value = '';
+  if (genreSelect) genreSelect.value = '';
+  if (platformSelect) platformSelect.value = '';
+  if (sortSelect) sortSelect.value = 'popularity.desc';
+  
+  // Desactivar filtro de favoritos
+  const favoritesCheckbox = document.getElementById('favorites-checkbox');
+  if (favoritesCheckbox) {
+    favoritesCheckbox.checked = false;
+    showingFavorites = false;
+  }
+  
+  // Ocultar información de resultados
+  hideSearchResultsInfo();
+  
+  // Recargar contenido inicial
+  currentPage = 1;
+  getTitles(currentPage);
+  
+  // Mostrar notificación (if available)
+  if (typeof showNotification === 'function') {
+    showNotification('Filtros limpiados correctamente', 'success', 2000);
+  }
+}
+
 document.getElementById("type").addEventListener("change", applyFilters);
 document.getElementById("genre").addEventListener("change", applyFilters);
 document.getElementById("platform").addEventListener("change", applyFilters);
 document.getElementById("sort").addEventListener("change", applyFilters);
+
+// Event listener para el botón de limpiar filtros
+document.addEventListener('DOMContentLoaded', function() {
+  const clearFiltersBtn = document.getElementById('clear-filters-btn');
+  if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener('click', clearAllFilters);
+  }
+});
 document.getElementById('type').addEventListener('change', updateGenreSelect);
 document.getElementById('connect-metamask').addEventListener('click', connectMetaMask);
 
@@ -214,6 +308,9 @@ async function getTitles(page = 1) {
   if (isLoading) return;
   isLoading = true;
 
+  // Mostrar indicador de carga
+  showSearchLoading(true);
+
   const type = document.getElementById('type').value;
   const genre = document.getElementById('genre').value;
   const platform = document.getElementById('platform').value;
@@ -230,11 +327,15 @@ async function getTitles(page = 1) {
   if (showingFavorites) {
     const favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
 
-    // Filter favorites by the current type (movie or tv)
-    const filteredFavorites = favorites.filter(fav => fav.type === type);
+    // Filter favorites by the current type (movie or tv), or all if no type selected
+    let filteredFavorites = favorites;
+    if (type && type !== '') {
+      filteredFavorites = favorites.filter(fav => fav.type === type);
+    }
 
     if (filteredFavorites.length === 0) {
         elements.movieGrid.innerHTML = '<p>No tienes favoritos en esta categoría.</p>';
+        showSearchLoading(false);
         isLoading = false;
         return;
     }
@@ -243,16 +344,16 @@ async function getTitles(page = 1) {
     data = { results: [] };
 
     for (let favorite of filteredFavorites) {
-        const response = await fetch(`/api/titles/details?id=${favorite.id}&type=${type}&language=en`);
+        const response = await fetch(`/api/titles/details?id=${favorite.id}&type=${favorite.type}&language=en`);
         const movie = await response.json();
         if (movie) {
+            movie.content_type = favorite.type; // Asegurar que el tipo esté disponible
             data.results.push(movie);
         }
     }
-} else {
-    // Si no está activo el filtro de favoritos, llamamos a la API normal
+  } else if (searchQuery && searchQuery.length > 0) {
+    // Si hay búsqueda, usar la nueva API que busca en ambos tipos
     const params = new URLSearchParams({
-      type,
       searchQuery,
       genre,
       platform,
@@ -260,14 +361,49 @@ async function getTitles(page = 1) {
       page
     }).toString();
 
-    data = await fetchData('titles', params); // Llamada a la API
+    data = await fetchData('search-all', params);
+  } else {
+    // Si no hay búsqueda, usar la API original
+    // Si no se especifica tipo, mostrar contenido por defecto (películas)
+    const defaultType = type || 'movie';
+    const params = new URLSearchParams({
+      type: defaultType,
+      searchQuery,
+      genre,
+      platform,
+      sortBy,
+      page
+    }).toString();
+
+    data = await fetchData('titles', params);
+    
+    // Agregar el tipo de contenido a los resultados
+    if (data && data.results) {
+      data.results = data.results.map(item => ({
+        ...item,
+        content_type: defaultType
+      }));
+    }
   }
+
+  // Ocultar indicador de carga
+  showSearchLoading(false);
 
   // Validar que tengamos resultados
   if (!data || !data.results || data.results.length === 0) {
-    if (currentPage === 1) elements.movieGrid.innerHTML = '<p>No se encontraron resultados.</p>';
+    if (currentPage === 1) {
+      elements.movieGrid.innerHTML = '<p>No se encontraron resultados.</p>';
+      hideSearchResultsInfo();
+    }
     isLoading = false;
     return;
+  }
+
+  // Mostrar información de resultados si hay búsqueda
+  if (searchQuery && searchQuery.length > 0) {
+    showSearchResultsInfo(data);
+  } else {
+    hideSearchResultsInfo();
   }
 
   totalResults = data.total_results;
@@ -284,12 +420,18 @@ async function getTitles(page = 1) {
     const movieCard = document.createElement('div');
     movieCard.id = `movie-card-${title.id}`;
     movieCard.classList.add('movie-card');
+    
+    // Determinar el tipo de contenido
+    const contentType = title.content_type || type || 'movie';
+    movieCard.classList.add(`content-${contentType}`);
+    movieCard.setAttribute('data-type', contentType);
+    movieCard.setAttribute('data-id', title.id);
 
     // Obtener los géneros de la película/serie
-    const movieGenres = title.genre_ids ? title.genre_ids.map(id => genreMap[id]).join(', ') : title.genres.map(genre => genre.name).join(', ');
+    const movieGenres = title.genre_ids ? title.genre_ids.map(id => genreMap[id]).join(', ') : title.genres ? title.genres.map(genre => genre.name).join(', ') : 'N/A';
 
     // Obtener las plataformas disponibles
-    const providers = await fetchProvider(title.id, type);
+    const providers = await fetchProvider(title.id, contentType);
     const providerNames = providers ? providers.join(', ') : 'No disponible';
 
     // Verificar el título y la fecha según si es película o serie de TV
@@ -299,7 +441,7 @@ async function getTitles(page = 1) {
     let seasons = '';
     let status = '';
 
-    if (type === 'tv') {
+    if (contentType === 'tv') {
       const tvDetails = await fetchTVDetails(title.id);
       seasons = tvDetails ? `${tvDetails.number_of_seasons} Temporadas` : 'N/A';
       status = tvDetails ? (tvDetails.status === 'Ended' ? 'Finalizada' : 'En emisión') : 'Estado desconocido';
@@ -307,9 +449,11 @@ async function getTitles(page = 1) {
 
     const stars = renderStars(title.vote_average);
 
+    // Badge de tipo de contenido
+    const contentTypeBadge = contentType === 'movie' ? 'Película' : 'Serie';
     
-
     movieCard.innerHTML = `
+    <div class="content-type-badge ${contentType}">${contentTypeBadge}</div>
     <img src="https://image.tmdb.org/t/p/w500${title.poster_path}" alt="${titleName}">
     <h3>${titleName}</h3>
     <p><strong>Estreno:</strong> ${releaseDate}</p>
@@ -323,24 +467,24 @@ async function getTitles(page = 1) {
     <div class="card-icons">
       <i id="heart-icon-${title.id}" 
          class="fas fa-heart" 
-         style="cursor: pointer; color: ${isFavorite(title.id, type) ? 'red' : 'black'};" 
-         onclick="toggleFavorite(${title.id}, '${type}', event)"></i>
+         style="cursor: pointer; color: ${isFavorite(title.id, contentType) ? 'red' : 'black'};" 
+         onclick="toggleFavorite(${title.id}, '${contentType}', event)"></i>
       <i id="eye-icon-${title.id}" 
          class="fas fa-eye" 
-         style="cursor: pointer; color: ${isWatched(title.id, type) ? 'blue' : 'black'};" 
-         onclick="toggleWatched(${title.id}, '${type}', event)"></i>
+         style="cursor: pointer; color: ${isWatched(title.id, contentType) ? 'blue' : 'black'};" 
+         onclick="toggleWatched(${title.id}, '${contentType}', event)"></i>
     </div>
   `;
   
 
-    if (isWatched(title.id, type)) {
+    if (isWatched(title.id, contentType)) {
       movieCard.classList.add('watched');
     } else {
       movieCard.classList.remove('watched');
     }
 
     movieCard.addEventListener('click', () => {
-      showDetails(title.id, type, movieCard);
+      showDetails(title.id, contentType, movieCard);
     });
 
     elements.movieGrid.appendChild(movieCard);
@@ -1185,8 +1329,28 @@ async function closeModal() {
 }
 
 // Evento para actualizar los resultados cuando el usuario busca
-document.getElementById("search-bar").addEventListener("input", () => {
-  getTitles();
+let searchTimeout;
+document.getElementById("search-bar").addEventListener("input", (e) => {
+  // Cancelar el timeout anterior si existe
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+  }
+  
+  const searchQuery = e.target.value.trim();
+  
+  // Si la búsqueda está vacía, restaurar estado inicial inmediatamente
+  if (searchQuery === '') {
+    hideSearchResultsInfo();
+    currentPage = 1;
+    getTitles(currentPage);
+    return;
+  }
+  
+  // Debounce para búsquedas con contenido (300ms de delay)
+  searchTimeout = setTimeout(() => {
+    currentPage = 1;
+    getTitles(currentPage);
+  }, 300);
 });
 
 // Aplicar filtros y obtener títulos
