@@ -49,18 +49,55 @@ app.use('/subtitles', express.static(path.join(__dirname, 'uploads', 'subtitles'
 
 // Ruta para obtener géneros
 app.get('/api/genres', async (req, res) => {
-  const url = `https://api.themoviedb.org/3/genre/movie/list?api_key=${API_KEY}&language=es`;
-  const response = await fetch(url);
-  const data = await response.json();
-  res.json(data);
+  try {
+    // Si no hay API key, usar géneros de demostración
+    if (!API_KEY || API_KEY === 'demo_key_for_testing') {
+      console.log('Using demo genres');
+      const demoGenres = {
+        genres: [
+          { id: 28, name: 'Action' },
+          { id: 18, name: 'Drama' },
+          { id: 35, name: 'Comedy' },
+          { id: 80, name: 'Crime' },
+          { id: 99, name: 'Documentary' },
+          { id: 10765, name: 'Sci-Fi & Fantasy' },
+          { id: 53, name: 'Thriller' }
+        ]
+      };
+      return res.json(demoGenres);
+    }
+    
+    const url = `https://api.themoviedb.org/3/genre/movie/list?api_key=${API_KEY}&language=es`;
+    const response = await fetch(url);
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching genres:', error);
+    res.status(500).json({ message: 'Error fetching genres' });
+  }
 });
 
 // Ruta para obtener géneros según el tipo de contenido (movie o tv)
 app.get('/api/genres/:type', async (req, res) => {
   const { type } = req.params;
-  const url = `https://api.themoviedb.org/3/genre/${type}/list?api_key=${API_KEY}&language=es`;
 
   try {
+    // Si no hay API key, usar géneros de demostración
+    if (!API_KEY || API_KEY === 'demo_key_for_testing') {
+      console.log('Using demo genres for type:', type);
+      const demoGenres = [
+        { id: 28, name: 'Action' },
+        { id: 18, name: 'Drama' },
+        { id: 35, name: 'Comedy' },
+        { id: 80, name: 'Crime' },
+        { id: 99, name: 'Documentary' },
+        { id: 10765, name: 'Sci-Fi & Fantasy' },
+        { id: 53, name: 'Thriller' }
+      ];
+      return res.json(demoGenres);
+    }
+    
+    const url = `https://api.themoviedb.org/3/genre/${type}/list?api_key=${API_KEY}&language=es`;
     const response = await fetch(url);
     const data = await response.json();
     res.json(data.genres);  // Solo devolver la lista de géneros
@@ -124,6 +161,13 @@ app.get('/api/search-all', async (req, res) => {
   }
 
   try {
+    // Si no hay API key, usar datos de demostración
+    if (!API_KEY || API_KEY === 'demo_key_for_testing') {
+      console.log('Using demo data for search:', searchQuery);
+      const demoResults = generateDemoSearchResults(searchQuery);
+      return res.json(demoResults);
+    }
+
     // Construir URLs de búsqueda basadas en filtros seleccionados
     let movieUrl = null;
     let tvUrl = null;
@@ -227,6 +271,71 @@ app.get('/api/search-all', async (req, res) => {
   }
 });
 
+// Función para generar resultados de demostración
+function generateDemoSearchResults(searchQuery) {
+  const query = searchQuery.toLowerCase();
+  const demoResults = [];
+  
+  // Agregar series de TV de demostración
+  if (query.includes('breaking') || query.includes('bad')) {
+    demoResults.push({
+      id: 1396,
+      name: 'Breaking Bad',
+      original_name: 'Breaking Bad',
+      poster_path: '/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
+      backdrop_path: '/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg',
+      overview: 'When Walter White, a New Mexico chemistry teacher, is diagnosed with Stage III cancer and given a prognosis of only two years left to live, he becomes filled with a sense of fearlessness and an unrelenting desire to secure his family\'s financial future at any cost.',
+      first_air_date: '2008-01-20',
+      vote_average: 9.5,
+      content_type: 'tv',
+      genre_ids: [18, 80],
+      popularity: 369.594
+    });
+  }
+  
+  if (query.includes('stranger') || query.includes('things')) {
+    demoResults.push({
+      id: 66732,
+      name: 'Stranger Things',
+      original_name: 'Stranger Things',
+      poster_path: '/49WJfeN0moxb9IPfGn8AIqMGskD.jpg',
+      backdrop_path: '/56v2KjBlU4XaOv9rVYEQypROD7P.jpg',
+      overview: 'When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces, and one strange little girl.',
+      first_air_date: '2016-07-15',
+      vote_average: 8.6,
+      content_type: 'tv',
+      genre_ids: [18, 10765, 9648],
+      popularity: 547.331
+    });
+  }
+  
+  if (query.includes('game') || query.includes('thrones')) {
+    demoResults.push({
+      id: 1399,
+      name: 'Game of Thrones',
+      original_name: 'Game of Thrones',
+      poster_path: '/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg',
+      backdrop_path: '/suopoADq0k8YZr4dQXcU6pToj6s.jpg',
+      overview: 'Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north.',
+      first_air_date: '2011-04-17',
+      vote_average: 8.3,
+      content_type: 'tv',
+      genre_ids: [18, 10759, 10765],
+      popularity: 369.594
+    });
+  }
+  
+  return {
+    results: demoResults,
+    total_pages: 1,
+    total_results: demoResults.length,
+    movie_results: 0,
+    tv_results: demoResults.length,
+    active_filters: {},
+    is_filtered: false
+  };
+}
+
 // Ruta para buscar tráiler en YouTube
 app.get('/api/youtube-trailer', async (req, res) => {
   const title = req.query.title;
@@ -287,9 +396,15 @@ app.get('/api/vimeo-trailer', async (req, res) => {
 app.get('/api/titles/details', async (req, res) => {
     const { id, type, language } = req.query;
     
-    const url = `https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}&language=${language}&append_to_response=videos`;
-  
     try {
+      // Si no hay API key, usar datos de demostración
+      if (!API_KEY || API_KEY === 'demo_key_for_testing') {
+        console.log('Using demo details for', type, id, language);
+        const demoDetails = generateDemoTVDetails(id);
+        return res.json(demoDetails);
+      }
+      
+      const url = `https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}&language=${language}&append_to_response=videos`;
       const response = await fetch(url, {
         timeout: 10000, // 10 second timeout
         headers: {
@@ -303,7 +418,8 @@ app.get('/api/titles/details', async (req, res) => {
       }
       
       const data = await response.json();
-      res.json(data);    } catch (error) {
+      res.json(data);
+    } catch (error) {
       console.error('Error fetching movie details:', error);
       // Return a fallback response instead of failing completely
       res.status(200).json({
@@ -321,8 +437,23 @@ app.get('/api/titles/details', async (req, res) => {
 // Ruta para obtener proveedores
 app.get('/api/providers', async (req, res) => {
     const { type } = req.query;
-    const url = `https://api.themoviedb.org/3/watch/providers/${type}?api_key=${API_KEY}&language=es-ES&watch_region=US`;
+    
     try {
+      // Si no hay API key, usar proveedores de demostración
+      if (!API_KEY || API_KEY === 'demo_key_for_testing') {
+        console.log('Using demo providers for type:', type);
+        const demoProviders = {
+          results: [
+            { provider_id: 8, provider_name: 'Netflix' },
+            { provider_id: 119, provider_name: 'Amazon Prime Video' },
+            { provider_id: 337, provider_name: 'Disney Plus' },
+            { provider_id: 384, provider_name: 'HBO Max' }
+          ]
+        };
+        return res.json(demoProviders);
+      }
+      
+      const url = `https://api.themoviedb.org/3/watch/providers/${type}?api_key=${API_KEY}&language=es-ES&watch_region=US`;
       const response = await fetch(url);
       const data = await response.json();
       res.json(data);
@@ -335,9 +466,25 @@ app.get('/api/providers', async (req, res) => {
   // Ruta para obtener proveedor
   app.get('/api/:type/:id/watch/providers', async (req, res) => {
     const { type, id } = req.params;
-    const url = `https://api.themoviedb.org/3/${type}/${id}/watch/providers?api_key=${API_KEY}`;
-  
+    
     try {
+      // Si no hay API key, usar proveedores de demostración
+      if (!API_KEY || API_KEY === 'demo_key_for_testing') {
+        console.log('Using demo providers for', type, id);
+        const demoProviders = {
+          results: {
+            US: {
+              flatrate: [
+                { provider_id: 8, provider_name: 'Netflix' },
+                { provider_id: 119, provider_name: 'Amazon Prime Video' }
+              ]
+            }
+          }
+        };
+        return res.json(demoProviders);
+      }
+      
+      const url = `https://api.themoviedb.org/3/${type}/${id}/watch/providers?api_key=${API_KEY}`;
       const response = await fetch(url);
       const data = await response.json();
       res.json(data);
@@ -374,6 +521,230 @@ app.get('/api/torrents', async (req, res) => {
       res.status(500).json({ message: 'Error fetching torrents' });
     }
   });
+
+// Ruta para obtener detalles de una serie de TV
+app.get('/api/tv/details/:tvId', async (req, res) => {
+  const { tvId } = req.params;
+  
+  if (!tvId) {
+    return res.status(400).json({ message: 'TV ID is required' });
+  }
+  
+  try {
+    // Si no hay API key, usar datos de demostración
+    if (!API_KEY || API_KEY === 'demo_key_for_testing') {
+      console.log('Using demo TV details for ID:', tvId);
+      const demoDetails = generateDemoTVDetails(tvId);
+      return res.json(demoDetails);
+    }
+    
+    const url = `https://api.themoviedb.org/3/tv/${tvId}?api_key=${API_KEY}&language=en&append_to_response=videos,seasons`;
+    
+    const response = await fetch(url, {
+      timeout: 10000, // 10 second timeout
+      headers: {
+        'User-Agent': 'ATV-App/1.0'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch TV details from TMDb: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching TV details:', error);
+    res.status(200).json({
+      id: tvId,
+      name: 'TV Series Details Unavailable',
+      overview: 'Unable to fetch TV series details due to network connectivity issues.',
+      poster_path: null,
+      backdrop_path: null,
+      videos: { results: [] },
+      seasons: [],
+      number_of_seasons: 0,
+      status: 'Unknown',
+      error: 'Network connectivity issue'
+    });
+  }
+});
+
+// Función para generar detalles de demostración para series de TV
+function generateDemoTVDetails(tvId) {
+  const demoDetails = {
+    1396: { // Breaking Bad
+      id: 1396,
+      name: 'Breaking Bad',
+      original_name: 'Breaking Bad',
+      overview: 'When Walter White, a New Mexico chemistry teacher, is diagnosed with Stage III cancer and given a prognosis of only two years left to live, he becomes filled with a sense of fearlessness and an unrelenting desire to secure his family\'s financial future at any cost.',
+      poster_path: '/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
+      backdrop_path: '/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg',
+      first_air_date: '2008-01-20',
+      last_air_date: '2013-09-29',
+      number_of_seasons: 5,
+      number_of_episodes: 62,
+      status: 'Ended',
+      vote_average: 9.5,
+      genres: [
+        { id: 18, name: 'Drama' },
+        { id: 80, name: 'Crime' }
+      ],
+      seasons: [
+        { season_number: 1, episode_count: 7, name: 'Season 1' },
+        { season_number: 2, episode_count: 13, name: 'Season 2' },
+        { season_number: 3, episode_count: 13, name: 'Season 3' },
+        { season_number: 4, episode_count: 13, name: 'Season 4' },
+        { season_number: 5, episode_count: 16, name: 'Season 5' }
+      ]
+    },
+    66732: { // Stranger Things
+      id: 66732,
+      name: 'Stranger Things',
+      original_name: 'Stranger Things',
+      overview: 'When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces, and one strange little girl.',
+      poster_path: '/49WJfeN0moxb9IPfGn8AIqMGskD.jpg',
+      backdrop_path: '/56v2KjBlU4XaOv9rVYEQypROD7P.jpg',
+      first_air_date: '2016-07-15',
+      last_air_date: '2022-07-01',
+      number_of_seasons: 4,
+      number_of_episodes: 42,
+      status: 'Ended',
+      vote_average: 8.6,
+      genres: [
+        { id: 18, name: 'Drama' },
+        { id: 10765, name: 'Sci-Fi & Fantasy' },
+        { id: 9648, name: 'Mystery' }
+      ],
+      seasons: [
+        { season_number: 1, episode_count: 8, name: 'Season 1' },
+        { season_number: 2, episode_count: 9, name: 'Season 2' },
+        { season_number: 3, episode_count: 8, name: 'Season 3' },
+        { season_number: 4, episode_count: 9, name: 'Season 4' }
+      ]
+    },
+    1399: { // Game of Thrones
+      id: 1399,
+      name: 'Game of Thrones',
+      original_name: 'Game of Thrones',
+      overview: 'Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north.',
+      poster_path: '/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg',
+      backdrop_path: '/suopoADq0k8YZr4dQXcU6pToj6s.jpg',
+      first_air_date: '2011-04-17',
+      last_air_date: '2019-05-19',
+      number_of_seasons: 8,
+      number_of_episodes: 73,
+      status: 'Ended',
+      vote_average: 8.3,
+      genres: [
+        { id: 18, name: 'Drama' },
+        { id: 10759, name: 'Action & Adventure' },
+        { id: 10765, name: 'Sci-Fi & Fantasy' }
+      ],
+      seasons: [
+        { season_number: 1, episode_count: 10, name: 'Season 1' },
+        { season_number: 2, episode_count: 10, name: 'Season 2' },
+        { season_number: 3, episode_count: 10, name: 'Season 3' },
+        { season_number: 4, episode_count: 10, name: 'Season 4' },
+        { season_number: 5, episode_count: 10, name: 'Season 5' },
+        { season_number: 6, episode_count: 10, name: 'Season 6' },
+        { season_number: 7, episode_count: 7, name: 'Season 7' },
+        { season_number: 8, episode_count: 6, name: 'Season 8' }
+      ]
+    }
+  };
+  
+  return demoDetails[tvId] || {
+    id: tvId,
+    name: 'Demo TV Series',
+    original_name: 'Demo TV Series',
+    overview: 'This is a demo TV series for testing torrent functionality.',
+    poster_path: null,
+    backdrop_path: null,
+    number_of_seasons: 3,
+    number_of_episodes: 30,
+    status: 'Ended',
+    vote_average: 8.0,
+    genres: [{ id: 18, name: 'Drama' }],
+    seasons: [
+      { season_number: 1, episode_count: 10, name: 'Season 1' },
+      { season_number: 2, episode_count: 10, name: 'Season 2' },
+      { season_number: 3, episode_count: 10, name: 'Season 3' }
+    ]
+  };
+}
+
+// Ruta para obtener torrents de series de TV
+app.get('/api/tv-torrents', async (req, res) => {
+  const { tvTitle, season, episode } = req.query;
+  
+  // Verifica que tvTitle esté presente
+  if (!tvTitle) {
+    return res.status(400).json({ message: 'TV title is required' });
+  }
+  
+  try {
+    // Construir el término de búsqueda
+    let searchTerm = tvTitle;
+    if (season && episode) {
+      searchTerm += ` S${season.toString().padStart(2, '0')}E${episode.toString().padStart(2, '0')}`;
+    } else if (season) {
+      searchTerm += ` S${season.toString().padStart(2, '0')}`;
+    }
+    
+    // Buscar torrents usando 1337x API (alternativa más común para series)
+    const torrentsUrl = `https://1337x.to/search/${encodeURIComponent(searchTerm)}/1/`;
+    
+    // Como 1337x no tiene API pública, usar una estrategia de búsqueda simulada
+    // En un entorno real, usarías APIs como EZTV, Nyaa, o servicios de torrents para series
+    
+    // Generar torrents de muestra para demostrar la funcionalidad
+    const mockTorrents = generateMockTVTorrents(tvTitle, season, episode);
+    
+    if (mockTorrents.length > 0) {
+      res.json(mockTorrents);
+    } else {
+      res.status(404).json({ message: 'No torrents found for this TV episode.' });
+    }
+    
+  } catch (error) {
+    console.error('Error fetching TV torrents:', error);
+    res.status(500).json({ message: 'Error fetching TV torrents' });
+  }
+});
+
+// Función para generar torrents de muestra para series de TV
+function generateMockTVTorrents(tvTitle, season, episode) {
+  const qualities = ['1080p', '720p', '480p'];
+  const sizes = ['1.5GB', '800MB', '350MB'];
+  const seeds = [150, 89, 45];
+  const leeches = [12, 8, 3];
+  
+  const torrents = [];
+  
+  qualities.forEach((quality, index) => {
+    const episodeText = episode ? `E${episode.toString().padStart(2, '0')}` : 'Full Season';
+    const seasonText = season ? `S${season.toString().padStart(2, '0')}` : 'Complete';
+    
+    // Generar hash simulado
+    const hash = Math.random().toString(36).substring(2, 42);
+    
+    torrents.push({
+      title: `${tvTitle} ${seasonText}${episode ? episodeText : ''} ${quality}`,
+      quality: quality,
+      size: sizes[index],
+      seeds: seeds[index],
+      leeches: leeches[index],
+      hash: hash,
+      type: 'tv',
+      season: season,
+      episode: episode,
+      magnet: `magnet:?xt=urn:btih:${hash}&dn=${encodeURIComponent(tvTitle)}&tr=udp://tracker.openbittorrent.com:80/announce`
+    });
+  });
+  
+  return torrents;
+}
 // API para explorar archivos dentro de un torrent
 app.post('/api/torrent/explore', (req, res) => {
   const { magnetURI } = req.body;

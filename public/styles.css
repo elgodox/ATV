@@ -2108,3 +2108,143 @@ h1 {
   background: transparent;
   margin-top: 8px;
 }
+
+/* TV Torrent Selector Styles */
+.tv-torrent-selector {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  border: 2px solid #3498db;
+  border-radius: 15px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.tv-torrent-selector h3 {
+  color: #ffffff;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 1.4em;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.selector-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+}
+
+.selector-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.selector-group label {
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 0.9em;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.season-episode-select {
+  padding: 10px;
+  border: 2px solid #3498db;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  font-size: 1em;
+  transition: all 0.3s ease;
+}
+
+.season-episode-select:focus {
+  outline: none;
+  border-color: #2980b9;
+  box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+}
+
+.search-torrents-btn {
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 25px;
+  color: white;
+  font-size: 1.1em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.search-torrents-btn:hover {
+  background: linear-gradient(135deg, #229954 0%, #27ae60 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);
+}
+
+.search-torrents-btn:active {
+  transform: translateY(0);
+}
+
+.torrent-results {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.loading-torrents {
+  text-align: center;
+  color: #ffffff;
+  font-size: 1.2em;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}
+
+.torrent-seeds {
+  font-size: 0.8em;
+  color: #27ae60;
+  margin-left: 10px;
+}
+
+/* Responsive design for TV selector */
+@media (max-width: 768px) {
+  .tv-torrent-selector {
+    padding: 15px;
+    margin: 15px 0;
+  }
+  
+  .tv-torrent-selector h3 {
+    font-size: 1.2em;
+  }
+  
+  .selector-group {
+    max-width: 100%;
+  }
+  
+  .search-torrents-btn {
+    padding: 10px 20px;
+    font-size: 1em;
+  }
+}
+
+@media (min-width: 769px) {
+  .selector-container {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: end;
+  }
+  
+  .selector-group {
+    flex: 1;
+    max-width: 200px;
+  }
+  
+  .search-torrents-btn {
+    flex-shrink: 0;
+    margin-left: 15px;
+  }
+}

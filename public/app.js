@@ -717,9 +717,20 @@ async function showDetails(id, type, movieCard) {
       </div>
     `);
 
-    // Si es una película, buscar torrents en YTS
+    // Buscar torrents según el tipo de contenido
     if (type === "movie") {
       await fetchTorrents(dataOriginal.title);
+    } else if (type === "tv") {
+      // Para series de TV, obtener los detalles completos y buscar torrents
+      const tvDetails = await fetchTVDetails(id);
+      if (tvDetails) {
+        await fetchTVTorrents(dataOriginal.original_name || dataOriginal.name, tvDetails);
+      } else {
+        elements.modalDescription.insertAdjacentHTML(
+          "beforeend",
+          '<div class="no-torrents-message">No se pudieron obtener los detalles de la serie para buscar torrents.</div>'
+        );
+      }
     }
 
     // Mostrar el modal
@@ -909,6 +920,182 @@ async function fetchTorrents(movieTitle) {
     );
     console.error("Error fetching torrents:", error);
   }
+}
+
+// Función para obtener torrents de series de TV
+async function fetchTVTorrents(tvTitle, tvDetails) {
+  try {
+    // Crear interfaz de selección de temporada y episodio
+    const seasonSelect = createSeasonEpisodeSelector(tvDetails);
+    
+    elements.modalDescription.insertAdjacentHTML("beforeend", seasonSelect);
+    
+    // Agregar event listeners para los selectores
+    const seasonSelector = document.getElementById('season-selector');
+    const episodeSelector = document.getElementById('episode-selector');
+    const searchTorrentsBtn = document.getElementById('search-torrents-btn');
+    const torrentResultsContainer = document.getElementById('torrent-results');
+    
+    // Actualizar episodios cuando cambie la temporada
+    seasonSelector.addEventListener('change', function() {
+      updateEpisodeSelector(tvDetails, this.value);
+    });
+    
+    // Buscar torrents cuando se haga clic en el botón
+    searchTorrentsBtn.addEventListener('click', async function() {
+      const selectedSeason = seasonSelector.value;
+      const selectedEpisode = episodeSelector.value;
+      
+      if (!selectedSeason) {
+        alert('Por favor selecciona una temporada');
+        return;
+      }
+      
+      // Mostrar indicador de carga
+      torrentResultsContainer.innerHTML = '<div class="loading-torrents">🔍 Buscando torrents...</div>';
+      
+      await searchTVTorrents(tvTitle, selectedSeason, selectedEpisode, torrentResultsContainer);
+    });
+    
+    // Cargar episodios de la primera temporada por defecto
+    if (seasonSelector.value) {
+      updateEpisodeSelector(tvDetails, seasonSelector.value);
+    }
+    
+  } catch (error) {
+    console.error("Error setting up TV torrents:", error);
+    elements.modalDescription.insertAdjacentHTML(
+      "beforeend",
+      `<div class="no-torrents-message" style="background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%); border-color: #f44336; color: #ffebee;">
+        <span style="font-size: 2em; display: block; margin-bottom: 10px;">⚠️</span>
+        Error al configurar la búsqueda de torrents para series.
+      </div>`
+    );
+  }
+}
+
+// Función para crear el selector de temporada y episodio
+function createSeasonEpisodeSelector(tvDetails) {
+  const seasons = tvDetails.seasons || [];
+  let seasonOptions = '<option value="">Selecciona una temporada</option>';
+  
+  seasons.forEach(season => {
+    if (season.season_number > 0) { // Omitir temporada 0 (especiales)
+      seasonOptions += `<option value="${season.season_number}">Temporada ${season.season_number} (${season.episode_count} episodios)</option>`;
+    }
+  });
+  
+  return `
+    <div class="tv-torrent-selector">
+      <h3>📺 Buscar Torrents para Episodios</h3>
+      <div class="selector-container">
+        <div class="selector-group">
+          <label for="season-selector">Temporada:</label>
+          <select id="season-selector" class="season-episode-select">
+            ${seasonOptions}
+          </select>
+        </div>
+        <div class="selector-group">
+          <label for="episode-selector">Episodio:</label>
+          <select id="episode-selector" class="season-episode-select">
+            <option value="">Selecciona un episodio</option>
+          </select>
+        </div>
+        <button id="search-torrents-btn" class="search-torrents-btn">🔍 Buscar Torrents</button>
+      </div>
+      <div id="torrent-results" class="torrent-results"></div>
+    </div>
+  `;
+}
+
+// Función para actualizar el selector de episodios
+function updateEpisodeSelector(tvDetails, seasonNumber) {
+  const episodeSelector = document.getElementById('episode-selector');
+  const selectedSeason = tvDetails.seasons.find(s => s.season_number == seasonNumber);
+  
+  if (!selectedSeason) {
+    episodeSelector.innerHTML = '<option value="">Temporada no encontrada</option>';
+    return;
+  }
+  
+  let episodeOptions = '<option value="">Temporada completa</option>';
+  
+  // Generar opciones para cada episodio
+  for (let i = 1; i <= selectedSeason.episode_count; i++) {
+    episodeOptions += `<option value="${i}">Episodio ${i}</option>`;
+  }
+  
+  episodeSelector.innerHTML = episodeOptions;
+}
+
+// Función para buscar torrents de TV
+async function searchTVTorrents(tvTitle, season, episode, resultsContainer) {
+  try {
+    const response = await fetch(`/api/tv-torrents?tvTitle=${encodeURIComponent(tvTitle)}&season=${season}&episode=${episode || ''}`);
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        resultsContainer.innerHTML = '<div class="no-torrents-message">No se encontraron torrents para este episodio.</div>';
+        return;
+      } else {
+        throw new Error('Error fetching TV torrents');
+      }
+    }
+    
+    const torrents = await response.json();
+    
+    if (torrents.length > 0) {
+      displayTVTorrents(torrents, resultsContainer, tvTitle);
+    } else {
+      resultsContainer.innerHTML = '<div class="no-torrents-message">No se encontraron torrents para este episodio.</div>';
+    }
+    
+  } catch (error) {
+    console.error("Error searching TV torrents:", error);
+    resultsContainer.innerHTML = `
+      <div class="no-torrents-message" style="background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%); border-color: #f44336; color: #ffebee;">
+        <span style="font-size: 2em; display: block; margin-bottom: 10px;">⚠️</span>
+        Error al buscar torrents. Intenta más tarde.
+      </div>
+    `;
+  }
+}
+
+// Función para mostrar los torrents de TV
+function displayTVTorrents(torrents, container, tvTitle) {
+  let torrentButtons = `
+    <div class="torrent-quote">
+      <h4>Torrents encontrados</h4>
+      <div class="torrent-buttons">
+  `;
+  
+  torrents.forEach((torrent) => {
+    const magnetLink = torrent.magnet;
+    const torrentTitle = torrent.title;
+    
+    torrentButtons += `
+      <div class="torrent-item">
+        <button class="torrent-button" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${torrentTitle}" onclick="toggleTorrentActions(this)">
+          <span class="torrent-quality">${torrent.quality}</span>
+          <span class="torrent-size">${torrent.size}</span>
+          <span class="torrent-seeds">🌱 ${torrent.seeds}</span>
+        </button>
+        <div class="torrent-actions" style="display: none;">
+          <button class="action-button watch-online" onclick="watchOnlineWithStats('${magnetLink}', '${torrentTitle}')">
+            <span class="action-icon">▶</span>
+            <span class="action-text">Ver Online</span>
+          </button>
+          <a class="action-button download-torrent" href="${magnetLink}" download>
+            <span class="action-icon">🧲</span>
+            <span class="action-text">Descargar</span>
+          </a>
+        </div>
+      </div>
+    `;
+  });
+  
+  torrentButtons += `</div></div>`;
+  container.innerHTML = torrentButtons;
 }
 
 // Función para iniciar el reproductor de video WebTorrent
