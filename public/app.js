@@ -247,26 +247,10 @@ document.addEventListener('DOMContentLoaded', function() {
     clearFiltersBtn.addEventListener('click', clearAllFilters);
   }
   
-  // Check if app is in demo mode
-  checkDemoMode();
+  
 });
 
-// Function to check if app is in demo mode
-async function checkDemoMode() {
-  try {
-    // Try to get TV details to check if we're in demo mode
-    const response = await fetch('/api/tv/details/1396'); // Breaking Bad ID
-    if (response.ok) {
-      const data = await response.json();
-      // If we get a response without error and it's demo data, show demo mode notification
-      if (data.name === 'Breaking Bad' && !data.error) {
-        showNotification('🎭 Modo Demostración: La aplicación está ejecutándose en modo demostración con datos simulados. Para acceder a la funcionalidad completa, configura una API key válida de TMDb.', 'info', 6000);
-      }
-    }
-  } catch (error) {
-    console.log('Demo mode check failed:', error);
-  }
-}
+
 document.getElementById('type').addEventListener('change', updateGenreSelect);
 document.getElementById('connect-metamask').addEventListener('click', connectMetaMask);
 
@@ -1086,11 +1070,6 @@ function displayTVTorrents(torrents, container, tvTitle) {
   let torrentButtons = `
     <div class="torrent-quote">
       <h4>Torrents encontrados</h4>
-      <div class="demo-mode-info" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid #3498db;">
-        <p style="margin: 0; font-size: 0.9em; color: #e3f2fd;">
-          🎭 <strong>Modo Demostración:</strong> Estos son torrents simulados para demostrar la funcionalidad. Los botones "Ver Online" mostrarán información sobre el modo demostración.
-        </p>
-      </div>
       <div class="torrent-buttons">
   `;
   
