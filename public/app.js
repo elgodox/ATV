@@ -84,13 +84,15 @@ function testVideoStreamingFeatures() {
   
   // Test subtitle controls
   const subtitleElements = [
+    'torrent-subtitle-select',
     'language-select',
     'search-subtitles-btn', 
     'online-subtitle-select',
     'subtitle-file',
     'uploaded-subtitle-select',
-    'enable-subtitles-btn',
-    'disable-subtitles-btn'
+    'subtitle-enabled-toggle',
+    'select-file-btn',
+    'upload-subtitle-btn'
   ];
   
   const missingElements = subtitleElements.filter(id => !document.getElementById(id));
@@ -167,6 +169,20 @@ function showSearchResultsInfo(data) {
         filterIndicators.push(`🎭 ${typeText}`);
       }
       
+      if (data.active_filters.adultFilter) {
+        const adultFilterToggle = document.getElementById('adult-filter');
+        let adultFilterText = 'Sin contenido +18';
+        if (adultFilterToggle) {
+          const state = adultFilterToggle.getAttribute('data-state');
+          switch (state) {
+            case 'false': adultFilterText = '🚫 Sin contenido +18'; break;
+            case '': adultFilterText = '🔞 Con contenido +18'; break;
+            case 'only': adultFilterText = '🔞 Solo contenido +18'; break;
+          }
+        }
+        filterIndicators.push(adultFilterText);
+      }
+      
       if (filterIndicators.length > 0) {
         resultsText += ` (filtrado por: ${filterIndicators.join(', ')})`;
       }
@@ -208,11 +224,16 @@ function clearAllFilters() {
   const typeSelect = document.getElementById('type');
   const genreSelect = document.getElementById('genre');
   const platformSelect = document.getElementById('platform');
+  const adultFilterToggle = document.getElementById('adult-filter');
   const sortSelect = document.getElementById('sort');
   
   if (typeSelect) typeSelect.value = '';
   if (genreSelect) genreSelect.value = '';
   if (platformSelect) platformSelect.value = '';
+  if (adultFilterToggle) {
+    adultFilterToggle.setAttribute('data-state', 'false');
+    updateAdultFilterDisplay(adultFilterToggle);
+  }
   if (sortSelect) sortSelect.value = 'popularity.desc';
   
   // Desactivar filtro de favoritos
@@ -235,9 +256,49 @@ function clearAllFilters() {
   }
 }
 
+// Adult filter toggle functionality
+function updateAdultFilterDisplay(toggle) {
+  const state = toggle.getAttribute('data-state');
+  const icon = toggle.querySelector('.toggle-icon');
+  const text = toggle.querySelector('.toggle-text');
+  
+  switch (state) {
+    case 'false':
+      icon.textContent = '🚫';
+      text.textContent = 'Excluir contenido +18';
+      break;
+    case '':
+      icon.textContent = '🔞';
+      text.textContent = 'Incluir contenido +18';
+      break;
+    case 'only':
+      icon.textContent = '🔞';
+      text.textContent = 'Solo contenido +18';
+      break;
+  }
+}
+
+function cycleAdultFilter() {
+  const toggle = document.getElementById('adult-filter');
+  const currentState = toggle.getAttribute('data-state');
+  
+  let nextState;
+  switch (currentState) {
+    case 'false': nextState = ''; break;      // exclude -> include all
+    case '': nextState = 'only'; break;       // include all -> only adult
+    case 'only': nextState = 'false'; break; // only adult -> exclude
+    default: nextState = 'false'; break;     // fallback to exclude
+  }
+  
+  toggle.setAttribute('data-state', nextState);
+  updateAdultFilterDisplay(toggle);
+  applyFilters();
+}
+
 document.getElementById("type").addEventListener("change", applyFilters);
 document.getElementById("genre").addEventListener("change", applyFilters);
 document.getElementById("platform").addEventListener("change", applyFilters);
+document.getElementById("adult-filter").addEventListener("click", cycleAdultFilter);
 document.getElementById("sort").addEventListener("change", applyFilters);
 
 // Event listener para el botón de limpiar filtros
@@ -247,6 +308,11 @@ document.addEventListener('DOMContentLoaded', function() {
     clearFiltersBtn.addEventListener('click', clearAllFilters);
   }
   
+  // Initialize adult filter toggle
+  const adultFilterToggle = document.getElementById('adult-filter');
+  if (adultFilterToggle) {
+    updateAdultFilterDisplay(adultFilterToggle);
+  }
   
 });
 
@@ -309,8 +375,17 @@ async function getGenres(type) {
     if (!response.ok) {
       throw new Error('Error fetching genres');
     }
-    const genres = await response.json();
-    return genres;  // Devolver la lista de géneros
+    const data = await response.json();
+    
+    // Verificar que sea un array (puede ser un objeto de error si no hay API key)
+    if (Array.isArray(data)) {
+      return data;
+    } else if (data && Array.isArray(data.genres)) {
+      return data.genres;
+    } else {
+      console.warn('Invalid genres response:', data);
+      return [];
+    }
   } catch (error) {
     console.error('Error fetching genres:', error);
     return [];
@@ -348,6 +423,7 @@ async function getTitles(page = 1) {
   const type = document.getElementById('type').value;
   const genre = document.getElementById('genre').value;
   const platform = document.getElementById('platform').value;
+  const adultFilter = document.getElementById('adult-filter').getAttribute('data-state');
   const sortBy = document.getElementById('sort').value;
   const searchQuery = document.getElementById('search-bar') ? document.getElementById('search-bar').value.trim() : '';
 
@@ -392,6 +468,7 @@ async function getTitles(page = 1) {
       type, // Pass type filter to search API
       genre,
       platform,
+      adultFilter,
       sortBy,
       page
     }).toString();
@@ -406,6 +483,7 @@ async function getTitles(page = 1) {
       searchQuery,
       genre,
       platform,
+      adultFilter,
       sortBy,
       page
     }).toString();
@@ -1932,17 +2010,6 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
       if (!response.ok) {
         const errorData = await response.json();
         
-        // Check for demo mode
-        if (errorData.isDemoMode) {
-          // Limpiar solicitud pendiente
-          pendingTorrentRequests.delete(torrentHash);
-          closeFileSelectionModal();
-          
-          // Show demo mode message
-          showNotification('🎬 Modo Demostración: Esta es una demostración de la funcionalidad de búsqueda de torrents para series de TV. Para usar la funcionalidad completa de streaming, configura una API key válida de TMDb.', 'info', 8000);
-          return;
-        }
-        
         // Si es un error 503 (torrent cargando), reintentar con backoff exponencial
         if (response.status === 503 && retryCount < maxRetries) {
           retryCount++;
@@ -1965,17 +2032,6 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
 
       const torrentInfo = await response.json();
       currentTorrentInfo = torrentInfo;
-
-      // Check if this is demo mode response
-      if (torrentInfo.isDemoMode) {
-        // Limpiar solicitud pendiente
-        pendingTorrentRequests.delete(torrentHash);
-        closeFileSelectionModal();
-        
-        // Show demo mode message with torrent info
-        showNotification('🎬 Modo Demostración: Torrent encontrado exitosamente. En modo demostración, se muestran datos simulados. Para ver y reproducir contenido real, configura una API key válida de TMDb.', 'info', 8000);
-        return;
-      }
 
       // Si solo hay un archivo de video, saltar la selección y reproducir directamente
       if (torrentInfo.videoFiles.length === 1) {
@@ -2231,19 +2287,38 @@ function setupSubtitleControls() {
     await searchOnlineSubtitles(language);
   };
 
-  // Subir subtítulos
-  document.getElementById('upload-subtitle-btn').onclick = function() {
+  // Subir subtítulos - nuevo flujo con botón de selección separado
+  document.getElementById('select-file-btn').onclick = function() {
     const fileInput = document.getElementById('subtitle-file');
     fileInput.click();
   };
 
   document.getElementById('subtitle-file').onchange = function(event) {
-    uploadSubtitle(event.target.files[0]);
+    const file = event.target.files[0];
+    if (file) {
+      // Actualizar el botón de selección para mostrar el archivo seleccionado
+      const selectBtn = document.getElementById('select-file-btn');
+      selectBtn.innerHTML = `<span class="btn-icon">📄</span>${file.name}`;
+      
+      // Habilitar el botón de subir
+      const uploadBtn = document.getElementById('upload-subtitle-btn');
+      uploadBtn.disabled = false;
+      
+      // Actualizar el evento del botón de subir
+      uploadBtn.onclick = function() {
+        uploadSubtitle(file);
+      };
+    }
   };
 
-  // Habilitar/deshabilitar subtítulos
-  document.getElementById('enable-subtitles-btn').onclick = enableSubtitles;
-  document.getElementById('disable-subtitles-btn').onclick = disableSubtitles;
+  // Toggle principal de subtítulos
+  document.getElementById('subtitle-enabled-toggle').onchange = function() {
+    if (this.checked) {
+      enableSubtitles();
+    } else {
+      disableSubtitles();
+    }
+  };
 
   // Cambio de subtítulos del torrent
   document.getElementById('torrent-subtitle-select').onchange = function() {
@@ -2322,19 +2397,12 @@ async function searchOnlineSubtitles(language) {
         const option = document.createElement('option');
         option.value = subtitle.downloadUrl;
         
-        // Agregar indicador si es demo
-        const demoIndicator = subtitle.isDemo ? ' [DEMO]' : '';
-        option.textContent = `${subtitle.languageName} - ${subtitle.filename} (${subtitle.rating || 'N/A'})${demoIndicator}`;
+        option.textContent = `${subtitle.languageName} - ${subtitle.filename} (${subtitle.rating || 'N/A'})`;
         select.appendChild(option);
       });
       
-      const demoCount = subtitles.filter(s => s.isDemo).length;
-      const realCount = subtitles.length - demoCount;
-      
-      if (demoCount > 0 && realCount === 0) {
-        showNotification(`Se encontraron ${subtitles.length} subtítulos de demostración para "${movieTitle}". Para subtítulos reales, se requiere integración con APIs externas.`, 'info');
-      } else {
-        showNotification(`Se encontraron ${subtitles.length} subtítulos para "${movieTitle}"`, 'success');
+      if (subtitles.length > 0) {
+        showNotification(`Se encontraron ${subtitles.length} subtítulos para "${movieTitle}".`, 'success');
       }
     } else {
       showNotification(`No se encontraron subtítulos online para "${movieTitle}" en ${language}. La búsqueda de subtítulos requiere integración con APIs externas como OpenSubtitles.`, 'warning');
@@ -2541,6 +2609,7 @@ function addSubtitleTrack(src, label, language) {
 function enableSubtitles() {
   const videoPlayer = document.getElementById('video-player');
   const tracks = videoPlayer.textTracks;
+  const toggle = document.getElementById('subtitle-enabled-toggle');
   
   let tracksEnabled = 0;
   for (let i = 0; i < tracks.length; i++) {
@@ -2550,8 +2619,10 @@ function enableSubtitles() {
   
   if (tracksEnabled > 0) {
     showNotification(`${tracksEnabled} pista(s) de subtítulos habilitadas`, 'success');
+    if (toggle) toggle.checked = true;
   } else {
     showNotification('No hay subtítulos disponibles para habilitar', 'warning');
+    if (toggle) toggle.checked = false;
   }
 }
 
@@ -2559,6 +2630,7 @@ function enableSubtitles() {
 function disableSubtitles() {
   const videoPlayer = document.getElementById('video-player');
   const tracks = videoPlayer.textTracks;
+  const toggle = document.getElementById('subtitle-enabled-toggle');
   
   let tracksDisabled = 0;
   for (let i = 0; i < tracks.length; i++) {
@@ -2568,8 +2640,10 @@ function disableSubtitles() {
   
   if (tracksDisabled > 0) {
     showNotification('Subtítulos deshabilitados', 'info');
+    if (toggle) toggle.checked = false;
   } else {
     showNotification('No hay subtítulos para deshabilitar', 'warning');
+    if (toggle) toggle.checked = false;
   }
 }
 
@@ -2670,7 +2744,7 @@ function closeFileSelectionModal() {
 
 // Función para actualizar estadísticas del torrent
 function updateTorrentStats(torrentInfo) {
-  // Actualizar seeds y leechers
+  // Actualizar seeds y leechers (elementos originales)
   const seedsElement = document.getElementById('torrent-seeds');
   const leechersElement = document.getElementById('torrent-leechers');
   const peersElement = document.getElementById('torrent-peers');
@@ -2679,7 +2753,7 @@ function updateTorrentStats(torrentInfo) {
   if (leechersElement) leechersElement.textContent = `Leechers: ${torrentInfo.leechers || 0}`;
   if (peersElement) peersElement.textContent = `Peers: ${torrentInfo.numPeers || 0}`;
 
-  // Actualizar progreso
+  // Actualizar progreso (elementos originales)
   const progressElement = document.getElementById('torrent-progress');
   const progressBarFill = document.getElementById('progress-bar-fill');
   const progressPercentage = document.getElementById('progress-percentage');
@@ -2689,14 +2763,14 @@ function updateTorrentStats(torrentInfo) {
   if (progressBarFill) progressBarFill.style.width = `${progress}%`;
   if (progressPercentage) progressPercentage.textContent = `${progress}%`;
 
-  // Actualizar velocidades
+  // Actualizar velocidades (elementos originales)
   const downloadSpeedElement = document.getElementById('torrent-download-speed');
   const uploadSpeedElement = document.getElementById('torrent-upload-speed');
   
   if (downloadSpeedElement) downloadSpeedElement.textContent = `↓ ${formatSpeed(torrentInfo.downloadSpeed)}`;
   if (uploadSpeedElement) uploadSpeedElement.textContent = `↑ ${formatSpeed(torrentInfo.uploadSpeed)}`;
 
-  // Actualizar datos descargados/subidos
+  // Actualizar datos descargados/subidos (elementos originales)
   const downloadedElement = document.getElementById('torrent-downloaded');
   const uploadedElement = document.getElementById('torrent-uploaded');
   const timeRemainingElement = document.getElementById('torrent-time-remaining');
@@ -2707,6 +2781,19 @@ function updateTorrentStats(torrentInfo) {
     const eta = torrentInfo.timeRemaining ? formatTime(torrentInfo.timeRemaining) : '--:--';
     timeRemainingElement.textContent = `ETA: ${eta}`;
   }
+
+  // Actualizar elementos compactos del nuevo overlay
+  const seedsCompact = document.getElementById('torrent-seeds-compact');
+  const leechersCompact = document.getElementById('torrent-leechers-compact');
+  const progressCompact = document.getElementById('torrent-progress-compact');
+  const downloadSpeedCompact = document.getElementById('torrent-download-speed-compact');
+  const progressBarFillCompact = document.getElementById('progress-bar-fill-compact');
+  
+  if (seedsCompact) seedsCompact.textContent = torrentInfo.seeds || 0;
+  if (leechersCompact) leechersCompact.textContent = torrentInfo.leechers || 0;
+  if (progressCompact) progressCompact.textContent = `${progress}%`;
+  if (downloadSpeedCompact) downloadSpeedCompact.textContent = formatSpeed(torrentInfo.downloadSpeed);
+  if (progressBarFillCompact) progressBarFillCompact.style.width = `${progress}%`;
 }
 
 // Función para obtener estadísticas actualizadas del servidor

@@ -73,6 +73,11 @@
         <option value="">📱 Todas las plataformas</option>
       </select>
 
+      <button id="adult-filter" class="modern-toggle" data-state="false" title="Filtro de contenido +18">
+        <span class="toggle-icon">🚫</span>
+        <span class="toggle-text">Excluir contenido +18</span>
+      </button>
+
       <select id="sort" class="modern-select">
         <option value="popularity.desc">⭐ Popularidad</option>
         <option value="vote_average.desc">🏆 Mejor valoradas</option>
@@ -115,93 +120,134 @@
         <video id="video-player" controls preload="metadata">
           Tu navegador no soporta la reproducción de video.
         </video>
-          <!-- Información de progreso del torrent -->
-        <div id="torrent-progress-info" class="torrent-progress-section">
-          <div id="torrent-stats" style="display: none;">
-            <div class="progress-info">
-              <div class="torrent-stat-row">
-                <span id="torrent-seeds">Seeds: 0</span>
-                <span id="torrent-leechers">Leechers: 0</span>
-                <span id="torrent-peers">Peers: 0</span>
-              </div>
-              <div class="torrent-stat-row">
-                <span id="torrent-progress">Progress: 0%</span>
-                <span id="torrent-download-speed">↓ 0 kB/s</span>
-                <span id="torrent-upload-speed">↑ 0 kB/s</span>
-              </div>
-              <div class="torrent-stat-row">
-                <span id="torrent-downloaded">Downloaded: 0 MB</span>
-                <span id="torrent-uploaded">Uploaded: 0 MB</span>
-                <span id="torrent-time-remaining">ETA: --:--</span>
-              </div>
-              <div class="progress-bar-container">
-                <div class="progress-bar">
-                  <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
-                </div>
-                <span id="progress-percentage">0%</span>
-              </div>
+        
+        <!-- Torrent statistics positioned subtly below video -->
+        <div id="torrent-stats" class="torrent-stats-overlay" style="display: none;">
+          <div class="stats-compact">
+            <div class="stats-row">
+              <span class="stat-item">
+                <span class="stat-icon">🌱</span>
+                <span id="torrent-seeds-compact">0</span>
+              </span>
+              <span class="stat-item">
+                <span class="stat-icon">📥</span>
+                <span id="torrent-leechers-compact">0</span>
+              </span>
+              <span class="stat-item">
+                <span class="stat-icon">🔄</span>
+                <span id="torrent-progress-compact">0%</span>
+              </span>
+              <span class="stat-item">
+                <span class="stat-icon">⚡</span>
+                <span id="torrent-download-speed-compact">0 kB/s</span>
+              </span>
             </div>
-            <div id="player-loading-indicator" class="loading-spinner" style="display: none;">Loading...</div>
-            <div id="player-status-message" style="display: none;"></div>
+            <div class="progress-bar-minimal">
+              <div id="progress-bar-fill-compact" class="progress-fill" style="width: 0%;"></div>
+            </div>
           </div>
+        </div>
+        
+        <!-- Información de progreso del torrent (legacy container for compatibility) -->
+        <div id="torrent-progress-info" class="torrent-progress-section" style="display: none;">
+          <div class="progress-info">
+            <div class="torrent-stat-row">
+              <span id="torrent-seeds">Seeds: 0</span>
+              <span id="torrent-leechers">Leechers: 0</span>
+              <span id="torrent-peers">Peers: 0</span>
+            </div>
+            <div class="torrent-stat-row">
+              <span id="torrent-progress">Progress: 0%</span>
+              <span id="torrent-download-speed">↓ 0 kB/s</span>
+              <span id="torrent-upload-speed">↑ 0 kB/s</span>
+            </div>
+            <div class="torrent-stat-row">
+              <span id="torrent-downloaded">Downloaded: 0 MB</span>
+              <span id="torrent-uploaded">Uploaded: 0 MB</span>
+              <span id="torrent-time-remaining">ETA: --:--</span>
+            </div>
+            <div class="progress-bar-container">
+              <div class="progress-bar">
+                <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+              </div>
+              <span id="progress-percentage">0%</span>
+            </div>
+          </div>
+          <div id="player-loading-indicator" class="loading-spinner" style="display: none;">Loading...</div>
+          <div id="player-status-message" style="display: none;"></div>
         </div>
         
         <!-- Controles de subtítulos -->
         <div id="subtitle-controls">
-          <!-- Información sobre subtítulos -->
-          <div class="subtitle-info">
-            <h4>ℹ️ Información de Subtítulos</h4>
-            <div class="subtitle-info-content">
-              <p><strong>Estado:</strong> <span id="subtitle-status">Búsqueda en modo demostración</span></p>
-              <p><strong>Opciones disponibles:</strong></p>
-              <ul>
-                <li>📁 <strong>Subtítulos del torrent:</strong> Automáticamente detectados del archivo torrent</li>
-                <li>🌐 <strong>Búsqueda online:</strong> Actualmente en modo demo - retorna subtítulos de ejemplo</li>
-                <li>📤 <strong>Subir archivo:</strong> Sube tus propios archivos .srt, .vtt, etc.</li>
-              </ul>
-              <p class="subtitle-help">💡 <strong>Tip:</strong> Para subtítulos reales, se requiere integración con APIs como OpenSubtitles.</p>
+          <div class="subtitle-header">
+            <h3>🎬 Subtítulos</h3>
+            <div class="subtitle-toggle">
+              <label class="toggle-switch">
+                <input type="checkbox" id="subtitle-enabled-toggle">
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-label">Activados</span>
             </div>
           </div>
           
-          <div class="subtitle-section">
-            <h4>Subtítulos del Torrent:</h4>
-            <select id="torrent-subtitle-select">
-              <option value="">Sin subtítulos</option>
-            </select>
-          </div>
-          
-          <div class="subtitle-section">
-            <h4>Buscar Subtítulos Online:</h4>
-            <div class="subtitle-search">
-              <select id="language-select">
-                <option value="es">Español</option>
-                <option value="en">English</option>
-                <option value="fr">Français</option>
-                <option value="de">Deutsch</option>
-                <option value="it">Italiano</option>
-                <option value="pt">Português</option>
+          <div class="subtitle-options">
+            <!-- Subtítulos del torrent -->
+            <div class="subtitle-option">
+              <div class="option-header">
+                <span class="option-icon">📁</span>
+                <span class="option-title">Del Torrent</span>
+              </div>
+              <select id="torrent-subtitle-select" class="modern-select">
+                <option value="">Ninguno detectado</option>
               </select>
-              <button id="search-subtitles-btn">Buscar</button>
             </div>
-            <select id="online-subtitle-select">
-              <option value="">Sin subtítulos online</option>
-            </select>
-          </div>
-          
-          <div class="subtitle-section">
-            <h4>Subir Subtítulos:</h4>
-            <div class="subtitle-upload">
-              <input type="file" id="subtitle-file" accept=".srt,.vtt,.ass,.ssa,.sub">
-              <button id="upload-subtitle-btn">Subir</button>
+            
+            <!-- Búsqueda online -->
+            <div class="subtitle-option">
+              <div class="option-header">
+                <span class="option-icon">🌐</span>
+                <span class="option-title">Buscar Online</span>
+              </div>
+              <div class="search-controls">
+                <select id="language-select" class="modern-select language-select">
+                  <option value="es">🇪🇸 Español</option>
+                  <option value="en">🇺🇸 English</option>
+                  <option value="fr">🇫🇷 Français</option>
+                  <option value="de">🇩🇪 Deutsch</option>
+                  <option value="it">🇮🇹 Italiano</option>
+                  <option value="pt">🇵🇹 Português</option>
+                </select>
+                <button id="search-subtitles-btn" class="action-btn search-btn">
+                  <span class="btn-icon">🔍</span>
+                  Buscar
+                </button>
+              </div>
+              <select id="online-subtitle-select" class="modern-select results-select">
+                <option value="">Busca subtítulos arriba</option>
+              </select>
             </div>
-            <select id="uploaded-subtitle-select">
-              <option value="">Sin subtítulos subidos</option>
-            </select>
-          </div>
-          
-          <div class="subtitle-controls-buttons">
-            <button id="enable-subtitles-btn">Habilitar Subtítulos</button>
-            <button id="disable-subtitles-btn">Deshabilitar Subtítulos</button>
+            
+            <!-- Subir archivo -->
+            <div class="subtitle-option">
+              <div class="option-header">
+                <span class="option-icon">📤</span>
+                <span class="option-title">Subir Archivo</span>
+              </div>
+              <div class="upload-controls">
+                <input type="file" id="subtitle-file" accept=".srt,.vtt,.ass,.ssa,.sub" class="file-input" hidden>
+                <button id="select-file-btn" class="action-btn select-btn">
+                  <span class="btn-icon">📋</span>
+                  Seleccionar
+                </button>
+                <button id="upload-subtitle-btn" class="action-btn upload-btn" disabled>
+                  <span class="btn-icon">⬆️</span>
+                  Subir
+                </button>
+              </div>
+              <select id="uploaded-subtitle-select" class="modern-select">
+                <option value="">Ninguno subido</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>

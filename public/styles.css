@@ -169,10 +169,12 @@
 
 .filters-row {
   display: flex;
-  gap: 15px;
+  gap: 16px;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
+  padding: 20px 0;
+  min-height: 80px;
 }
 
 .modern-select {
@@ -210,6 +212,47 @@
   border-color: rgba(255, 255, 255, 0.25);
   outline: none;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+.modern-toggle {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: white;
+  padding: 12px 18px;
+  border-radius: 25px;
+  font-size: 0.95em;
+  min-width: 200px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  user-select: none;
+  position: relative;
+}
+
+.modern-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.modern-toggle:active {
+  transform: translateY(0);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.modern-toggle .toggle-icon {
+  font-size: 1.1em;
+}
+
+.modern-toggle .toggle-text {
+  font-weight: 500;
 }
 
 .modern-clear-btn {
@@ -279,11 +322,11 @@
 }
 
 
-/* Contenedor del toggle */
+/* Contenedor del toggle de favoritos */
 .favorite-toggle {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 /* Ocultar el checkbox original */
@@ -291,72 +334,70 @@
   display: none;
 }
 
-/* Estilo del switch con glassmorphism */
-.toggle-label {
+/* Estilo moderno unificado para el toggle de favoritos */
+.favorite-toggle .toggle-label {
   position: relative;
   display: flex;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  padding: 4px;
-  width: 70px;
-  height: 32px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 6px;
+  width: 50px;
+  height: 28px;
   cursor: pointer;
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Slider dentro del switch */
-.toggle-slider {
+.favorite-toggle .toggle-slider {
   position: absolute;
   content: "";
-  width: 24px;
-  height: 24px;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 12px;
-  top: 3px;
-  left: 3px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  width: 16px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  top: 5px;
+  left: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Cuando el checkbox está activado */
 #favorites-checkbox:checked + .toggle-label {
-  background: rgba(246, 133, 27, 0.2);  /* Color naranja con transparencia */
-  border-color: rgba(246, 133, 27, 0.4);
+  background: rgba(246, 133, 27, 0.15);
+  border-color: rgba(246, 133, 27, 0.3);
 }
 
 /* Mueve el slider cuando está activado */
 #favorites-checkbox:checked + .toggle-label .toggle-slider {
-  transform: translateX(38px);
-  background: rgba(246, 133, 27, 0.8);
-  border-color: rgba(246, 133, 27, 1);
+  transform: translateX(22px);
+  background: rgba(246, 133, 27, 1);
+  box-shadow: 0 2px 8px rgba(246, 133, 27, 0.4);
 }
 
 /* Hover effect para el toggle */
-.toggle-label:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 
-    0 4px 16px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+.favorite-toggle .toggle-label:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 #favorites-checkbox:checked + .toggle-label:hover {
-  background: rgba(246, 133, 27, 0.3);
-  border-color: rgba(246, 133, 27, 0.5);
+  background: rgba(246, 133, 27, 0.2);
+  border-color: rgba(246, 133, 27, 0.4);
 }
 
 /* Texto del toggle */
-.favorite-toggle span {
+.favorite-toggle > span {
   color: white;
   font-size: 0.9em;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 
@@ -1145,9 +1186,11 @@ h1 {
   }
   
   .filters-row {
-    gap: 10px;
+    gap: 12px;
     flex-direction: column;
     align-items: stretch;
+    padding: 15px 0;
+    min-height: auto;
   }
   
   .modern-select {
@@ -1155,13 +1198,41 @@ h1 {
     width: 100%;
     max-width: 100%;
     font-size: 0.9em;
-    padding: 10px 16px;
+    padding: 12px 16px;
     padding-right: 40px;
+  }
+  
+  .modern-toggle {
+    min-width: auto;
+    width: 100%;
+    max-width: 100%;
+    font-size: 0.9em;
+    padding: 12px 16px;
+    justify-content: center;
   }
   
   .modern-clear-btn {
     align-self: center;
-    margin-top: 5px;
+    margin-top: 8px;
+  }
+
+  /* Improve search-favorite container on mobile */
+  .search-favorite-container {
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  .search-wrapper {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  .favorite-toggle {
+    justify-content: center;
+    gap: 15px;
   }
 }
 
@@ -1172,6 +1243,11 @@ h1 {
   
   .modern-select {
     min-width: 140px;
+    font-size: 0.9em;
+  }
+  
+  .modern-toggle {
+    min-width: 180px;
     font-size: 0.9em;
   }
 }
@@ -1520,73 +1596,273 @@ h1 {
 
 #subtitle-controls {
   margin-top: 20px;
-  padding: 20px;
-  background-color: #2a2a2a;
-  border-radius: 10px;
+  padding: 25px;
+  background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+  border-radius: 15px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid #3a3a3a;
 }
 
-.subtitle-section {
-  margin-bottom: 20px;
+.subtitle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
   padding-bottom: 15px;
-  border-bottom: 1px solid #444;
+  border-bottom: 2px solid #444;
 }
 
-.subtitle-section:last-child {
-  border-bottom: none;
+.subtitle-header h3 {
+  margin: 0;
+  font-size: 1.4em;
+  color: #fff;
+  font-weight: 600;
 }
 
-.subtitle-section h4 {
-  margin: 0 0 10px 0;
-  color: #4caf50;
+/* Subtitle controls header with modern toggle */
+.subtitle-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Modern toggle switch for subtitles */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Modern toggle slider for subtitles - matching favorites style */
+.subtitle-toggle .toggle-slider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 6px;
+  width: 50px;
+  height: 28px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.subtitle-toggle .toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 6px;
+  background: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.subtitle-toggle input:checked + .toggle-slider {
+  background: rgba(76, 175, 80, 0.15);
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.subtitle-toggle input:checked + .toggle-slider:before {
+  transform: translateX(22px);
+  background: #4caf50;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
+}
+
+.subtitle-toggle .toggle-slider:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.subtitle-toggle input:checked + .toggle-slider:hover {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: rgba(76, 175, 80, 0.4);
+}
+
+.subtitle-toggle .toggle-label {
+  color: #fff;
+  font-size: 0.9em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.subtitle-options {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.subtitle-option {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #3a3a3a;
+  transition: all 0.3s ease;
+}
+
+.subtitle-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #4a4a4a;
+}
+
+.option-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.option-icon {
+  font-size: 1.2em;
+}
+
+.option-title {
+  color: #fff;
+  font-weight: 600;
   font-size: 1.1em;
 }
 
-.subtitle-search {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
-}
-
-.subtitle-upload {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
-}
-
-#subtitle-controls select,
-#subtitle-controls button,
-#subtitle-controls input[type="file"] {
-  padding: 8px 12px;
-  border: 1px solid #555;
-  border-radius: 5px;
-  background-color: #333;
-  color: white;
-  font-size: 0.9em;
-}
-
-#subtitle-controls button {
-  background-color: #4caf50;
-  border: none;
+.modern-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #444;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #333 0%, #2a2a2a 100%);
+  color: #fff;
+  font-size: 0.95em;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all 0.3s ease;
+  margin-bottom: 10px;
 }
 
-#subtitle-controls button:hover {
-  background-color: #45a049;
+.modern-select:hover {
+  border-color: #555;
 }
 
-.subtitle-controls-buttons {
+.modern-select:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.search-controls {
   display: flex;
-  gap: 15px;
-  margin-top: 20px;
-  justify-content: center;
+  gap: 12px;
+  margin-bottom: 15px;
+  align-items: stretch;
 }
 
-.subtitle-controls-buttons button {
-  padding: 10px 20px;
+.language-select {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.upload-controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 15px;
+  align-items: center;
+}
+
+.action-btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.search-btn {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  min-width: 120px;
+}
+
+.search-btn:hover {
+  background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.select-btn {
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  color: white;
+  flex: 1;
+}
+
+.select-btn:hover {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+}
+
+.upload-btn {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+  flex: 1;
+}
+
+.upload-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f57c00 0%, #ef6c00 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+}
+
+.upload-btn:disabled {
+  background: #555;
+  color: #999;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-icon {
   font-size: 1em;
+}
+
+.results-select {
+  min-height: 45px;
+}
+
+/* Responsividad para subtítulos */
+@media (max-width: 768px) {
+  .subtitle-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .search-controls,
+  .upload-controls {
+    flex-direction: column;
+  }
+  
+  .language-select {
+    margin-bottom: 10px;
+  }
+  
+  .action-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* Modal para selección de archivos */
@@ -2246,5 +2522,78 @@ h1 {
   .search-torrents-btn {
     flex-shrink: 0;
     margin-left: 15px;
+  }
+}
+
+/* Modern compact torrent stats overlay */
+.torrent-stats-overlay {
+  position: relative;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 8px;
+  font-size: 0.8em;
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.stats-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stats-row {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.stat-icon {
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+
+.progress-bar-minimal {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #8bc34a);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 4px rgba(76, 175, 80, 0.4);
+}
+
+/* Responsive adjustments for compact stats */
+@media (max-width: 768px) {
+  .torrent-stats-overlay {
+    font-size: 0.75em;
+    padding: 6px 10px;
+  }
+  
+  .stats-row {
+    gap: 12px;
+  }
+  
+  .stat-item {
+    font-size: 0.8em;
   }
 }
