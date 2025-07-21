@@ -48,24 +48,50 @@
   display: flex;
   justify-content: center; /* Alineación horizontal centrada */
   align-items: center; /* Alineación vertical centrada */
-  gap: 20px; /* Espacio entre el buscador y el toggle */
+  gap: 25px; /* Espacio entre el buscador y el toggle */
   width: 100%; /* Ocupar el 100% del espacio disponible */
-  margin-bottom: 20px; /* Espacio inferior para separar de otros elementos */
+  margin-bottom: 25px; /* Espacio inferior para separar de otros elementos */
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border-radius: 25px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* Ajustes para pantallas móviles */
+/* Mejoras en responsive para dispositivos móviles */
 @media (max-width: 768px) {
   .search-favorite-container {
-    flex-direction: column; /* Cambia la disposición a columnas (uno debajo del otro) */
-    justify-content: flex-start; /* Alinea hacia arriba en lugar de centrado */
-    align-items: center; /* Alinea al centro en lugar de estirar el contenido */
-    gap: 10px; /* Reduce el espacio entre los elementos */
-    margin-bottom: 15px; /* Ajusta el margen inferior */
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 20px;
+    padding: 18px 15px;
+    border-radius: 20px;
   }
 
-  /* Aseguramos que el toggle también esté centrado */
-  .toggle {
-    margin: 0 auto; /* Asegura que el toggle esté centrado */
+  .search-wrapper {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+  
+  #search-bar {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 0;
+    padding: 14px 16px 14px 48px;
+    font-size: 1em;
+    border-radius: 18px;
+  }
+
+  .favorite-toggle {
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .favorite-toggle > span {
+    font-size: 0.9em;
   }
 }
 
@@ -81,25 +107,29 @@
   position: relative;
   flex: 1 1 50%;
   max-width: 50%;
+  filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.15));
 }
 
 /* Estilo del buscador para pantallas grandes */
 #search-bar {
   width: 100%;
-  padding: 12px 16px 12px 45px;
-  font-size: 1em;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  padding: 15px 18px 15px 50px;
+  font-size: 1.05em;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.08) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   color: white;
   outline: none;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    0 2px 16px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    0 12px 40px rgba(0, 0, 0, 0.25),
+    0 4px 20px rgba(0, 0, 0, 0.15),
+    inset 0 2px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 500;
+  letter-spacing: 0.3px;
 }
 
 /* Icono de búsqueda */
@@ -108,23 +138,25 @@
   font-family: 'Font Awesome 5 Free';
   font-weight: 900;
   position: absolute;
-  left: 15px;
+  left: 18px;
   top: 50%;
   transform: translateY(-50%);
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 16px;
   z-index: 1;
   pointer-events: none;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Indicador de carga en búsqueda */
 .search-loading {
   position: absolute;
-  right: 15px;
+  right: 18px;
   top: 50%;
   transform: translateY(-50%);
   color: rgba(255, 255, 255, 0.8);
-  font-size: 14px;
+  font-size: 16px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .search-loading.hidden {
@@ -133,17 +165,31 @@
 
 /* Placeholder del buscador */
 #search-bar::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 400;
 }
 
 /* Cambia el color de fondo cuando el campo está enfocado */
 #search-bar:focus {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.12) 100%);
+  border-color: rgba(255, 255, 255, 0.25);
   box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.4),
-    0 4px 20px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    0 16px 50px rgba(0, 0, 0, 0.3),
+    0 6px 25px rgba(0, 0, 0, 0.2),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+    0 0 0 3px rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+#search-bar:hover:not(:focus) {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.10) 100%);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 14px 45px rgba(0, 0, 0, 0.28),
+    0 5px 22px rgba(0, 0, 0, 0.18),
+    inset 0 2px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
 }
 
 /* Adaptación del buscador para dispositivos móviles */
@@ -151,104 +197,151 @@
   .search-wrapper {
     flex: 1 1 100%;
     max-width: 100%;
+    filter: drop-shadow(0 3px 15px rgba(0, 0, 0, 0.12));
   }
   
   #search-bar {
     width: 100%; /* En dispositivos móviles, el buscador ocupará el 100% del ancho */
     max-width: 100%; /* Asegura que el ancho no exceda el contenedor */
-    margin-bottom: 10px; /* Añade un margen inferior para separar del resto de los elementos */
+    margin-bottom: 0; /* Elimina margen inferior */
+    padding: 14px 16px 14px 48px;
+    font-size: 1em;
+    border-radius: 18px;
+  }
+
+  .search-wrapper::before {
+    left: 16px;
+    font-size: 15px;
+  }
+
+  .search-loading {
+    right: 16px;
+    font-size: 15px;
   }
 }
 
 /* Filtros modernos y minimalistas */
 .modern-filters {
-  margin: 20px auto;
+  margin: 25px auto;
   max-width: 1200px;
   padding: 0 20px;
+  filter: drop-shadow(0 2px 15px rgba(0, 0, 0, 0.1));
 }
 
 .filters-row {
   display: flex;
-  gap: 16px;
+  gap: 18px;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  padding: 20px 0;
-  min-height: 80px;
+  padding: 25px 0;
+  min-height: 90px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border-radius: 25px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .modern-select {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.08) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 2px solid rgba(255, 255, 255, 0.15);
   color: white;
-  padding: 12px 18px;
-  border-radius: 25px;
-  font-size: 0.95em;
-  min-width: 160px;
+  padding: 14px 22px;
+  border-radius: 28px;
+  font-size: 0.96em;
+  font-weight: 500;
+  min-width: 180px;
   cursor: pointer;
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
-  background-position: right 15px center;
-  background-size: 14px;
-  padding-right: 45px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-position: right 18px center;
+  background-size: 16px;
+  padding-right: 50px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.3px;
 }
 
 .modern-select:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.12) 100%);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
 }
 
 .modern-select:focus {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.12) 100%);
+  border-color: rgba(255, 255, 255, 0.3);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.2),
+    0 0 0 3px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
 }
 
 .modern-toggle {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.08) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 2px solid rgba(255, 255, 255, 0.15);
   color: white;
-  padding: 12px 18px;
-  border-radius: 25px;
-  font-size: 0.95em;
-  min-width: 200px;
+  padding: 14px 22px;
+  border-radius: 28px;
+  font-size: 0.96em;
+  font-weight: 500;
+  min-width: 220px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  gap: 10px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
   user-select: none;
   position: relative;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.3px;
 }
 
 .modern-toggle:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.12) 100%);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
 }
 
 .modern-toggle:active {
-  transform: translateY(0);
-  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px) scale(1.01);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.10) 100%);
 }
 
 .modern-toggle .toggle-icon {
-  font-size: 1.1em;
+  font-size: 1.2em;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .modern-toggle .toggle-text {
@@ -256,30 +349,37 @@
 }
 
 .modern-clear-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.8);
-  padding: 12px 15px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.85);
+  padding: 14px;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 16px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  width: 44px;
-  height: 44px;
+  font-size: 18px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .modern-clear-btn:hover {
-  background: rgba(255, 85, 85, 0.15);
-  border-color: rgba(255, 85, 85, 0.3);
+  background: linear-gradient(135deg, rgba(255, 85, 85, 0.18) 0%, rgba(255, 85, 85, 0.12) 100%);
+  border-color: rgba(255, 85, 85, 0.35);
   color: #ff5555;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(255, 85, 85, 0.15);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 
+    0 8px 25px rgba(255, 85, 85, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
 }
 
 /* Información de resultados de búsqueda */
@@ -326,7 +426,7 @@
 .favorite-toggle {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 15px;
 }
 
 /* Ocultar el checkbox original */
@@ -339,65 +439,77 @@
   position: relative;
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 20px;
-  padding: 6px;
-  width: 50px;
-  height: 28px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.08) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 22px;
+  padding: 8px;
+  width: 56px;
+  height: 32px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
 }
 
 /* Slider dentro del switch */
 .favorite-toggle .toggle-slider {
   position: absolute;
   content: "";
-  width: 16px;
-  height: 16px;
-  background: rgba(255, 255, 255, 0.8);
+  width: 18px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.85);
   border-radius: 50%;
-  top: 5px;
-  left: 6px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  top: 7px;
+  left: 7px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
 /* Cuando el checkbox está activado */
 #favorites-checkbox:checked + .toggle-label {
-  background: rgba(246, 133, 27, 0.15);
-  border-color: rgba(246, 133, 27, 0.3);
+  background: linear-gradient(135deg, rgba(246, 133, 27, 0.18) 0%, rgba(246, 133, 27, 0.12) 100%);
+  border-color: rgba(246, 133, 27, 0.35);
 }
 
 /* Mueve el slider cuando está activado */
 #favorites-checkbox:checked + .toggle-label .toggle-slider {
-  transform: translateX(22px);
-  background: rgba(246, 133, 27, 1);
-  box-shadow: 0 2px 8px rgba(246, 133, 27, 0.4);
+  transform: translateX(24px);
+  background: #f6851b;
+  box-shadow: 
+    0 3px 12px rgba(246, 133, 27, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 /* Hover effect para el toggle */
 .favorite-toggle .toggle-label:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.12) 100%);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
 }
 
 #favorites-checkbox:checked + .toggle-label:hover {
-  background: rgba(246, 133, 27, 0.2);
-  border-color: rgba(246, 133, 27, 0.4);
+  background: linear-gradient(135deg, rgba(246, 133, 27, 0.22) 0%, rgba(246, 133, 27, 0.15) 100%);
+  border-color: rgba(246, 133, 27, 0.45);
 }
 
 /* Texto del toggle */
 .favorite-toggle > span {
   color: white;
-  font-size: 0.9em;
+  font-size: 0.95em;
   font-weight: 500;
   white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.3px;
 }
 
 
@@ -1183,37 +1295,46 @@ h1 {
 @media (max-width: 768px) {
   .modern-filters {
     padding: 0 15px;
+    margin: 20px auto;
   }
   
   .filters-row {
-    gap: 12px;
+    gap: 14px;
     flex-direction: column;
     align-items: stretch;
-    padding: 15px 0;
+    padding: 20px 15px;
     min-height: auto;
+    border-radius: 20px;
   }
   
   .modern-select {
     min-width: auto;
     width: 100%;
     max-width: 100%;
-    font-size: 0.9em;
-    padding: 12px 16px;
-    padding-right: 40px;
+    font-size: 0.95em;
+    padding: 13px 18px;
+    padding-right: 45px;
+    border-radius: 18px;
+    background-size: 15px;
+    background-position: right 16px center;
   }
   
   .modern-toggle {
     min-width: auto;
     width: 100%;
     max-width: 100%;
-    font-size: 0.9em;
-    padding: 12px 16px;
+    font-size: 0.95em;
+    padding: 13px 18px;
     justify-content: center;
+    border-radius: 18px;
   }
   
   .modern-clear-btn {
     align-self: center;
-    margin-top: 8px;
+    margin-top: 10px;
+    width: 46px;
+    height: 46px;
+    font-size: 17px;
   }
 
   /* Improve search-favorite container on mobile */
@@ -1223,6 +1344,8 @@ h1 {
     align-items: center;
     gap: 15px;
     margin-bottom: 20px;
+    padding: 18px 15px;
+    border-radius: 20px;
   }
 
   .search-wrapper {
@@ -1233,6 +1356,23 @@ h1 {
   .favorite-toggle {
     justify-content: center;
     gap: 15px;
+  }
+
+  .favorite-toggle .toggle-label {
+    width: 52px;
+    height: 30px;
+    border-radius: 20px;
+  }
+
+  .favorite-toggle .toggle-slider {
+    width: 16px;
+    height: 16px;
+    top: 7px;
+    left: 7px;
+  }
+
+  #favorites-checkbox:checked + .toggle-label .toggle-slider {
+    transform: translateX(22px);
   }
 }
 
