@@ -168,9 +168,17 @@ function showSearchResultsInfo(data) {
       }
       
       if (data.active_filters.adultFilter) {
-        const adultFilterSelect = document.getElementById('adult-filter');
-        const adultFilterText = adultFilterSelect ? adultFilterSelect.options[adultFilterSelect.selectedIndex].text : 'Sin contenido +18';
-        filterIndicators.push(`🔞 ${adultFilterText}`);
+        const adultFilterToggle = document.getElementById('adult-filter');
+        let adultFilterText = 'Sin contenido +18';
+        if (adultFilterToggle) {
+          const state = adultFilterToggle.getAttribute('data-state');
+          switch (state) {
+            case 'false': adultFilterText = '🚫 Sin contenido +18'; break;
+            case '': adultFilterText = '🔞 Con contenido +18'; break;
+            case 'only': adultFilterText = '🔞 Solo contenido +18'; break;
+          }
+        }
+        filterIndicators.push(adultFilterText);
       }
       
       if (filterIndicators.length > 0) {
@@ -214,13 +222,16 @@ function clearAllFilters() {
   const typeSelect = document.getElementById('type');
   const genreSelect = document.getElementById('genre');
   const platformSelect = document.getElementById('platform');
-  const adultFilterSelect = document.getElementById('adult-filter');
+  const adultFilterToggle = document.getElementById('adult-filter');
   const sortSelect = document.getElementById('sort');
   
   if (typeSelect) typeSelect.value = '';
   if (genreSelect) genreSelect.value = '';
   if (platformSelect) platformSelect.value = '';
-  if (adultFilterSelect) adultFilterSelect.value = '';
+  if (adultFilterToggle) {
+    adultFilterToggle.setAttribute('data-state', 'false');
+    updateAdultFilterDisplay(adultFilterToggle);
+  }
   if (sortSelect) sortSelect.value = 'popularity.desc';
   
   // Desactivar filtro de favoritos
@@ -243,10 +254,49 @@ function clearAllFilters() {
   }
 }
 
+// Adult filter toggle functionality
+function updateAdultFilterDisplay(toggle) {
+  const state = toggle.getAttribute('data-state');
+  const icon = toggle.querySelector('.toggle-icon');
+  const text = toggle.querySelector('.toggle-text');
+  
+  switch (state) {
+    case 'false':
+      icon.textContent = '🚫';
+      text.textContent = 'Excluir contenido +18';
+      break;
+    case '':
+      icon.textContent = '🔞';
+      text.textContent = 'Incluir contenido +18';
+      break;
+    case 'only':
+      icon.textContent = '🔞';
+      text.textContent = 'Solo contenido +18';
+      break;
+  }
+}
+
+function cycleAdultFilter() {
+  const toggle = document.getElementById('adult-filter');
+  const currentState = toggle.getAttribute('data-state');
+  
+  let nextState;
+  switch (currentState) {
+    case 'false': nextState = ''; break;      // exclude -> include all
+    case '': nextState = 'only'; break;       // include all -> only adult
+    case 'only': nextState = 'false'; break; // only adult -> exclude
+    default: nextState = 'false'; break;     // fallback to exclude
+  }
+  
+  toggle.setAttribute('data-state', nextState);
+  updateAdultFilterDisplay(toggle);
+  applyFilters();
+}
+
 document.getElementById("type").addEventListener("change", applyFilters);
 document.getElementById("genre").addEventListener("change", applyFilters);
 document.getElementById("platform").addEventListener("change", applyFilters);
-document.getElementById("adult-filter").addEventListener("change", applyFilters);
+document.getElementById("adult-filter").addEventListener("click", cycleAdultFilter);
 document.getElementById("sort").addEventListener("change", applyFilters);
 
 // Event listener para el botón de limpiar filtros
@@ -256,6 +306,11 @@ document.addEventListener('DOMContentLoaded', function() {
     clearFiltersBtn.addEventListener('click', clearAllFilters);
   }
   
+  // Initialize adult filter toggle
+  const adultFilterToggle = document.getElementById('adult-filter');
+  if (adultFilterToggle) {
+    updateAdultFilterDisplay(adultFilterToggle);
+  }
   
 });
 
@@ -357,7 +412,7 @@ async function getTitles(page = 1) {
   const type = document.getElementById('type').value;
   const genre = document.getElementById('genre').value;
   const platform = document.getElementById('platform').value;
-  const adultFilter = document.getElementById('adult-filter').value;
+  const adultFilter = document.getElementById('adult-filter').getAttribute('data-state');
   const sortBy = document.getElementById('sort').value;
   const searchQuery = document.getElementById('search-bar') ? document.getElementById('search-bar').value.trim() : '';
 

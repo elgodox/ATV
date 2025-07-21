@@ -23,6 +23,22 @@ const API_KEY = process.env.API_KEY; // Cargar la API key desde el .env
 const VIMEO_ACCESS_TOKEN = process.env.VIMEO_ACCESS_TOKEN;
 const OPENSUBTITLES_API_KEY = process.env.OPENSUBTITLES_API_KEY;
 
+// Helper function to filter adult content based on adult filter setting
+function filterAdultContent(results, adultFilter) {
+  if (!results) return results;
+  
+  if (adultFilter === 'only') {
+    // Show only adult content
+    return results.filter(item => item.adult === true);
+  } else if (adultFilter === 'false') {
+    // Exclude adult content (already handled by API parameter, but just in case)
+    return results.filter(item => item.adult !== true);
+  }
+  
+  // For adultFilter === '' (include all), return all results
+  return results;
+}
+
 // Debug: Verificar si la API_KEY se está cargando correctamente
 console.log('🔑 API_KEY cargada:', API_KEY ? 'SÍ (longitud: ' + API_KEY.length + ')' : 'NO');
 console.log('🔑 VIMEO_ACCESS_TOKEN cargado:', VIMEO_ACCESS_TOKEN ? 'SÍ' : 'NO');
@@ -148,6 +164,10 @@ app.get('/api/titles', async (req, res) => {
     // Filter out results without poster images
     if (data.results) {
       data.results = data.results.filter(item => item.poster_path);
+      
+      // Apply adult content filtering
+      data.results = filterAdultContent(data.results, adultFilter);
+      
       data.total_results = data.results.length;
     }
     
@@ -243,7 +263,7 @@ app.get('/api/search-all', async (req, res) => {
       tvData = dataResults[dataIndex++];
     }
     
-    // Filtrar resultados sin imágenes
+    // Filtrar resultados sin imágenes y aplicar filtro de contenido adulto
     const moviesWithType = (movieData.results || [])
       .filter(item => item.poster_path) // Solo mostrar resultados con imagen
       .map(item => ({
@@ -258,8 +278,11 @@ app.get('/api/search-all', async (req, res) => {
         content_type: 'tv'
       }));
     
-    // Combinar y ordenar resultados
-    const allResults = [...moviesWithType, ...tvWithType];
+    // Combinar resultados antes de aplicar el filtro de adultos
+    let allResults = [...moviesWithType, ...tvWithType];
+    
+    // Aplicar filtro de contenido adulto
+    allResults = filterAdultContent(allResults, adultFilter);
     
     // Ordenar por popularidad por defecto
     allResults.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
@@ -272,12 +295,16 @@ app.get('/api/search-all', async (req, res) => {
       adultFilter: adultFilter && adultFilter !== '' ? adultFilter : null
     };
     
+    // Separar los resultados filtrados por tipo para contar correctamente
+    const filteredMovies = allResults.filter(item => item.content_type === 'movie');
+    const filteredTV = allResults.filter(item => item.content_type === 'tv');
+    
     res.json({
       results: allResults,
       total_pages: Math.max(movieData.total_pages || 0, tvData.total_pages || 0),
-      total_results: moviesWithType.length + tvWithType.length,
-      movie_results: moviesWithType.length,
-      tv_results: tvWithType.length,
+      total_results: filteredMovies.length + filteredTV.length,
+      movie_results: filteredMovies.length,
+      tv_results: filteredTV.length,
       active_filters: activeFilters,
       is_filtered: Boolean(activeFilters.platform || activeFilters.genre || activeFilters.type || activeFilters.adultFilter)
     });
