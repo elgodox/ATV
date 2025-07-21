@@ -75,43 +75,71 @@
   display: flex;
   flex-direction: column;
 }
-/* Enhanced Glassmorphism Search Container */
+/* 🚀 REVOLUTIONARY SEARCH CONTAINER - Futuristic Innovation */
 .search-favorite-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 30px;
+  gap: 40px;
   width: 100%;
   max-width: 1400px;
-  margin: 30px auto 40px auto;
-  padding: 25px 30px;
+  margin: 40px auto 50px auto;
+  padding: 35px 40px;
   
-  /* Advanced Glassmorphism */
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.12) 0%, 
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.04) 100%
-  );
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 28px;
+  /* Cyberpunk neon border background */
+  background: 
+    /* Animated neon grid */
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 40px,
+      rgba(0, 255, 255, 0.1) 42px,
+      rgba(0, 255, 255, 0.1) 44px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 40px,
+      rgba(255, 0, 255, 0.1) 42px,
+      rgba(255, 0, 255, 0.1) 44px
+    ),
+    /* Main cyberpunk gradient */
+    linear-gradient(135deg, 
+      rgba(0, 30, 60, 0.4) 0%, 
+      rgba(30, 0, 60, 0.4) 25%,
+      rgba(0, 60, 30, 0.4) 50%,
+      rgba(60, 0, 30, 0.4) 75%,
+      rgba(0, 30, 60, 0.4) 100%
+    );
   
-  /* Enhanced shadows for depth */
+  /* Revolutionary neon borders */
+  border: 2px solid transparent;
+  border-image: linear-gradient(90deg, 
+    rgba(0, 255, 255, 0.8) 0%, 
+    rgba(255, 0, 255, 0.8) 25%,
+    rgba(255, 255, 0, 0.8) 50%,
+    rgba(255, 0, 255, 0.8) 75%,
+    rgba(0, 255, 255, 0.8) 100%
+  ) 1;
+  border-radius: 35px;
+  
+  /* Cyberpunk shadows and glow */
   box-shadow: 
-    0 20px 60px rgba(0, 0, 0, 0.4),
-    0 8px 32px rgba(0, 0, 0, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+    0 0 50px rgba(0, 255, 255, 0.3),
+    0 0 100px rgba(255, 0, 255, 0.2),
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
   
   position: relative;
   overflow: hidden;
   
-  /* Smooth animations */
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.320, 1);
+  /* Revolutionary animations */
+  animation: searchContainerGlow 4s ease-in-out infinite alternate;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Glass reflection effect */
+/* Cyberpunk energy waves */
 .search-favorite-container::before {
   content: '';
   position: absolute;
@@ -122,52 +150,277 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.1) 50%,
+    rgba(0, 255, 255, 0.2) 25%,
+    rgba(255, 0, 255, 0.2) 50%,
+    rgba(255, 255, 0, 0.2) 75%,
     transparent 100%
   );
-  transition: left 0.8s ease-in-out;
+  animation: energyWave 6s linear infinite;
   pointer-events: none;
+  z-index: 1;
 }
 
-/* Hover effects for enhanced glass feeling */
+/* Floating cyberpunk particles */
+.search-favorite-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(2px 2px at 30px 40px, rgba(0, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 70px 80px, rgba(255, 0, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 110px 20px, rgba(255, 255, 0, 0.3), transparent),
+    radial-gradient(2px 2px at 150px 90px, rgba(0, 255, 0, 0.5), transparent);
+  background-size: 180px 120px, 120px 160px, 140px 100px, 160px 140px;
+  animation: particleFloat 15s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Enhanced hover effects */
 .search-favorite-container:hover {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.16) 0%, 
-    rgba(255, 255, 255, 0.12) 50%,
-    rgba(255, 255, 255, 0.08) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.25);
+  background: 
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 35px,
+      rgba(0, 255, 255, 0.2) 37px,
+      rgba(0, 255, 255, 0.2) 39px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 35px,
+      rgba(255, 0, 255, 0.2) 37px,
+      rgba(255, 0, 255, 0.2) 39px
+    ),
+    linear-gradient(135deg, 
+      rgba(0, 50, 100, 0.6) 0%, 
+      rgba(50, 0, 100, 0.6) 25%,
+      rgba(0, 100, 50, 0.6) 50%,
+      rgba(100, 0, 50, 0.6) 75%,
+      rgba(0, 50, 100, 0.6) 100%
+    );
+  
+  border-image: linear-gradient(90deg, 
+    rgba(0, 255, 255, 1) 0%, 
+    rgba(255, 0, 255, 1) 25%,
+    rgba(255, 255, 0, 1) 50%,
+    rgba(255, 0, 255, 1) 75%,
+    rgba(0, 255, 255, 1) 100%
+  ) 1;
+  
   box-shadow: 
-    0 25px 80px rgba(0, 0, 0, 0.5),
-    0 12px 40px rgba(0, 0, 0, 0.3),
-    inset 0 2px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -2px 0 rgba(255, 255, 255, 0.08);
-  transform: translateY(-2px);
+    0 0 80px rgba(0, 255, 255, 0.5),
+    0 0 160px rgba(255, 0, 255, 0.3),
+    0 25px 80px rgba(0, 0, 0, 0.6),
+    inset 0 3px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.3);
+  
+  transform: translateY(-3px) scale(1.02);
 }
 
-.search-favorite-container:hover::before {
-  left: 100%;
+@keyframes searchContainerGlow {
+  0% {
+    box-shadow: 
+      0 0 30px rgba(0, 255, 255, 0.2),
+      0 0 60px rgba(255, 0, 255, 0.1),
+      0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  100% {
+    box-shadow: 
+      0 0 60px rgba(0, 255, 255, 0.4),
+      0 0 120px rgba(255, 0, 255, 0.2),
+      0 20px 60px rgba(0, 0, 0, 0.5);
+  }
 }
 
-/* Responsive adjustments */
+@keyframes energyWave {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+@keyframes particleFloat {
+  0%, 100% { 
+    background-position: 0% 0%, 100% 100%, 50% 50%, 0% 100%;
+    opacity: 0.6;
+  }
+  50% { 
+    background-position: 100% 50%, 0% 0%, 100% 100%, 100% 0%;
+    opacity: 0.9;
+  }
+}
+
+/* 📱 MOBILE RESPONSIVE CYBERPUNK DESIGN */
 @media (max-width: 768px) {
+  /* Cyberpunk body adjustments */
+  body {
+    background-size: 150px 80px, 60px 100px, 120px 60px, 100px 140px, 140px 70px;
+  }
+  
+  /* Cyberpunk title mobile */
+  h1 {
+    font-size: 2.5em;
+    letter-spacing: 2px;
+    padding: 20px 25px;
+    max-width: 95%;
+  }
+  
+  /* Top bar mobile adjustments */
+  #top-bar {
+    padding: 10px 15px;
+  }
+  
+  #top-bar .container {
+    gap: 12px;
+  }
+  
+  #top-bar .button {
+    padding: 8px 16px;
+    font-size: 0.8em;
+    border-radius: 20px;
+  }
+  
+  #top-bar .button i {
+    font-size: 1.1em;
+    margin-right: 6px;
+  }
+  
+  .metamask-btn img {
+    width: 18px;
+    height: 18px;
+    margin-right: 6px;
+  }
+  
+  /* Search container mobile */
   .search-favorite-container {
     flex-direction: column;
-    gap: 20px;
-    margin: 20px 15px 30px 15px;
-    padding: 20px 20px;
-    border-radius: 24px;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    gap: 25px;
+    margin: 30px 15px 40px 15px;
+    padding: 25px 20px;
+    border-radius: 25px;
+  }
+  
+  /* Search bar mobile */
+  .search-wrapper {
+    flex: 1 1 100%;
+    max-width: 100%;
+    min-width: auto;
+  }
+  
+  #search-bar {
+    padding: 16px 20px 16px 55px;
+    font-size: 1em;
+    border-radius: 25px;
+  }
+  
+  .search-wrapper::before {
+    left: 20px;
+    font-size: 18px;
+  }
+  
+  .search-loading {
+    right: 20px;
+    font-size: 18px;
+  }
+  
+  /* Favorite toggle mobile */
+  .favorite-toggle {
+    justify-content: center;
+    gap: 15px;
+  }
+  
+  .favorite-toggle .toggle-label {
+    width: 65px;
+    height: 36px;
+  }
+  
+  .favorite-toggle .toggle-slider {
+    width: 24px;
+    height: 24px;
+    top: 6px;
+    left: 7px;
+  }
+  
+  #favorites-checkbox:checked + .toggle-label .toggle-slider {
+    transform: translateX(29px);
+  }
+  
+  .favorite-toggle > span {
+    font-size: 0.9em;
   }
 }
 
 @media (max-width: 480px) {
+  /* Ultra mobile adjustments */
+  h1 {
+    font-size: 2em;
+    letter-spacing: 1px;
+    padding: 15px 20px;
+  }
+  
+  #top-bar .button {
+    padding: 6px 12px;
+    font-size: 0.75em;
+    border-radius: 18px;
+  }
+  
   .search-favorite-container {
-    margin: 15px 10px 25px 10px;
-    padding: 18px 16px;
+    margin: 20px 10px 30px 10px;
+    padding: 20px 15px;
+    gap: 20px;
     border-radius: 20px;
-    gap: 15px;
+  }
+  
+  #search-bar {
+    padding: 14px 18px 14px 50px;
+    font-size: 0.95em;
+    border-radius: 22px;
+  }
+  
+  .search-wrapper::before {
+    left: 18px;
+    font-size: 16px;
+  }
+  
+  .search-loading {
+    right: 18px;
+    font-size: 16px;
+  }
+  
+  .favorite-toggle .toggle-label {
+    width: 60px;
+    height: 32px;
+  }
+  
+  .favorite-toggle .toggle-slider {
+    width: 22px;
+    height: 22px;
+    top: 5px;
+    left: 6px;
+  }
+  
+  #favorites-checkbox:checked + .toggle-label .toggle-slider {
+    transform: translateX(26px);
+  }
+  
+  .favorite-toggle > span {
+    font-size: 0.85em;
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  body::before {
+    display: none;
   }
 }
 
@@ -178,131 +431,228 @@
 
 
 
-/* Enhanced Glassmorphism Search Wrapper */
+/* 🔍 REVOLUTIONARY SEARCH BAR - Cyberpunk Innovation */
 .search-wrapper {
   position: relative;
   flex: 1 1 60%;
   max-width: 600px;
   min-width: 320px;
+  z-index: 2;
 }
 
-/* Premium Glass Search Bar */
+/* Futuristic neon search input */
 #search-bar {
   width: 100%;
-  padding: 16px 20px 16px 55px;
-  font-size: 1.1em;
-  font-weight: 400;
-  letter-spacing: 0.5px;
+  padding: 20px 24px 20px 65px;
+  font-size: 1.2em;
+  font-weight: 500;
+  letter-spacing: 1px;
   
-  /* Premium glassmorphism */
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.15) 0%, 
-    rgba(255, 255, 255, 0.08) 100%
-  );
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border: 1.5px solid rgba(255, 255, 255, 0.25);
-  border-radius: 22px;
+  /* Cyberpunk neon background */
+  background: 
+    linear-gradient(135deg, 
+      rgba(0, 50, 100, 0.3) 0%, 
+      rgba(50, 0, 100, 0.3) 50%,
+      rgba(0, 100, 50, 0.3) 100%
+    );
+  
+  /* Revolutionary neon border */
+  border: 3px solid transparent;
+  border-image: linear-gradient(45deg, 
+    rgba(0, 255, 255, 0.8), 
+    rgba(255, 0, 255, 0.6),
+    rgba(255, 255, 0, 0.8)
+  ) 1;
+  border-radius: 30px;
   
   color: rgba(255, 255, 255, 0.95);
   outline: none;
   
-  /* Advanced shadows and highlights */
+  /* Revolutionary cyberpunk glow */
   box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.35),
-    0 4px 20px rgba(0, 0, 0, 0.2),
-    inset 0 2px 0 rgba(255, 255, 255, 0.15),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+    0 0 30px rgba(0, 255, 255, 0.3),
+    0 0 60px rgba(255, 0, 255, 0.2),
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    inset 0 2px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
   
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.320, 1);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  z-index: 2;
+  z-index: 3;
+  
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  animation: searchBarGlow 3s ease-in-out infinite alternate;
 }
 
-/* Enhanced search icon with glow effect */
+/* Cyberpunk search icon with energy */
 .search-wrapper::before {
   content: '\f002';
   font-family: 'Font Awesome 5 Free';
   font-weight: 900;
   position: absolute;
-  left: 20px;
+  left: 25px;
   top: 50%;
   transform: translateY(-50%);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 16px;
-  z-index: 3;
+  color: rgba(0, 255, 255, 0.9);
+  font-size: 20px;
+  z-index: 4;
   pointer-events: none;
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
-  transition: all 0.3s ease;
+  
+  /* Cyberpunk icon glow */
+  filter: 
+    drop-shadow(0 0 10px rgba(0, 255, 255, 0.8))
+    drop-shadow(0 0 20px rgba(255, 0, 255, 0.4));
+  
+  text-shadow: 
+    0 0 15px rgba(0, 255, 255, 1),
+    0 0 30px rgba(255, 0, 255, 0.6);
+  
+  animation: iconPulse 2s ease-in-out infinite alternate;
 }
 
-/* Animated loading indicator */
+/* Revolutionary loading indicator */
 .search-loading {
   position: absolute;
-  right: 20px;
+  right: 25px;
   top: 50%;
   transform: translateY(-50%);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 16px;
-  z-index: 3;
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.4));
-  animation: pulse 1.5s infinite ease-in-out;
+  color: rgba(0, 255, 255, 1);
+  font-size: 20px;
+  z-index: 4;
+  
+  filter: 
+    drop-shadow(0 0 15px rgba(0, 255, 255, 1))
+    drop-shadow(0 0 30px rgba(255, 0, 255, 0.6));
+  
+  animation: loadingCyberpunk 1s linear infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
-  50% { opacity: 0.7; transform: translateY(-50%) scale(1.1); }
+@keyframes loadingCyberpunk {
+  0% { 
+    transform: translateY(-50%) rotate(0deg);
+    color: rgba(0, 255, 255, 1);
+  }
+  33% { 
+    color: rgba(255, 0, 255, 1);
+  }
+  66% { 
+    color: rgba(255, 255, 0, 1);
+  }
+  100% { 
+    transform: translateY(-50%) rotate(360deg);
+    color: rgba(0, 255, 255, 1);
+  }
 }
 
 .search-loading.hidden {
   display: none;
 }
 
-/* Enhanced placeholder styling */
+/* Enhanced cyberpunk placeholder */
 #search-bar::placeholder {
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(0, 255, 255, 0.7);
   font-style: italic;
-  font-weight: 300;
+  font-weight: 400;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
 }
 
-/* Premium focus state */
+/* Revolutionary focus state */
 #search-bar:focus {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.2) 0%, 
-    rgba(255, 255, 255, 0.12) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: 
-    0 20px 60px rgba(0, 0, 0, 0.4),
-    0 8px 30px rgba(0, 0, 0, 0.25),
-    inset 0 3px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -2px 0 rgba(255, 255, 255, 0.08),
-    0 0 0 4px rgba(255, 255, 255, 0.1);
+  background: 
+    linear-gradient(135deg, 
+      rgba(0, 80, 160, 0.5) 0%, 
+      rgba(80, 0, 160, 0.5) 50%,
+      rgba(0, 160, 80, 0.5) 100%
+    );
   
-  transform: translateY(-1px);
+  border-image: linear-gradient(45deg, 
+    rgba(0, 255, 255, 1) 0%, 
+    rgba(255, 0, 255, 1) 50%,
+    rgba(255, 255, 0, 1) 100%
+  ) 1;
+  
+  box-shadow: 
+    0 0 50px rgba(0, 255, 255, 0.6),
+    0 0 100px rgba(255, 0, 255, 0.4),
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    inset 0 3px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.3),
+    0 0 0 6px rgba(0, 255, 255, 0.2);
+  
+  transform: translateY(-2px) scale(1.02);
+  text-shadow: 
+    0 0 15px rgba(255, 255, 255, 0.8),
+    0 0 30px rgba(0, 255, 255, 0.6);
 }
 
 /* Enhanced icon glow on focus */
-#search-bar:focus + .search-wrapper::before,
 .search-wrapper:has(#search-bar:focus)::before {
-  color: rgba(255, 255, 255, 0.9);
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
-  transform: translateY(-50%) scale(1.1);
+  color: rgba(255, 255, 255, 1);
+  filter: 
+    drop-shadow(0 0 15px rgba(0, 255, 255, 1))
+    drop-shadow(0 0 30px rgba(255, 0, 255, 0.8))
+    drop-shadow(0 0 45px rgba(255, 255, 0, 0.6));
+  
+  transform: translateY(-50%) scale(1.2);
+  animation: iconPulse 1s ease-in-out infinite alternate;
 }
 
 /* Hover effects */
 .search-wrapper:hover #search-bar:not(:focus) {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.18) 0%, 
-    rgba(255, 255, 255, 0.1) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.3);
+  background: 
+    linear-gradient(135deg, 
+      rgba(0, 70, 140, 0.4) 0%, 
+      rgba(70, 0, 140, 0.4) 50%,
+      rgba(0, 140, 70, 0.4) 100%
+    );
+  
+  border-image: linear-gradient(45deg, 
+    rgba(0, 255, 255, 0.9) 0%, 
+    rgba(255, 0, 255, 0.7) 50%,
+    rgba(255, 255, 0, 0.9) 100%
+  ) 1;
+  
   transform: translateY(-1px);
+  box-shadow: 
+    0 0 40px rgba(0, 255, 255, 0.4),
+    0 0 80px rgba(255, 0, 255, 0.3),
+    0 15px 50px rgba(0, 0, 0, 0.4);
 }
 
 .search-wrapper:hover::before {
-  color: rgba(255, 255, 255, 0.8);
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.4));
+  color: rgba(255, 255, 255, 0.9);
+  filter: 
+    drop-shadow(0 0 12px rgba(0, 255, 255, 0.9))
+    drop-shadow(0 0 24px rgba(255, 0, 255, 0.5));
+  transform: translateY(-50%) scale(1.1);
+}
+
+@keyframes searchBarGlow {
+  0% {
+    box-shadow: 
+      0 0 20px rgba(0, 255, 255, 0.2),
+      0 0 40px rgba(255, 0, 255, 0.1),
+      0 12px 40px rgba(0, 0, 0, 0.4);
+  }
+  100% {
+    box-shadow: 
+      0 0 40px rgba(0, 255, 255, 0.4),
+      0 0 80px rgba(255, 0, 255, 0.25),
+      0 12px 40px rgba(0, 0, 0, 0.4);
+  }
+}
+
+@keyframes iconPulse {
+  0% {
+    filter: 
+      drop-shadow(0 0 8px rgba(0, 255, 255, 0.6))
+      drop-shadow(0 0 16px rgba(255, 0, 255, 0.3));
+  }
+  100% {
+    filter: 
+      drop-shadow(0 0 15px rgba(0, 255, 255, 1))
+      drop-shadow(0 0 30px rgba(255, 0, 255, 0.6));
+  }
 }
 
 /* Mobile responsive design */
@@ -956,12 +1306,13 @@
   }
 }
 
-/* Enhanced Glassmorphism Favorite Toggle */
+/* 💖 REVOLUTIONARY FAVORITE TOGGLE - Cyberpunk Innovation */
 .favorite-toggle {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 20px;
   position: relative;
+  z-index: 2;
 }
 
 /* Hide original checkbox */
@@ -969,66 +1320,81 @@
   display: none;
 }
 
-/* Premium Glass Toggle Switch */
+/* Futuristic cyberpunk toggle switch */
 .favorite-toggle .toggle-label {
   position: relative;
   display: flex;
   align-items: center;
   
-  /* Enhanced glassmorphism */
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.12) 0%, 
-    rgba(255, 255, 255, 0.06) 100%
-  );
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1.5px solid rgba(255, 255, 255, 0.18);
-  border-radius: 25px;
+  /* Cyberpunk neon background */
+  background: 
+    linear-gradient(135deg, 
+      rgba(0, 30, 60, 0.4) 0%, 
+      rgba(30, 0, 60, 0.4) 50%,
+      rgba(0, 60, 30, 0.4) 100%
+    );
+  
+  /* Revolutionary neon border */
+  border: 3px solid transparent;
+  border-image: linear-gradient(45deg, 
+    rgba(255, 0, 128, 0.8), 
+    rgba(128, 0, 255, 0.8)
+  ) 1;
+  border-radius: 35px;
   padding: 8px;
-  width: 60px;
-  height: 34px;
+  width: 70px;
+  height: 40px;
   cursor: pointer;
   
-  /* Enhanced shadows and depth */
+  /* Cyberpunk glow effects */
   box-shadow: 
-    0 8px 25px rgba(0, 0, 0, 0.2),
-    0 3px 12px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    0 0 30px rgba(255, 0, 128, 0.3),
+    0 0 60px rgba(128, 0, 255, 0.2),
+    0 8px 25px rgba(0, 0, 0, 0.4),
+    inset 0 2px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
   
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.320, 1);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  
+  animation: toggleGlow 3s ease-in-out infinite alternate;
 }
 
-/* Glass slider inside the switch */
+/* Cyberpunk slider with energy effects */
 .favorite-toggle .toggle-slider {
   position: absolute;
   content: "";
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
   
-  /* Glass effect for slider */
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.9) 0%, 
-    rgba(255, 255, 255, 0.7) 100%
-  );
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  /* Revolutionary energy orb */
+  background: 
+    radial-gradient(circle at 30% 30%, 
+      rgba(255, 255, 255, 1) 0%, 
+      rgba(255, 0, 128, 0.9) 30%,
+      rgba(128, 0, 255, 0.8) 70%,
+      rgba(0, 0, 0, 0.2) 100%
+    );
+  
+  /* Neon border for slider */
+  border: 2px solid rgba(255, 255, 255, 0.6);
   border-radius: 50%;
-  top: 6px;
-  left: 7px;
+  top: 7px;
+  left: 8px;
   
-  /* Enhanced shadows for slider */
+  /* Energy orb glow */
   box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.25),
-    0 2px 6px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    0 0 20px rgba(255, 0, 128, 0.8),
+    0 0 40px rgba(128, 0, 255, 0.6),
+    0 4px 15px rgba(0, 0, 0, 0.4),
+    inset 0 2px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
   
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.320, 1);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: sliderPulse 2s ease-in-out infinite alternate;
 }
 
-/* Ripple effect on toggle */
+/* Energy wave ripple effect */
 .favorite-toggle .toggle-label::before {
   content: '';
   position: absolute;
@@ -1036,82 +1402,177 @@
   left: 50%;
   width: 0;
   height: 0;
-  background: rgba(255, 255, 255, 0.15);
+  background: 
+    radial-gradient(circle, 
+      rgba(255, 0, 128, 0.3) 0%, 
+      rgba(128, 0, 255, 0.2) 50%,
+      transparent 100%
+    );
   border-radius: 50%;
-  transition: all 0.6s ease;
+  transition: all 0.8s ease-out;
   transform: translate(-50%, -50%);
   z-index: 0;
 }
 
 .favorite-toggle .toggle-label:active::before {
-  width: 80px;
-  height: 80px;
+  width: 120px;
+  height: 120px;
+  opacity: 0.6;
 }
 
-/* Active state styling */
+/* Active state - Love energy activated */
 #favorites-checkbox:checked + .toggle-label {
-  background: linear-gradient(135deg, 
-    rgba(246, 133, 27, 0.25) 0%, 
-    rgba(246, 133, 27, 0.15) 100%
-  );
-  border-color: rgba(246, 133, 27, 0.4);
+  background: 
+    linear-gradient(135deg, 
+      rgba(255, 0, 128, 0.6) 0%, 
+      rgba(255, 20, 147, 0.5) 50%,
+      rgba(255, 0, 128, 0.6) 100%
+    );
+  
+  border-image: linear-gradient(45deg, 
+    rgba(255, 0, 128, 1), 
+    rgba(255, 20, 147, 0.9),
+    rgba(255, 105, 180, 0.8)
+  ) 1;
+  
   box-shadow: 
-    0 12px 35px rgba(246, 133, 27, 0.2),
-    0 4px 15px rgba(0, 0, 0, 0.15),
-    inset 0 2px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -2px 0 rgba(246, 133, 27, 0.1);
+    0 0 50px rgba(255, 0, 128, 0.6),
+    0 0 100px rgba(255, 20, 147, 0.4),
+    0 12px 35px rgba(0, 0, 0, 0.5),
+    inset 0 3px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.3);
 }
 
-/* Slider movement and styling when active */
+/* Slider movement and love energy when active */
 #favorites-checkbox:checked + .toggle-label .toggle-slider {
-  transform: translateX(26px);
-  background: linear-gradient(135deg, 
-    rgba(246, 133, 27, 1) 0%, 
-    rgba(246, 133, 27, 0.8) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateX(30px);
+  
+  background: 
+    radial-gradient(circle at 30% 30%, 
+      rgba(255, 255, 255, 1) 0%, 
+      rgba(255, 0, 128, 1) 20%,
+      rgba(255, 20, 147, 0.9) 50%,
+      rgba(255, 105, 180, 0.8) 80%,
+      rgba(0, 0, 0, 0.2) 100%
+    );
+  
+  border-color: rgba(255, 255, 255, 0.9);
   box-shadow: 
-    0 6px 18px rgba(246, 133, 27, 0.4),
-    0 3px 9px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    0 0 30px rgba(255, 0, 128, 1),
+    0 0 60px rgba(255, 20, 147, 0.8),
+    0 6px 20px rgba(0, 0, 0, 0.5),
+    inset 0 3px 0 rgba(255, 255, 255, 1),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+    
+  animation: activeLove 1.5s ease-in-out infinite alternate;
 }
 
 /* Enhanced hover effects */
 .favorite-toggle .toggle-label:hover {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.16) 0%, 
-    rgba(255, 255, 255, 0.1) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: translateY(-1px);
+  background: 
+    linear-gradient(135deg, 
+      rgba(0, 50, 100, 0.6) 0%, 
+      rgba(50, 0, 100, 0.6) 50%,
+      rgba(0, 100, 50, 0.6) 100%
+    );
+  
+  border-image: linear-gradient(45deg, 
+    rgba(255, 0, 128, 1), 
+    rgba(128, 0, 255, 1)
+  ) 1;
+  
+  transform: translateY(-2px) scale(1.05);
   box-shadow: 
-    0 12px 35px rgba(0, 0, 0, 0.25),
-    0 5px 18px rgba(0, 0, 0, 0.15),
-    inset 0 2px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.05);
+    0 0 40px rgba(255, 0, 128, 0.5),
+    0 0 80px rgba(128, 0, 255, 0.3),
+    0 12px 35px rgba(0, 0, 0, 0.5);
 }
 
 #favorites-checkbox:checked + .toggle-label:hover {
-  background: linear-gradient(135deg, 
-    rgba(246, 133, 27, 0.3) 0%, 
-    rgba(246, 133, 27, 0.2) 100%
-  );
-  border-color: rgba(246, 133, 27, 0.5);
+  background: 
+    linear-gradient(135deg, 
+      rgba(255, 0, 128, 0.8) 0%, 
+      rgba(255, 20, 147, 0.7) 50%,
+      rgba(255, 0, 128, 0.8) 100%
+    );
+  
   box-shadow: 
-    0 16px 40px rgba(246, 133, 27, 0.25),
-    0 6px 20px rgba(0, 0, 0, 0.2),
-    inset 0 2px 0 rgba(255, 255, 255, 0.15),
-    inset 0 -2px 0 rgba(246, 133, 27, 0.15);
+    0 0 70px rgba(255, 0, 128, 0.8),
+    0 0 140px rgba(255, 20, 147, 0.5),
+    0 16px 50px rgba(0, 0, 0, 0.6);
 }
 
-/* Enhanced toggle text */
+/* Enhanced toggle text with cyberpunk style */
 .favorite-toggle > span {
   color: rgba(255, 255, 255, 0.95);
-  font-size: 0.95em;
-  font-weight: 500;
-  letter-spacing: 0.3px;
+  font-size: 1em;
+  font-weight: 600;
+  letter-spacing: 0.5px;
   white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  
+  text-shadow: 
+    0 0 10px rgba(255, 255, 255, 0.6),
+    0 0 20px rgba(0, 255, 255, 0.4);
+  
+  animation: textGlow 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes toggleGlow {
+  0% {
+    box-shadow: 
+      0 0 20px rgba(255, 0, 128, 0.2),
+      0 0 40px rgba(128, 0, 255, 0.1),
+      0 8px 25px rgba(0, 0, 0, 0.4);
+  }
+  100% {
+    box-shadow: 
+      0 0 35px rgba(255, 0, 128, 0.4),
+      0 0 70px rgba(128, 0, 255, 0.25),
+      0 8px 25px rgba(0, 0, 0, 0.4);
+  }
+}
+
+@keyframes sliderPulse {
+  0% {
+    box-shadow: 
+      0 0 15px rgba(255, 0, 128, 0.6),
+      0 0 30px rgba(128, 0, 255, 0.4),
+      0 4px 15px rgba(0, 0, 0, 0.4);
+  }
+  100% {
+    box-shadow: 
+      0 0 25px rgba(255, 0, 128, 0.9),
+      0 0 50px rgba(128, 0, 255, 0.6),
+      0 4px 15px rgba(0, 0, 0, 0.4);
+  }
+}
+
+@keyframes activeLove {
+  0% {
+    box-shadow: 
+      0 0 20px rgba(255, 0, 128, 0.8),
+      0 0 40px rgba(255, 20, 147, 0.6),
+      0 6px 20px rgba(0, 0, 0, 0.5);
+  }
+  100% {
+    box-shadow: 
+      0 0 40px rgba(255, 0, 128, 1),
+      0 0 80px rgba(255, 20, 147, 0.8),
+      0 6px 20px rgba(0, 0, 0, 0.5);
+  }
+}
+
+@keyframes textGlow {
+  0% {
+    text-shadow: 
+      0 0 5px rgba(255, 255, 255, 0.4),
+      0 0 10px rgba(0, 255, 255, 0.2);
+  }
+  100% {
+    text-shadow: 
+      0 0 15px rgba(255, 255, 255, 0.8),
+      0 0 30px rgba(0, 255, 255, 0.6);
+  }
 }
 
 /* Responsive adjustments */
@@ -1200,220 +1661,490 @@
 
 
 
-/* Enhanced Glassmorphism Top Bar */
+/* 🎮 CYBERPUNK NEON TOP BAR - Revolutionary Design */
 #top-bar {
-  /* Premium glassmorphism background */
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.08) 0%, 
-    rgba(255, 255, 255, 0.04) 100%
-  );
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  /* Futuristic neon border background */
+  background: 
+    linear-gradient(90deg, 
+      rgba(0, 255, 255, 0.1) 0%, 
+      rgba(255, 0, 255, 0.1) 25%, 
+      rgba(255, 255, 0, 0.1) 50%, 
+      rgba(255, 0, 255, 0.1) 75%, 
+      rgba(0, 255, 255, 0.1) 100%
+    ),
+    linear-gradient(135deg, 
+      rgba(0, 20, 40, 0.9) 0%, 
+      rgba(20, 0, 40, 0.9) 50%, 
+      rgba(0, 40, 20, 0.9) 100%
+    );
   
-  padding: 8px 15px;
+  /* Neon glow borders */
+  border: 1px solid transparent;
+  border-image: linear-gradient(90deg, 
+    rgba(0, 255, 255, 0.6), 
+    rgba(255, 0, 255, 0.6), 
+    rgba(255, 255, 0, 0.6)
+  ) 1;
+  border-bottom: 2px solid rgba(0, 255, 255, 0.4);
+  
+  padding: 12px 20px;
   display: flex;
   justify-content: flex-end;
   align-items: center;
   
-  /* Enhanced shadow for depth */
+  /* Revolutionary cyberpunk shadow */
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    0 2px 16px rgba(0, 0, 0, 0.15),
+    0 0 30px rgba(0, 255, 255, 0.2),
+    0 0 60px rgba(255, 0, 255, 0.1),
+    0 8px 32px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   
   position: sticky;
   top: 0;
   z-index: 1000;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Animated cyberpunk pattern */
+  animation: cyberpunkGlow 3s ease-in-out infinite alternate;
 }
 
 #top-bar:hover {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.11) 0%, 
-    rgba(255, 255, 255, 0.07) 100%
-  );
-  border-bottom-color: rgba(255, 255, 255, 0.15);
+  /* Enhanced cyberpunk glow on hover */
   box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.35),
-    0 4px 20px rgba(0, 0, 0, 0.2),
-    inset 0 2px 0 rgba(255, 255, 255, 0.12);
+    0 0 50px rgba(0, 255, 255, 0.4),
+    0 0 100px rgba(255, 0, 255, 0.2),
+    0 12px 40px rgba(0, 0, 0, 0.8),
+    inset 0 2px 0 rgba(255, 255, 255, 0.15);
+  
+  border-bottom-color: rgba(0, 255, 255, 0.8);
+  transform: translateY(-1px);
+}
+
+@keyframes cyberpunkGlow {
+  0% {
+    box-shadow: 
+      0 0 20px rgba(0, 255, 255, 0.2),
+      0 0 40px rgba(255, 0, 255, 0.1),
+      0 8px 32px rgba(0, 0, 0, 0.6);
+  }
+  100% {
+    box-shadow: 
+      0 0 40px rgba(0, 255, 255, 0.3),
+      0 0 80px rgba(255, 0, 255, 0.15),
+      0 8px 32px rgba(0, 0, 0, 0.6);
+  }
 }
 
 #top-bar .container {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 12px;
+  gap: 16px;
 }
 
-/* Enhanced Glassmorphism Buttons */
+/* 🔥 REVOLUTIONARY NEON BUTTONS - Cyberpunk Innovation */
 #top-bar .button {
-  color: rgba(255, 255, 255, 0.95);
+  color: #ffffff;
   text-decoration: none;
   
-  /* Premium glass effect */
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.12) 0%, 
-    rgba(255, 255, 255, 0.06) 100%
-  );
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* Cyberpunk neon button background */
+  background: 
+    linear-gradient(135deg, 
+      rgba(0, 50, 100, 0.3) 0%, 
+      rgba(50, 0, 100, 0.3) 50%,
+      rgba(0, 100, 50, 0.3) 100%
+    );
   
-  padding: 8px 14px;
-  border-radius: 18px;
-  font-size: 0.85em;
-  font-weight: 500;
+  /* Neon border */
+  border: 2px solid transparent;
+  border-image: linear-gradient(45deg, 
+    rgba(0, 255, 255, 0.8), 
+    rgba(255, 0, 255, 0.8)
+  ) 1;
+  
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-size: 0.9em;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   
-  /* Enhanced shadows */
+  /* Revolutionary neon glow */
   box-shadow: 
-    0 4px 16px rgba(0, 0, 0, 0.2),
-    0 2px 8px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 0 20px rgba(0, 255, 255, 0.3),
+    0 0 40px rgba(255, 0, 255, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   
-  transition: all 0.3s cubic-bezier(0.23, 1, 0.320, 1);
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.320, 1);
   position: relative;
   overflow: hidden;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  
+  /* Animated neon pulse */
+  animation: neonPulse 2s ease-in-out infinite alternate;
 }
 
-/* Ripple effect for buttons */
+/* Neon energy wave effect */
 #top-bar .button::before {
   content: '';
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  transition: all 0.6s ease;
-  transform: translate(-50%, -50%);
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  transition: left 0.8s ease-in-out;
   z-index: 0;
 }
 
-#top-bar .button:active::before {
-  width: 100px;
-  height: 100px;
+#top-bar .button:hover::before {
+  left: 100%;
 }
 
 #top-bar .button i {
-  margin-right: 6px;
-  font-size: 1.1em;
-  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.3));
+  margin-right: 8px;
+  font-size: 1.2em;
+  filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.6));
   position: relative;
   z-index: 1;
+  animation: iconGlow 1.5s ease-in-out infinite alternate;
 }
 
-/* Enhanced hover states */
+/* Revolutionary hover effects */
 #top-bar .button:hover {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.16) 0%, 
-    rgba(255, 255, 255, 0.1) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
+  background: 
+    linear-gradient(135deg, 
+      rgba(0, 80, 160, 0.5) 0%, 
+      rgba(80, 0, 160, 0.5) 50%,
+      rgba(0, 160, 80, 0.5) 100%
+    );
+  
+  border-image: linear-gradient(45deg, 
+    rgba(0, 255, 255, 1), 
+    rgba(255, 0, 255, 1),
+    rgba(255, 255, 0, 0.8)
+  ) 1;
+  
+  transform: translateY(-3px) scale(1.05);
   box-shadow: 
-    0 8px 24px rgba(0, 0, 0, 0.25),
-    0 4px 12px rgba(0, 0, 0, 0.15),
-    inset 0 2px 0 rgba(255, 255, 255, 0.15);
-  color: white;
+    0 0 40px rgba(0, 255, 255, 0.6),
+    0 0 80px rgba(255, 0, 255, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3);
+  
+  color: #ffffff;
+  text-shadow: 
+    0 0 15px rgba(255, 255, 255, 0.8),
+    0 0 30px rgba(0, 255, 255, 0.6);
 }
 
-/* Enhanced specific button styles */
+@keyframes neonPulse {
+  0% {
+    box-shadow: 
+      0 0 15px rgba(0, 255, 255, 0.2),
+      0 0 30px rgba(255, 0, 255, 0.1),
+      0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+  100% {
+    box-shadow: 
+      0 0 25px rgba(0, 255, 255, 0.4),
+      0 0 50px rgba(255, 0, 255, 0.2),
+      0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+}
+
+@keyframes iconGlow {
+  0% {
+    filter: drop-shadow(0 0 5px rgba(0, 255, 255, 0.4));
+  }
+  100% {
+    filter: drop-shadow(0 0 12px rgba(0, 255, 255, 0.8));
+  }
+}
+
+/* 🎯 SPECIALIZED CYBERPUNK BUTTONS */
 .donate-btn {
-  background: linear-gradient(135deg, 
-    rgba(247, 147, 26, 0.2) 0%, 
-    rgba(247, 147, 26, 0.1) 100%
-  ) !important;
-  border-color: rgba(247, 147, 26, 0.3) !important;
-  color: rgba(247, 147, 26, 1) !important;
+  /* Bitcoin golden energy */
+  background: 
+    linear-gradient(135deg, 
+      rgba(247, 147, 26, 0.4) 0%, 
+      rgba(255, 193, 7, 0.3) 50%,
+      rgba(247, 147, 26, 0.4) 100%
+    ) !important;
+  
+  border-image: linear-gradient(45deg, 
+    rgba(247, 147, 26, 1), 
+    rgba(255, 193, 7, 0.8)
+  ) 1 !important;
+  
+  color: rgba(255, 215, 0, 1) !important;
+  text-shadow: 0 0 15px rgba(255, 215, 0, 0.8) !important;
+  
+  animation: bitcoinGlow 2.5s ease-in-out infinite alternate;
 }
 
 .donate-btn:hover {
-  background: linear-gradient(135deg, 
-    rgba(247, 147, 26, 0.3) 0%, 
-    rgba(247, 147, 26, 0.15) 100%
-  ) !important;
-  border-color: rgba(247, 147, 26, 0.4) !important;
+  background: 
+    linear-gradient(135deg, 
+      rgba(247, 147, 26, 0.7) 0%, 
+      rgba(255, 193, 7, 0.6) 50%,
+      rgba(247, 147, 26, 0.7) 100%
+    ) !important;
+  
   box-shadow: 
-    0 8px 24px rgba(247, 147, 26, 0.2),
-    0 4px 12px rgba(0, 0, 0, 0.15),
-    inset 0 2px 0 rgba(255, 255, 255, 0.1) !important;
-  color: rgba(247, 147, 26, 1) !important;
+    0 0 50px rgba(247, 147, 26, 0.8),
+    0 0 100px rgba(255, 193, 7, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.5) !important;
+  
+  color: rgba(255, 255, 255, 1) !important;
+  text-shadow: 
+    0 0 20px rgba(255, 215, 0, 1),
+    0 0 40px rgba(247, 147, 26, 0.8) !important;
+}
+
+@keyframes bitcoinGlow {
+  0% {
+    box-shadow: 
+      0 0 20px rgba(247, 147, 26, 0.4),
+      0 0 40px rgba(255, 193, 7, 0.2);
+  }
+  100% {
+    box-shadow: 
+      0 0 35px rgba(247, 147, 26, 0.6),
+      0 0 70px rgba(255, 193, 7, 0.3);
+  }
 }
 
 .github-btn {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.1) 0%, 
-    rgba(255, 255, 255, 0.05) 100%
-  ) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
+  /* GitHub matrix green */
+  background: 
+    linear-gradient(135deg, 
+      rgba(0, 255, 0, 0.2) 0%, 
+      rgba(50, 205, 50, 0.2) 50%,
+      rgba(0, 255, 0, 0.2) 100%
+    ) !important;
+  
+  border-image: linear-gradient(45deg, 
+    rgba(0, 255, 0, 0.8), 
+    rgba(50, 205, 50, 0.6)
+  ) 1 !important;
+  
+  animation: matrixGlow 3s ease-in-out infinite alternate;
 }
 
 .github-btn:hover {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.15) 0%, 
-    rgba(255, 255, 255, 0.08) 100%
-  ) !important;
-  border-color: rgba(255, 255, 255, 0.25) !important;
+  background: 
+    linear-gradient(135deg, 
+      rgba(0, 255, 0, 0.4) 0%, 
+      rgba(50, 205, 50, 0.4) 50%,
+      rgba(0, 255, 0, 0.4) 100%
+    ) !important;
+  
+  box-shadow: 
+    0 0 50px rgba(0, 255, 0, 0.6),
+    0 0 100px rgba(50, 205, 50, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.5) !important;
 }
 
-/* Enhanced MetaMask button */
+@keyframes matrixGlow {
+  0% {
+    box-shadow: 
+      0 0 15px rgba(0, 255, 0, 0.3),
+      0 0 30px rgba(50, 205, 50, 0.1);
+  }
+  100% {
+    box-shadow: 
+      0 0 25px rgba(0, 255, 0, 0.5),
+      0 0 50px rgba(50, 205, 50, 0.2);
+  }
+}
+
+/* Enhanced MetaMask Button - Cyberpunk Style */
 .metamask-btn {
-  background: linear-gradient(135deg, 
-    rgba(246, 133, 27, 0.15) 0%, 
-    rgba(246, 133, 27, 0.08) 100%
-  ) !important;
-  border-color: rgba(246, 133, 27, 0.3) !important;
+  /* MetaMask orange energy */
+  background: 
+    linear-gradient(135deg, 
+      rgba(246, 133, 27, 0.3) 0%, 
+      rgba(255, 102, 0, 0.3) 50%,
+      rgba(246, 133, 27, 0.3) 100%
+    ) !important;
+  
+  border-image: linear-gradient(45deg, 
+    rgba(246, 133, 27, 0.9), 
+    rgba(255, 102, 0, 0.7)
+  ) 1 !important;
+  
   color: rgba(246, 133, 27, 1) !important;
+  text-shadow: 0 0 15px rgba(246, 133, 27, 0.8) !important;
+  
+  animation: metamaskGlow 2s ease-in-out infinite alternate;
 }
 
 .metamask-btn:hover {
-  background: linear-gradient(135deg, 
-    rgba(246, 133, 27, 0.25) 0%, 
-    rgba(246, 133, 27, 0.12) 100%
-  ) !important;
-  border-color: rgba(246, 133, 27, 0.4) !important;
+  background: 
+    linear-gradient(135deg, 
+      rgba(246, 133, 27, 0.6) 0%, 
+      rgba(255, 102, 0, 0.6) 50%,
+      rgba(246, 133, 27, 0.6) 100%
+    ) !important;
+  
   box-shadow: 
-    0 8px 24px rgba(246, 133, 27, 0.2),
-    0 4px 12px rgba(0, 0, 0, 0.15),
-    inset 0 2px 0 rgba(255, 255, 255, 0.1) !important;
+    0 0 50px rgba(246, 133, 27, 0.8),
+    0 0 100px rgba(255, 102, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.5) !important;
+  
+  color: rgba(255, 255, 255, 1) !important;
+  text-shadow: 
+    0 0 20px rgba(246, 133, 27, 1),
+    0 0 40px rgba(255, 102, 0, 0.8) !important;
 }
 
 .metamask-btn img {
-  width: 18px;
-  height: 18px;
-  margin-right: 6px;
-  filter: drop-shadow(0 0 4px rgba(246, 133, 27, 0.3));
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  filter: 
+    drop-shadow(0 0 8px rgba(246, 133, 27, 0.6))
+    drop-shadow(0 0 16px rgba(255, 102, 0, 0.4));
 }
 
-.metamask-btn:disabled {
-  background: linear-gradient(135deg, 
-    rgba(246, 133, 27, 0.3) 0%, 
-    rgba(246, 133, 27, 0.15) 100%
-  ) !important;
-  color: rgba(255, 255, 255, 0.9) !important;
-  cursor: not-allowed;
-  border-color: rgba(246, 133, 27, 0.4) !important;
-  opacity: 0.8;
-  transform: none !important;
+@keyframes metamaskGlow {
+  0% {
+    box-shadow: 
+      0 0 20px rgba(246, 133, 27, 0.4),
+      0 0 40px rgba(255, 102, 0, 0.2);
+  }
+  100% {
+    box-shadow: 
+      0 0 35px rgba(246, 133, 27, 0.6),
+      0 0 70px rgba(255, 102, 0, 0.3);
+  }
 }
 
-.metamask-btn:disabled:hover {
-  background: linear-gradient(135deg, 
-    rgba(246, 133, 27, 0.3) 0%, 
-    rgba(246, 133, 27, 0.15) 100%
-  ) !important;
-  color: rgba(255, 255, 255, 0.9) !important;
-  border-color: rgba(246, 133, 27, 0.4) !important;
-  transform: none !important;
-  box-shadow: 
-    0 4px 16px rgba(0, 0, 0, 0.2),
-    0 2px 8px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+/* 🌟 CYBERPUNK TITLE - Revolutionary Header */
+header {
+  margin-bottom: 40px;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+h1 {
+  font-size: 3.5em;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 4px;
+  
+  /* Revolutionary cyberpunk title */
+  background: linear-gradient(
+    135deg,
+    #00ff00 0%,
+    #00ffff 25%,
+    #ff00ff 50%,
+    #ffff00 75%,
+    #00ff00 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  background-size: 400% 400%;
+  
+  text-shadow: 
+    0 0 30px rgba(0, 255, 255, 0.6),
+    0 0 60px rgba(255, 0, 255, 0.4),
+    0 0 90px rgba(0, 255, 0, 0.2);
+  
+  /* Futuristic border */
+  padding: 30px 40px;
+  border: 3px solid transparent;
+  border-image: linear-gradient(45deg, 
+    rgba(0, 255, 255, 0.8), 
+    rgba(255, 0, 255, 0.6), 
+    rgba(255, 255, 0, 0.8)
+  ) 1;
+  border-radius: 25px;
+  
+  /* Cyberpunk background */
+  background-image: 
+    linear-gradient(
+      135deg,
+      #00ff00 0%,
+      #00ffff 25%,
+      #ff00ff 50%,
+      #ffff00 75%,
+      #00ff00 100%
+    ),
+    linear-gradient(135deg, 
+      rgba(0, 20, 40, 0.8) 0%, 
+      rgba(20, 0, 40, 0.8) 50%, 
+      rgba(0, 40, 20, 0.8) 100%
+    );
+  background-clip: text, border-box;
+  -webkit-background-clip: text, border-box;
+  
+  max-width: 90%;
+  margin: 0 auto;
+  position: relative;
+  
+  /* Revolutionary animations */
+  animation: 
+    titleColorShift 4s ease-in-out infinite,
+    titleGlow 3s ease-in-out infinite alternate;
+}
+
+h1::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  background: linear-gradient(45deg, 
+    rgba(0, 255, 255, 0.3), 
+    rgba(255, 0, 255, 0.3), 
+    rgba(255, 255, 0, 0.3)
+  );
+  border-radius: 30px;
+  z-index: -1;
+  filter: blur(20px);
+  animation: titleHalo 2s ease-in-out infinite alternate;
+}
+
+@keyframes titleColorShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes titleGlow {
+  0% {
+    text-shadow: 
+      0 0 20px rgba(0, 255, 255, 0.4),
+      0 0 40px rgba(255, 0, 255, 0.3),
+      0 0 60px rgba(0, 255, 0, 0.2);
+  }
+  100% {
+    text-shadow: 
+      0 0 40px rgba(0, 255, 255, 0.8),
+      0 0 80px rgba(255, 0, 255, 0.6),
+      0 0 120px rgba(0, 255, 0, 0.4);
+  }
+}
+
+@keyframes titleHalo {
+  0% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.6;
+    transform: scale(1.05);
+  }
 }
 
 /* Mobile responsive adjustments */
@@ -1444,48 +2175,85 @@
 
 
 
-/* Reseteo de estilos */
+/* 🚀 INNOVATIVE CYBERPUNK RESET - Complete Visual Revolution */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* 🌌 FUTURISTIC CYBERPUNK BODY - Revolutionary Design */
 body {
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   margin: 0;
   padding: 0;
   
-  /* Enhanced gradient background for better glassmorphism contrast */
-  background: linear-gradient(135deg, 
-    #0a0a0a 0%, 
-    #1a1a1a 25%, 
-    #141414 50%, 
-    #0f0f0f 75%, 
-    #0a0a0a 100%
-  );
+  /* 🎆 Revolutionary Neon Cyberpunk Background */
+  background: 
+    /* Animated neon grid overlay */
+    linear-gradient(90deg, transparent 98%, rgba(0, 255, 255, 0.03) 100%),
+    linear-gradient(180deg, transparent 98%, rgba(255, 0, 255, 0.03) 100%),
+    /* Main cyberpunk gradient */
+    radial-gradient(ellipse at top, #1a0033 0%, #000000 50%, #001122 100%),
+    linear-gradient(135deg, #000011 0%, #001133 25%, #220066 50%, #000022 75%, #000000 100%);
   
-  /* Add subtle animated background pattern */
+  /* Animated cyberpunk particles */
   background-image: 
-    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.01) 0%, transparent 50%);
+    radial-gradient(2px 2px at 20px 30px, rgba(0, 255, 255, 0.6), transparent),
+    radial-gradient(2px 2px at 40px 70px, rgba(255, 0, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 0, 0.3), transparent),
+    radial-gradient(1px 1px at 130px 80px, rgba(0, 255, 0, 0.3), transparent),
+    radial-gradient(2px 2px at 160px 30px, rgba(255, 0, 128, 0.5), transparent);
   
+  background-size: 200px 100px, 80px 120px, 150px 80px, 120px 160px, 180px 90px;
   background-attachment: fixed;
   min-height: 100vh;
-  color: white;
+  color: #ffffff;
   
-  /* Subtle animation for background */
-  animation: subtleBackgroundShift 20s ease-in-out infinite;
+  /* Revolutionary floating animation */
+  animation: cyberpunkParticles 20s ease-in-out infinite;
+  
+  /* Add subtle screen effect */
+  position: relative;
 }
 
-@keyframes subtleBackgroundShift {
+/* Add screen scan line effect */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    transparent 50%, 
+    rgba(0, 255, 255, 0.03) 50%, 
+    transparent 51%
+  );
+  background-size: 100% 4px;
+  animation: scanLines 0.1s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+@keyframes cyberpunkParticles {
   0%, 100% { 
-    background-position: 0% 0%, 100% 100%, 50% 50%; 
+    background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%;
+  }
+  25% { 
+    background-position: 100% 20%, 20% 100%, 80% 40%, 40% 80%, 60% 20%;
   }
   50% { 
-    background-position: 20% 20%, 80% 80%, 40% 60%; 
+    background-position: 200% 100%, 100% 200%, 160% 80%, 80% 160%, 120% 100%;
   }
+  75% { 
+    background-position: 300% 50%, 50% 300%, 240% 120%, 120% 240%, 180% 50%;
+  }
+}
+
+@keyframes scanLines {
+  0% { transform: translateY(-100vh); }
+  100% { transform: translateY(100vh); }
 }
 
 header {
