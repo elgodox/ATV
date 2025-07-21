@@ -1932,17 +1932,6 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
       if (!response.ok) {
         const errorData = await response.json();
         
-        // Check for demo mode
-        if (errorData.isDemoMode) {
-          // Limpiar solicitud pendiente
-          pendingTorrentRequests.delete(torrentHash);
-          closeFileSelectionModal();
-          
-          // Show demo mode message
-          showNotification('🎬 Modo Demostración: Esta es una demostración de la funcionalidad de búsqueda de torrents para series de TV. Para usar la funcionalidad completa de streaming, configura una API key válida de TMDb.', 'info', 8000);
-          return;
-        }
-        
         // Si es un error 503 (torrent cargando), reintentar con backoff exponencial
         if (response.status === 503 && retryCount < maxRetries) {
           retryCount++;
@@ -1965,17 +1954,6 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
 
       const torrentInfo = await response.json();
       currentTorrentInfo = torrentInfo;
-
-      // Check if this is demo mode response
-      if (torrentInfo.isDemoMode) {
-        // Limpiar solicitud pendiente
-        pendingTorrentRequests.delete(torrentHash);
-        closeFileSelectionModal();
-        
-        // Show demo mode message with torrent info
-        showNotification('🎬 Modo Demostración: Torrent encontrado exitosamente. En modo demostración, se muestran datos simulados. Para ver y reproducir contenido real, configura una API key válida de TMDb.', 'info', 8000);
-        return;
-      }
 
       // Si solo hay un archivo de video, saltar la selección y reproducir directamente
       if (torrentInfo.videoFiles.length === 1) {
@@ -2322,19 +2300,12 @@ async function searchOnlineSubtitles(language) {
         const option = document.createElement('option');
         option.value = subtitle.downloadUrl;
         
-        // Agregar indicador si es demo
-        const demoIndicator = subtitle.isDemo ? ' [DEMO]' : '';
-        option.textContent = `${subtitle.languageName} - ${subtitle.filename} (${subtitle.rating || 'N/A'})${demoIndicator}`;
+        option.textContent = `${subtitle.languageName} - ${subtitle.filename} (${subtitle.rating || 'N/A'})`;
         select.appendChild(option);
       });
       
-      const demoCount = subtitles.filter(s => s.isDemo).length;
-      const realCount = subtitles.length - demoCount;
-      
-      if (demoCount > 0 && realCount === 0) {
-        showNotification(`Se encontraron ${subtitles.length} subtítulos de demostración para "${movieTitle}". Para subtítulos reales, se requiere integración con APIs externas.`, 'info');
-      } else {
-        showNotification(`Se encontraron ${subtitles.length} subtítulos para "${movieTitle}"`, 'success');
+      if (subtitles.length > 0) {
+        showNotification(`Se encontraron ${subtitles.length} subtítulos para "${movieTitle}".`, 'success');
       }
     } else {
       showNotification(`No se encontraron subtítulos online para "${movieTitle}" en ${language}. La búsqueda de subtítulos requiere integración con APIs externas como OpenSubtitles.`, 'warning');
