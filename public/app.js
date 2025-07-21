@@ -84,13 +84,15 @@ function testVideoStreamingFeatures() {
   
   // Test subtitle controls
   const subtitleElements = [
+    'torrent-subtitle-select',
     'language-select',
     'search-subtitles-btn', 
     'online-subtitle-select',
     'subtitle-file',
     'uploaded-subtitle-select',
-    'enable-subtitles-btn',
-    'disable-subtitles-btn'
+    'subtitle-enabled-toggle',
+    'select-file-btn',
+    'upload-subtitle-btn'
   ];
   
   const missingElements = subtitleElements.filter(id => !document.getElementById(id));
@@ -373,8 +375,17 @@ async function getGenres(type) {
     if (!response.ok) {
       throw new Error('Error fetching genres');
     }
-    const genres = await response.json();
-    return genres;  // Devolver la lista de géneros
+    const data = await response.json();
+    
+    // Verificar que sea un array (puede ser un objeto de error si no hay API key)
+    if (Array.isArray(data)) {
+      return data;
+    } else if (data && Array.isArray(data.genres)) {
+      return data.genres;
+    } else {
+      console.warn('Invalid genres response:', data);
+      return [];
+    }
   } catch (error) {
     console.error('Error fetching genres:', error);
     return [];
@@ -2276,19 +2287,38 @@ function setupSubtitleControls() {
     await searchOnlineSubtitles(language);
   };
 
-  // Subir subtítulos
-  document.getElementById('upload-subtitle-btn').onclick = function() {
+  // Subir subtítulos - nuevo flujo con botón de selección separado
+  document.getElementById('select-file-btn').onclick = function() {
     const fileInput = document.getElementById('subtitle-file');
     fileInput.click();
   };
 
   document.getElementById('subtitle-file').onchange = function(event) {
-    uploadSubtitle(event.target.files[0]);
+    const file = event.target.files[0];
+    if (file) {
+      // Actualizar el botón de selección para mostrar el archivo seleccionado
+      const selectBtn = document.getElementById('select-file-btn');
+      selectBtn.innerHTML = `<span class="btn-icon">📄</span>${file.name}`;
+      
+      // Habilitar el botón de subir
+      const uploadBtn = document.getElementById('upload-subtitle-btn');
+      uploadBtn.disabled = false;
+      
+      // Actualizar el evento del botón de subir
+      uploadBtn.onclick = function() {
+        uploadSubtitle(file);
+      };
+    }
   };
 
-  // Habilitar/deshabilitar subtítulos
-  document.getElementById('enable-subtitles-btn').onclick = enableSubtitles;
-  document.getElementById('disable-subtitles-btn').onclick = disableSubtitles;
+  // Toggle principal de subtítulos
+  document.getElementById('subtitle-enabled-toggle').onchange = function() {
+    if (this.checked) {
+      enableSubtitles();
+    } else {
+      disableSubtitles();
+    }
+  };
 
   // Cambio de subtítulos del torrent
   document.getElementById('torrent-subtitle-select').onchange = function() {
@@ -2579,6 +2609,7 @@ function addSubtitleTrack(src, label, language) {
 function enableSubtitles() {
   const videoPlayer = document.getElementById('video-player');
   const tracks = videoPlayer.textTracks;
+  const toggle = document.getElementById('subtitle-enabled-toggle');
   
   let tracksEnabled = 0;
   for (let i = 0; i < tracks.length; i++) {
@@ -2588,8 +2619,10 @@ function enableSubtitles() {
   
   if (tracksEnabled > 0) {
     showNotification(`${tracksEnabled} pista(s) de subtítulos habilitadas`, 'success');
+    if (toggle) toggle.checked = true;
   } else {
     showNotification('No hay subtítulos disponibles para habilitar', 'warning');
+    if (toggle) toggle.checked = false;
   }
 }
 
@@ -2597,6 +2630,7 @@ function enableSubtitles() {
 function disableSubtitles() {
   const videoPlayer = document.getElementById('video-player');
   const tracks = videoPlayer.textTracks;
+  const toggle = document.getElementById('subtitle-enabled-toggle');
   
   let tracksDisabled = 0;
   for (let i = 0; i < tracks.length; i++) {
@@ -2606,8 +2640,10 @@ function disableSubtitles() {
   
   if (tracksDisabled > 0) {
     showNotification('Subtítulos deshabilitados', 'info');
+    if (toggle) toggle.checked = false;
   } else {
     showNotification('No hay subtítulos para deshabilitar', 'warning');
+    if (toggle) toggle.checked = false;
   }
 }
 

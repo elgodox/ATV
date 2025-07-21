@@ -1166,6 +1166,48 @@ app.post('/api/torrent/stop/:infoHash', (req, res) => {
   res.status(200).json({ message: 'Cleanup initiated', success: true });
 });
 
+// Endpoint para obtener estadísticas de un torrent específico
+app.get('/api/torrent/stats/:infoHash', (req, res) => {
+  const { infoHash } = req.params;
+  
+  try {
+    // Buscar el torrent en el cliente WebTorrent
+    const torrent = client.torrents.find(t => t.infoHash === infoHash);
+    
+    if (!torrent) {
+      return res.status(404).json({ error: 'Torrent not found' });
+    }
+    
+    // Verificar si el torrent está listo
+    if (!torrent.ready) {
+      return res.status(503).json({ error: 'Torrent not ready' });
+    }
+    
+    // Devolver estadísticas del torrent
+    const stats = {
+      infoHash: torrent.infoHash,
+      name: torrent.name,
+      length: torrent.length,
+      downloaded: torrent.downloaded,
+      uploaded: torrent.uploaded,
+      downloadSpeed: torrent.downloadSpeed,
+      uploadSpeed: torrent.uploadSpeed,
+      progress: torrent.progress,
+      ratio: torrent.ratio,
+      numPeers: torrent.numPeers,
+      timeRemaining: torrent.timeRemaining,
+      ready: torrent.ready,
+      paused: torrent.paused,
+      done: torrent.done
+    };
+    
+    res.json(stats);
+  } catch (error) {
+    console.error('Error getting torrent stats:', error);
+    res.status(500).json({ error: 'Error getting torrent stats' });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
