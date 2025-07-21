@@ -167,6 +167,12 @@ function showSearchResultsInfo(data) {
         filterIndicators.push(`🎭 ${typeText}`);
       }
       
+      if (data.active_filters.adultFilter) {
+        const adultFilterSelect = document.getElementById('adult-filter');
+        const adultFilterText = adultFilterSelect ? adultFilterSelect.options[adultFilterSelect.selectedIndex].text : 'Sin contenido +18';
+        filterIndicators.push(`🔞 ${adultFilterText}`);
+      }
+      
       if (filterIndicators.length > 0) {
         resultsText += ` (filtrado por: ${filterIndicators.join(', ')})`;
       }
@@ -208,11 +214,13 @@ function clearAllFilters() {
   const typeSelect = document.getElementById('type');
   const genreSelect = document.getElementById('genre');
   const platformSelect = document.getElementById('platform');
+  const adultFilterSelect = document.getElementById('adult-filter');
   const sortSelect = document.getElementById('sort');
   
   if (typeSelect) typeSelect.value = '';
   if (genreSelect) genreSelect.value = '';
   if (platformSelect) platformSelect.value = '';
+  if (adultFilterSelect) adultFilterSelect.value = '';
   if (sortSelect) sortSelect.value = 'popularity.desc';
   
   // Desactivar filtro de favoritos
@@ -238,6 +246,7 @@ function clearAllFilters() {
 document.getElementById("type").addEventListener("change", applyFilters);
 document.getElementById("genre").addEventListener("change", applyFilters);
 document.getElementById("platform").addEventListener("change", applyFilters);
+document.getElementById("adult-filter").addEventListener("change", applyFilters);
 document.getElementById("sort").addEventListener("change", applyFilters);
 
 // Event listener para el botón de limpiar filtros
@@ -348,6 +357,7 @@ async function getTitles(page = 1) {
   const type = document.getElementById('type').value;
   const genre = document.getElementById('genre').value;
   const platform = document.getElementById('platform').value;
+  const adultFilter = document.getElementById('adult-filter').value;
   const sortBy = document.getElementById('sort').value;
   const searchQuery = document.getElementById('search-bar') ? document.getElementById('search-bar').value.trim() : '';
 
@@ -392,6 +402,7 @@ async function getTitles(page = 1) {
       type, // Pass type filter to search API
       genre,
       platform,
+      adultFilter,
       sortBy,
       page
     }).toString();
@@ -406,6 +417,7 @@ async function getTitles(page = 1) {
       searchQuery,
       genre,
       platform,
+      adultFilter,
       sortBy,
       page
     }).toString();

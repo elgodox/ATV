@@ -125,13 +125,15 @@ app.get('/api/genres/:type', async (req, res) => {
 
 // Ruta para obtener películas o series según filtros
 app.get('/api/titles', async (req, res) => {
-  const { type, searchQuery, genre, platform, sortBy, page } = req.query;
+  const { type, searchQuery, genre, platform, sortBy, page, adultFilter } = req.query;
   
   let url;
+  const adultParam = adultFilter === 'false' ? '&include_adult=false' : '&include_adult=true';
+  
   if (searchQuery) {
-    url = `https://api.themoviedb.org/3/search/${type}?api_key=${API_KEY}&query=${searchQuery}&page=${page}&language=en&with_watch_providers=${platform}&watch_region=US`;
+    url = `https://api.themoviedb.org/3/search/${type}?api_key=${API_KEY}&query=${searchQuery}&page=${page}&language=en&with_watch_providers=${platform}&watch_region=US${adultParam}`;
   } else {
-    url = `https://api.themoviedb.org/3/discover/${type}?api_key=${API_KEY}&with_watch_providers=${platform}&watch_region=US&page=${page}&with_genres=${genre}&language=en&sort_by=${sortBy}`;
+    url = `https://api.themoviedb.org/3/discover/${type}?api_key=${API_KEY}&with_watch_providers=${platform}&watch_region=US&page=${page}&with_genres=${genre}&language=en&sort_by=${sortBy}${adultParam}`;
   }
 
   try {
@@ -164,7 +166,7 @@ app.get('/api/titles', async (req, res) => {
 
 // Nueva ruta para búsqueda optimizada que busca en movies y TV simultáneamente
 app.get('/api/search-all', async (req, res) => {
-  const { searchQuery, genre, platform, sortBy, page = 1, type } = req.query;
+  const { searchQuery, genre, platform, sortBy, page = 1, type, adultFilter } = req.query;
   
   if (!searchQuery || searchQuery.trim() === '') {
     return res.status(400).json({
@@ -197,14 +199,15 @@ app.get('/api/search-all', async (req, res) => {
     const baseParams = `api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}&page=${page}&language=en`;
     const platformParam = platform && platform !== '' ? `&with_watch_providers=${platform}&watch_region=US` : '';
     const genreParam = genre && genre !== '' ? `&with_genres=${genre}` : '';
+    const adultParam = adultFilter === 'false' ? '&include_adult=false' : '&include_adult=true';
     
     // Solo realizar búsquedas necesarias según filtros
     if (searchMovies) {
-      movieUrl = `https://api.themoviedb.org/3/search/movie?${baseParams}${platformParam}${genreParam}`;
+      movieUrl = `https://api.themoviedb.org/3/search/movie?${baseParams}${platformParam}${genreParam}${adultParam}`;
     }
     
     if (searchTV) {
-      tvUrl = `https://api.themoviedb.org/3/search/tv?${baseParams}${platformParam}${genreParam}`;
+      tvUrl = `https://api.themoviedb.org/3/search/tv?${baseParams}${platformParam}${genreParam}${adultParam}`;
     }
     
     // Realizar búsquedas en paralelo solo para tipos necesarios
@@ -265,7 +268,8 @@ app.get('/api/search-all', async (req, res) => {
     const activeFilters = {
       platform: platform && platform !== '' ? platform : null,
       genre: genre && genre !== '' ? genre : null,
-      type: type && type !== '' ? type : null
+      type: type && type !== '' ? type : null,
+      adultFilter: adultFilter && adultFilter !== '' ? adultFilter : null
     };
     
     res.json({
@@ -275,7 +279,7 @@ app.get('/api/search-all', async (req, res) => {
       movie_results: moviesWithType.length,
       tv_results: tvWithType.length,
       active_filters: activeFilters,
-      is_filtered: Boolean(activeFilters.platform || activeFilters.genre || activeFilters.type)
+      is_filtered: Boolean(activeFilters.platform || activeFilters.genre || activeFilters.type || activeFilters.adultFilter)
     });
   } catch (error) {
     console.error('Error fetching search results:', error);
