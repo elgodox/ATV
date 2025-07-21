@@ -169,10 +169,12 @@
 
 .filters-row {
   display: flex;
-  gap: 15px;
+  gap: 16px;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
+  padding: 20px 0;
+  min-height: 80px;
 }
 
 .modern-select {
@@ -320,11 +322,11 @@
 }
 
 
-/* Contenedor del toggle */
+/* Contenedor del toggle de favoritos */
 .favorite-toggle {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 /* Ocultar el checkbox original */
@@ -332,72 +334,70 @@
   display: none;
 }
 
-/* Estilo del switch con glassmorphism */
-.toggle-label {
+/* Estilo moderno unificado para el toggle de favoritos */
+.favorite-toggle .toggle-label {
   position: relative;
   display: flex;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  padding: 4px;
-  width: 70px;
-  height: 32px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 6px;
+  width: 50px;
+  height: 28px;
   cursor: pointer;
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Slider dentro del switch */
-.toggle-slider {
+.favorite-toggle .toggle-slider {
   position: absolute;
   content: "";
-  width: 24px;
-  height: 24px;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 12px;
-  top: 3px;
-  left: 3px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  width: 16px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  top: 5px;
+  left: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Cuando el checkbox está activado */
 #favorites-checkbox:checked + .toggle-label {
-  background: rgba(246, 133, 27, 0.2);  /* Color naranja con transparencia */
-  border-color: rgba(246, 133, 27, 0.4);
+  background: rgba(246, 133, 27, 0.15);
+  border-color: rgba(246, 133, 27, 0.3);
 }
 
 /* Mueve el slider cuando está activado */
 #favorites-checkbox:checked + .toggle-label .toggle-slider {
-  transform: translateX(38px);
-  background: rgba(246, 133, 27, 0.8);
-  border-color: rgba(246, 133, 27, 1);
+  transform: translateX(22px);
+  background: rgba(246, 133, 27, 1);
+  box-shadow: 0 2px 8px rgba(246, 133, 27, 0.4);
 }
 
 /* Hover effect para el toggle */
-.toggle-label:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 
-    0 4px 16px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+.favorite-toggle .toggle-label:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 #favorites-checkbox:checked + .toggle-label:hover {
-  background: rgba(246, 133, 27, 0.3);
-  border-color: rgba(246, 133, 27, 0.5);
+  background: rgba(246, 133, 27, 0.2);
+  border-color: rgba(246, 133, 27, 0.4);
 }
 
 /* Texto del toggle */
-.favorite-toggle span {
+.favorite-toggle > span {
   color: white;
   font-size: 0.9em;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 
@@ -1186,9 +1186,11 @@ h1 {
   }
   
   .filters-row {
-    gap: 10px;
+    gap: 12px;
     flex-direction: column;
     align-items: stretch;
+    padding: 15px 0;
+    min-height: auto;
   }
   
   .modern-select {
@@ -1196,7 +1198,7 @@ h1 {
     width: 100%;
     max-width: 100%;
     font-size: 0.9em;
-    padding: 10px 16px;
+    padding: 12px 16px;
     padding-right: 40px;
   }
   
@@ -1205,12 +1207,32 @@ h1 {
     width: 100%;
     max-width: 100%;
     font-size: 0.9em;
-    padding: 10px 16px;
+    padding: 12px 16px;
+    justify-content: center;
   }
   
   .modern-clear-btn {
     align-self: center;
-    margin-top: 5px;
+    margin-top: 8px;
+  }
+
+  /* Improve search-favorite container on mobile */
+  .search-favorite-container {
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  .search-wrapper {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  .favorite-toggle {
+    justify-content: center;
+    gap: 15px;
   }
 }
 
@@ -1597,17 +1619,17 @@ h1 {
   font-weight: 600;
 }
 
+/* Subtitle controls header with modern toggle */
 .subtitle-toggle {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
+/* Modern toggle switch for subtitles */
 .toggle-switch {
   position: relative;
   display: inline-block;
-  width: 60px;
-  height: 30px;
 }
 
 .toggle-switch input {
@@ -1616,42 +1638,64 @@ h1 {
   height: 0;
 }
 
-.toggle-slider {
-  position: absolute;
+/* Modern toggle slider for subtitles - matching favorites style */
+.subtitle-toggle .toggle-slider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 6px;
+  width: 50px;
+  height: 28px;
   cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #555;
-  transition: 0.3s;
-  border-radius: 30px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.toggle-slider:before {
+.subtitle-toggle .toggle-slider:before {
   position: absolute;
   content: "";
-  height: 22px;
-  width: 22px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
-  transition: 0.3s;
+  height: 16px;
+  width: 16px;
+  left: 6px;
+  background: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
-input:checked + .toggle-slider {
-  background-color: #4caf50;
+.subtitle-toggle input:checked + .toggle-slider {
+  background: rgba(76, 175, 80, 0.15);
+  border-color: rgba(76, 175, 80, 0.3);
 }
 
-input:checked + .toggle-slider:before {
-  transform: translateX(30px);
+.subtitle-toggle input:checked + .toggle-slider:before {
+  transform: translateX(22px);
+  background: #4caf50;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
 }
 
-.toggle-label {
+.subtitle-toggle .toggle-slider:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.subtitle-toggle input:checked + .toggle-slider:hover {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: rgba(76, 175, 80, 0.4);
+}
+
+.subtitle-toggle .toggle-label {
   color: #fff;
   font-size: 0.9em;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .subtitle-options {
@@ -2478,5 +2522,78 @@ input:checked + .toggle-slider:before {
   .search-torrents-btn {
     flex-shrink: 0;
     margin-left: 15px;
+  }
+}
+
+/* Modern compact torrent stats overlay */
+.torrent-stats-overlay {
+  position: relative;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 8px;
+  font-size: 0.8em;
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.stats-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stats-row {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.stat-icon {
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+
+.progress-bar-minimal {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #8bc34a);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 4px rgba(76, 175, 80, 0.4);
+}
+
+/* Responsive adjustments for compact stats */
+@media (max-width: 768px) {
+  .torrent-stats-overlay {
+    font-size: 0.75em;
+    padding: 6px 10px;
+  }
+  
+  .stats-row {
+    gap: 12px;
+  }
+  
+  .stat-item {
+    font-size: 0.8em;
   }
 }

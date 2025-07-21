@@ -2744,7 +2744,7 @@ function closeFileSelectionModal() {
 
 // Función para actualizar estadísticas del torrent
 function updateTorrentStats(torrentInfo) {
-  // Actualizar seeds y leechers
+  // Actualizar seeds y leechers (elementos originales)
   const seedsElement = document.getElementById('torrent-seeds');
   const leechersElement = document.getElementById('torrent-leechers');
   const peersElement = document.getElementById('torrent-peers');
@@ -2753,7 +2753,7 @@ function updateTorrentStats(torrentInfo) {
   if (leechersElement) leechersElement.textContent = `Leechers: ${torrentInfo.leechers || 0}`;
   if (peersElement) peersElement.textContent = `Peers: ${torrentInfo.numPeers || 0}`;
 
-  // Actualizar progreso
+  // Actualizar progreso (elementos originales)
   const progressElement = document.getElementById('torrent-progress');
   const progressBarFill = document.getElementById('progress-bar-fill');
   const progressPercentage = document.getElementById('progress-percentage');
@@ -2763,14 +2763,14 @@ function updateTorrentStats(torrentInfo) {
   if (progressBarFill) progressBarFill.style.width = `${progress}%`;
   if (progressPercentage) progressPercentage.textContent = `${progress}%`;
 
-  // Actualizar velocidades
+  // Actualizar velocidades (elementos originales)
   const downloadSpeedElement = document.getElementById('torrent-download-speed');
   const uploadSpeedElement = document.getElementById('torrent-upload-speed');
   
   if (downloadSpeedElement) downloadSpeedElement.textContent = `↓ ${formatSpeed(torrentInfo.downloadSpeed)}`;
   if (uploadSpeedElement) uploadSpeedElement.textContent = `↑ ${formatSpeed(torrentInfo.uploadSpeed)}`;
 
-  // Actualizar datos descargados/subidos
+  // Actualizar datos descargados/subidos (elementos originales)
   const downloadedElement = document.getElementById('torrent-downloaded');
   const uploadedElement = document.getElementById('torrent-uploaded');
   const timeRemainingElement = document.getElementById('torrent-time-remaining');
@@ -2781,6 +2781,19 @@ function updateTorrentStats(torrentInfo) {
     const eta = torrentInfo.timeRemaining ? formatTime(torrentInfo.timeRemaining) : '--:--';
     timeRemainingElement.textContent = `ETA: ${eta}`;
   }
+
+  // Actualizar elementos compactos del nuevo overlay
+  const seedsCompact = document.getElementById('torrent-seeds-compact');
+  const leechersCompact = document.getElementById('torrent-leechers-compact');
+  const progressCompact = document.getElementById('torrent-progress-compact');
+  const downloadSpeedCompact = document.getElementById('torrent-download-speed-compact');
+  const progressBarFillCompact = document.getElementById('progress-bar-fill-compact');
+  
+  if (seedsCompact) seedsCompact.textContent = torrentInfo.seeds || 0;
+  if (leechersCompact) leechersCompact.textContent = torrentInfo.leechers || 0;
+  if (progressCompact) progressCompact.textContent = `${progress}%`;
+  if (downloadSpeedCompact) downloadSpeedCompact.textContent = formatSpeed(torrentInfo.downloadSpeed);
+  if (progressBarFillCompact) progressBarFillCompact.style.width = `${progress}%`;
 }
 
 // Función para obtener estadísticas actualizadas del servidor
