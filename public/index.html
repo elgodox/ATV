@@ -170,20 +170,30 @@
               </select>
             </div>
           </div>
-
-          <!-- Filtro adulto -->
-          <div class="filter-group adult-filter-group">
-            <label class="filter-label">
-              <i class="fas fa-user-shield"></i>
-              Contenido adulto
-            </label>
-            <div class="adult-filter-options">
-              <button id="adult-filter" class="adult-toggle" data-state="false">
-                <span class="toggle-icon">🚫</span>
-                <span class="toggle-text">Excluir contenido +18</span>
-              </button>
+        </div>
+        
+        <!-- Sección de configuración avanzada (contenido adulto) -->
+        <div class="advanced-settings">
+          <details class="adult-content-settings">
+            <summary class="settings-toggle">
+              <i class="fas fa-cog"></i>
+              <span>Configuración de contenido</span>
+            </summary>
+            <div class="settings-content">
+              <div class="adult-filter-group">
+                <label class="filter-label">
+                  <i class="fas fa-user-shield"></i>
+                  Control parental
+                </label>
+                <div class="adult-filter-options">
+                  <button id="adult-filter" class="adult-toggle" data-state="false">
+                    <span class="toggle-icon">🚫</span>
+                    <span class="toggle-text">Excluir contenido +18</span>
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+          </details>
         </div>
       </div>
     </div>

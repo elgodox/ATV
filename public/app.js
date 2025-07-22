@@ -169,6 +169,8 @@ function showSearchResultsInfo(data) {
         filterIndicators.push(`🎭 ${typeText}`);
       }
       
+      // Filtro de contenido adulto oculto de los resultados por privacidad
+      /*
       if (data.active_filters.adultFilter) {
         const adultFilterToggle = document.getElementById('adult-filter');
         let adultFilterText = 'Sin contenido +18';
@@ -182,6 +184,7 @@ function showSearchResultsInfo(data) {
         }
         filterIndicators.push(adultFilterText);
       }
+      */
       
       if (filterIndicators.length > 0) {
         resultsText += ` (filtrado por: ${filterIndicators.join(', ')})`;
@@ -302,17 +305,32 @@ function cycleAdultFilter() {
   applyFilters();
 }
 
-document.getElementById("type").addEventListener("change", applyFilters);
-document.getElementById("genre").addEventListener("change", applyFilters);
-document.getElementById("platform").addEventListener("change", applyFilters);
-document.getElementById("adult-filter").addEventListener("click", cycleAdultFilter);
-document.getElementById("sort").addEventListener("change", applyFilters);
+// Comentamos estos event listeners para moverlos al DOMContentLoaded
+// document.getElementById("type").addEventListener("change", applyFilters);
+// document.getElementById("genre").addEventListener("change", applyFilters);
+// document.getElementById("platform").addEventListener("change", applyFilters);
+// document.getElementById("adult-filter").addEventListener("click", cycleAdultFilter);
+// document.getElementById("sort").addEventListener("change", applyFilters);
 
 // Nuevas funcionalidades para la interfaz rediseñada
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('DOM Content Loaded - Inicializando...');
-  
   initializeNewInterface();
+  
+  // Registrar todos los event listeners de filtros
+  const typeSelect = document.getElementById("type");
+  const genreSelect = document.getElementById("genre");
+  const platformSelect = document.getElementById("platform");
+  const sortSelect = document.getElementById("sort");
+  const adultFilter = document.getElementById("adult-filter");
+  
+  if (typeSelect) {
+    typeSelect.addEventListener("change", applyFilters);
+    typeSelect.addEventListener('change', updateGenreSelect);
+  }
+  if (genreSelect) genreSelect.addEventListener("change", applyFilters);
+  if (platformSelect) platformSelect.addEventListener("change", applyFilters);
+  if (sortSelect) sortSelect.addEventListener("change", applyFilters);
+  if (adultFilter) adultFilter.addEventListener("click", cycleAdultFilter);
   
   // Event listener para el botón de limpiar filtros
   const clearFiltersBtn = document.getElementById('clear-filters-btn');
@@ -327,13 +345,10 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Cargar contenido inicial
-  console.log('Cargando contenido inicial...');
   getTitles(1);
 });
 
 function initializeNewInterface() {
-  console.log('Inicializando nueva interfaz...');
-  
   // Inicializar toggle de filtros
   initializeFiltersToggle();
   
@@ -346,50 +361,41 @@ function initializeNewInterface() {
   // Inicializar búsqueda por voz (opcional)
   initializeVoiceSearch();
   
-  console.log('Nueva interfaz inicializada correctamente');
+  // Inicializar configuración avanzada
+  initializeAdvancedSettings();
+}
+
+// Configuración avanzada (contenido adulto)
+function initializeAdvancedSettings() {
+  const advancedSettings = document.querySelector('.adult-content-settings');
   
-  // Event listener para el botón de limpiar filtros
-  const clearFiltersBtn = document.getElementById('clear-filters-btn');
-  if (clearFiltersBtn) {
-    clearFiltersBtn.addEventListener('click', clearAllFilters);
-  }
-  
-  // Initialize adult filter toggle
-  const adultFilterToggle = document.getElementById('adult-filter');
-  if (adultFilterToggle) {
-    updateAdultFilterDisplay(adultFilterToggle);
+  if (advancedSettings) {
+    // Añadir animación suave al abrir/cerrar
+    advancedSettings.addEventListener('toggle', function() {
+      if (this.open) {
+        this.querySelector('.settings-content').style.animation = 'slideDown 0.3s ease-out';
+      }
+    });
   }
 }
 
 // Toggle para mostrar/ocultar filtros expandidos
 function initializeFiltersToggle() {
-  console.log('Inicializando toggle de filtros...');
   const filtersToggle = document.getElementById('filters-toggle');
   const filtersContent = document.getElementById('filters-content');
   
-  console.log('Elementos encontrados:', {
-    filtersToggle: !!filtersToggle,
-    filtersContent: !!filtersContent
-  });
-  
   if (filtersToggle && filtersContent) {
     filtersToggle.addEventListener('click', function() {
-      console.log('Toggle clickeado');
       const isExpanded = filtersContent.classList.contains('expanded');
       
       if (isExpanded) {
-        console.log('Colapsando filtros');
         filtersContent.classList.remove('expanded');
         filtersToggle.classList.remove('active');
       } else {
-        console.log('Expandiendo filtros');
         filtersContent.classList.add('expanded');
         filtersToggle.classList.add('active');
       }
     });
-    console.log('Event listener añadido al toggle');
-  } else {
-    console.error('No se encontraron los elementos del toggle de filtros');
   }
 }
 
@@ -501,8 +507,33 @@ function performSearch() {
   }
 }
 
-document.getElementById('type').addEventListener('change', updateGenreSelect);
 document.getElementById('connect-metamask').addEventListener('click', connectMetaMask);
+
+// Debug: verificar que los elementos principales existan
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(() => {
+    console.log('=== DEBUG: Verificando elementos ===');
+    const requiredElements = [
+      'search-bar',
+      'filters-toggle', 
+      'filters-content',
+      'type',
+      'genre',
+      'platform',
+      'sort',
+      'adult-filter',
+      'movie-grid'
+    ];
+    
+    requiredElements.forEach(id => {
+      const element = document.getElementById(id);
+      console.log(`${id}:`, element ? '✓ Encontrado' : '✗ NO ENCONTRADO');
+    });
+    
+    console.log('Radio buttons tipo:', document.querySelectorAll('input[name="type"]').length);
+    console.log('=== FIN DEBUG ===');
+  }, 1000);
+});
 
 
 // Función para obtener todos los proveedores
