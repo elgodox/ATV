@@ -236,11 +236,18 @@ function clearAllFilters() {
   }
   if (sortSelect) sortSelect.value = 'popularity.desc';
   
+  // Limpiar radio buttons de tipo
+  const typeRadios = document.querySelectorAll('input[name="type"]');
+  typeRadios.forEach(radio => {
+    radio.checked = radio.value === '';
+  });
+  
   // Desactivar filtro de favoritos
   const favoritesCheckbox = document.getElementById('favorites-checkbox');
   if (favoritesCheckbox) {
     favoritesCheckbox.checked = false;
     showingFavorites = false;
+    updateFavoritesChip();
   }
   
   // Ocultar información de resultados
@@ -301,8 +308,13 @@ document.getElementById("platform").addEventListener("change", applyFilters);
 document.getElementById("adult-filter").addEventListener("click", cycleAdultFilter);
 document.getElementById("sort").addEventListener("change", applyFilters);
 
-// Event listener para el botón de limpiar filtros
+// Nuevas funcionalidades para la interfaz rediseñada
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM Content Loaded - Inicializando...');
+  
+  initializeNewInterface();
+  
+  // Event listener para el botón de limpiar filtros
   const clearFiltersBtn = document.getElementById('clear-filters-btn');
   if (clearFiltersBtn) {
     clearFiltersBtn.addEventListener('click', clearAllFilters);
@@ -314,8 +326,180 @@ document.addEventListener('DOMContentLoaded', function() {
     updateAdultFilterDisplay(adultFilterToggle);
   }
   
+  // Cargar contenido inicial
+  console.log('Cargando contenido inicial...');
+  getTitles(1);
 });
 
+function initializeNewInterface() {
+  console.log('Inicializando nueva interfaz...');
+  
+  // Inicializar toggle de filtros
+  initializeFiltersToggle();
+  
+  // Inicializar sugerencias de búsqueda
+  initializeSearchSuggestions();
+  
+  // Inicializar filtros de tipo de contenido (radio buttons)
+  initializeTypeFilters();
+  
+  // Inicializar búsqueda por voz (opcional)
+  initializeVoiceSearch();
+  
+  console.log('Nueva interfaz inicializada correctamente');
+  
+  // Event listener para el botón de limpiar filtros
+  const clearFiltersBtn = document.getElementById('clear-filters-btn');
+  if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener('click', clearAllFilters);
+  }
+  
+  // Initialize adult filter toggle
+  const adultFilterToggle = document.getElementById('adult-filter');
+  if (adultFilterToggle) {
+    updateAdultFilterDisplay(adultFilterToggle);
+  }
+}
+
+// Toggle para mostrar/ocultar filtros expandidos
+function initializeFiltersToggle() {
+  console.log('Inicializando toggle de filtros...');
+  const filtersToggle = document.getElementById('filters-toggle');
+  const filtersContent = document.getElementById('filters-content');
+  
+  console.log('Elementos encontrados:', {
+    filtersToggle: !!filtersToggle,
+    filtersContent: !!filtersContent
+  });
+  
+  if (filtersToggle && filtersContent) {
+    filtersToggle.addEventListener('click', function() {
+      console.log('Toggle clickeado');
+      const isExpanded = filtersContent.classList.contains('expanded');
+      
+      if (isExpanded) {
+        console.log('Colapsando filtros');
+        filtersContent.classList.remove('expanded');
+        filtersToggle.classList.remove('active');
+      } else {
+        console.log('Expandiendo filtros');
+        filtersContent.classList.add('expanded');
+        filtersToggle.classList.add('active');
+      }
+    });
+    console.log('Event listener añadido al toggle');
+  } else {
+    console.error('No se encontraron los elementos del toggle de filtros');
+  }
+}
+
+// Sugerencias de búsqueda rápida
+function initializeSearchSuggestions() {
+  const suggestionTags = document.querySelectorAll('.suggestion-tag');
+  const searchBar = document.getElementById('search-bar');
+  
+  suggestionTags.forEach(tag => {
+    tag.addEventListener('click', function() {
+      const searchTerm = this.getAttribute('data-search');
+      if (searchBar && searchTerm) {
+        searchBar.value = searchTerm;
+        searchBar.focus();
+        // Trigger search
+        performSearch();
+      }
+    });
+  });
+}
+
+// Filtros de tipo de contenido con radio buttons
+function initializeTypeFilters() {
+  const typeRadios = document.querySelectorAll('input[name="type"]');
+  
+  typeRadios.forEach(radio => {
+    radio.addEventListener('change', function() {
+      if (this.checked) {
+        // Actualizar el select oculto para mantener compatibilidad
+        const typeSelect = document.getElementById('type');
+        if (typeSelect) {
+          typeSelect.value = this.value;
+          applyFilters();
+          updateGenreSelect(); // Actualizar géneros según el tipo
+        }
+      }
+    });
+  });
+}
+
+// Búsqueda por voz (funcionalidad básica)
+function initializeVoiceSearch() {
+  const voiceBtn = document.querySelector('.voice-search-btn');
+  
+  if (voiceBtn && 'webkitSpeechRecognition' in window) {
+    const recognition = new webkitSpeechRecognition();
+    recognition.lang = 'es-ES';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    
+    voiceBtn.addEventListener('click', function() {
+      recognition.start();
+      this.classList.add('listening');
+      this.innerHTML = '<i class="fas fa-circle" style="color: #ff1493;"></i>';
+    });
+    
+    recognition.onresult = function(event) {
+      const transcript = event.results[0][0].transcript;
+      const searchBar = document.getElementById('search-bar');
+      if (searchBar) {
+        searchBar.value = transcript;
+        performSearch();
+      }
+    };
+    
+    recognition.onend = function() {
+      voiceBtn.classList.remove('listening');
+      voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+    };
+    
+    recognition.onerror = function() {
+      voiceBtn.classList.remove('listening');
+      voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+      showNotification('Error en el reconocimiento de voz', 'error');
+    };
+  } else if (voiceBtn) {
+    // Ocultar el botón si no hay soporte
+    voiceBtn.style.display = 'none';
+  }
+}
+
+// Función para sincronizar radio buttons con select cuando se cambia externamente
+function syncTypeFilters(selectedValue) {
+  const typeRadios = document.querySelectorAll('input[name="type"]');
+  typeRadios.forEach(radio => {
+    radio.checked = radio.value === selectedValue;
+  });
+}
+
+// Función para actualizar el estado visual del chip de favoritos
+function updateFavoritesChip() {
+  const favoritesChip = document.querySelector('.favorites-chip');
+  const favoritesCheckbox = document.getElementById('favorites-checkbox');
+  
+  if (favoritesChip && favoritesCheckbox) {
+    if (favoritesCheckbox.checked) {
+      favoritesChip.classList.add('active');
+    } else {
+      favoritesChip.classList.remove('active');
+    }
+  }
+}
+
+// Función helper para realizar búsqueda
+function performSearch() {
+  const searchBar = document.getElementById('search-bar');
+  if (searchBar && searchBar.value.trim()) {
+    applyFilters();
+  }
+}
 
 document.getElementById('type').addEventListener('change', updateGenreSelect);
 document.getElementById('connect-metamask').addEventListener('click', connectMetaMask);
@@ -394,12 +578,22 @@ async function getGenres(type) {
 
 // Actualizar el select de géneros según el tipo de contenido (movie o tv)
 async function updateGenreSelect() {
-  const type = document.getElementById('type').value;  // Obtener el tipo seleccionado
+  // Obtener el tipo desde el select oculto o desde los radio buttons
+  let type = document.getElementById('type').value;
+  
+  // Si no hay valor en el select, obtenerlo de los radio buttons
+  if (!type) {
+    const selectedRadio = document.querySelector('input[name="type"]:checked');
+    if (selectedRadio) {
+      type = selectedRadio.value;
+    }
+  }
+  
   const genres = await getGenres(type);  // Obtener los géneros desde el servidor
   const genreSelect = document.getElementById('genre');
 
   // Limpiar el select de géneros
-  genreSelect.innerHTML = '<option value="">Todos</option>';
+  genreSelect.innerHTML = '<option value="">Todos los géneros</option>';
 
   // Añadir los géneros al select
   genres.forEach(genre => {
@@ -420,7 +614,17 @@ async function getTitles(page = 1) {
   // Mostrar indicador de carga
   showSearchLoading(true);
 
-  const type = document.getElementById('type').value;
+  // Obtener el tipo desde el select o desde los radio buttons
+  let type = document.getElementById('type').value;
+  if (!type) {
+    const selectedRadio = document.querySelector('input[name="type"]:checked');
+    if (selectedRadio) {
+      type = selectedRadio.value;
+      // Sincronizar con el select oculto
+      document.getElementById('type').value = type;
+    }
+  }
+  
   const genre = document.getElementById('genre').value;
   const platform = document.getElementById('platform').value;
   const adultFilter = document.getElementById('adult-filter').getAttribute('data-state');
@@ -1779,11 +1983,12 @@ function loadFavorites() {
 // Función para activar/desactivar el filtro de favoritos
 function toggleFavoritesFilter() {
   showingFavorites = !showingFavorites;
+  updateFavoritesChip(); // Actualizar estado visual del chip
   getTitles();
 }
 
 // Inicializar la carga de títulos y géneros
-getTitles();
+// getTitles(); // Comentado para evitar duplicados - se llama en DOMContentLoaded
 fetchGenres();
 fetchProviders("movie"); // Cargar proveedores iniciales de películas (por defecto)
 

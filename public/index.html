@@ -36,58 +36,156 @@
     <!-- Aquí se mostrarán los favoritos del usuario -->
   </div>
 
-  <div class="search-favorite-container">
-    <!-- Buscador -->
-    <div class="search-wrapper">
-      <input type="text" id="search-bar" placeholder="Buscar películas y series...">
-      <div id="search-loading" class="search-loading hidden">
-        <i class="fas fa-spinner fa-spin"></i>
+  <!-- Nueva sección de búsqueda y filtros rediseñada -->
+  <div class="search-section">
+    <!-- Hero de búsqueda principal -->
+    <div class="search-hero">
+      <div class="search-container">
+        <div class="search-input-wrapper">
+          <i class="fas fa-search search-icon"></i>
+          <input type="text" id="search-bar" placeholder="¿Qué quieres ver hoy?" autocomplete="off">
+          <div id="search-loading" class="search-loading hidden">
+            <i class="fas fa-spinner fa-spin"></i>
+          </div>
+          <button class="voice-search-btn" title="Búsqueda por voz">
+            <i class="fas fa-microphone"></i>
+          </button>
+        </div>
+        
+        <!-- Sugerencias de búsqueda rápida -->
+        <div class="search-suggestions">
+          <div class="suggestion-tag" data-search="acción">🎬 Acción</div>
+          <div class="suggestion-tag" data-search="comedia">😂 Comedia</div>
+          <div class="suggestion-tag" data-search="terror">👻 Terror</div>
+          <div class="suggestion-tag" data-search="anime">🎌 Anime</div>
+          <div class="suggestion-tag" data-search="Netflix">📺 Netflix</div>
+        </div>
       </div>
     </div>
-    
-    <!-- Toggle de favoritos -->
-    <div class="favorite-toggle">
-        <input type="checkbox" id="favorites-checkbox" onchange="toggleFavoritesFilter()">
-        <label for="favorites-checkbox" class="toggle-label">
-            <span class="toggle-slider"></span>
-        </label>
-        <span>Mostrar solo favoritos</span>
-    </div>
-</div>
 
+    <!-- Panel de filtros avanzados -->
+    <div class="filters-panel">
+      <div class="filters-header">
+        <button class="filters-toggle" id="filters-toggle">
+          <i class="fas fa-sliders-h"></i>
+          <span>Filtros</span>
+          <i class="fas fa-chevron-down arrow"></i>
+        </button>
+        
+        <div class="quick-filters">
+          <!-- Toggle de favoritos -->
+          <div class="filter-chip favorites-chip">
+            <input type="checkbox" id="favorites-checkbox" onchange="toggleFavoritesFilter()">
+            <label for="favorites-checkbox" class="chip-label">
+              <i class="fas fa-heart"></i>
+              <span>Favoritos</span>
+            </label>
+          </div>
+          
+          <!-- Botón de limpiar filtros -->
+          <button id="clear-filters-btn" class="filter-chip clear-chip" title="Limpiar todos los filtros">
+            <i class="fas fa-times"></i>
+            <span>Limpiar</span>
+          </button>
+        </div>
+      </div>
 
-  <!-- Filtros modernos -->
-  <div id="filters" class="modern-filters">
-    <div class="filters-row">
-      <select id="type" class="modern-select">
-        <option value="">🎭 Todos los tipos</option>
-        <option value="movie">🎬 Solo Películas</option>
-        <option value="tv">📺 Solo Series de TV</option>
-      </select>
+      <!-- Filtros expandibles -->
+      <div class="filters-content" id="filters-content">
+        <!-- Selects ocultos para compatibilidad -->
+        <div style="display: none;">
+          <select id="type">
+            <option value="">Todo</option>
+            <option value="movie">Películas</option>
+            <option value="tv">Series</option>
+          </select>
+        </div>
+        
+        <div class="filters-grid">
+          <!-- Tipo de contenido -->
+          <div class="filter-group">
+            <label class="filter-label">
+              <i class="fas fa-film"></i>
+              Tipo de contenido
+            </label>
+            <div class="filter-options type-options">
+              <input type="radio" name="type" value="" id="type-all" checked>
+              <label for="type-all" class="option-btn">
+                <i class="fas fa-th-large"></i>
+                Todo
+              </label>
+              
+              <input type="radio" name="type" value="movie" id="type-movie">
+              <label for="type-movie" class="option-btn">
+                <i class="fas fa-film"></i>
+                Películas
+              </label>
+              
+              <input type="radio" name="type" value="tv" id="type-tv">
+              <label for="type-tv" class="option-btn">
+                <i class="fas fa-tv"></i>
+                Series
+              </label>
+            </div>
+          </div>
 
-      <select id="genre" class="modern-select">
-        <option value="">🎪 Todos los géneros</option>
-      </select>
+          <!-- Género -->
+          <div class="filter-group">
+            <label class="filter-label">
+              <i class="fas fa-masks-theater"></i>
+              Género
+            </label>
+            <div class="custom-select-wrapper">
+              <select id="genre" class="custom-select">
+                <option value="">Todos los géneros</option>
+              </select>
+            </div>
+          </div>
 
-      <select id="platform" class="modern-select">
-        <option value="">📱 Todas las plataformas</option>
-      </select>
+          <!-- Plataforma -->
+          <div class="filter-group">
+            <label class="filter-label">
+              <i class="fas fa-play-circle"></i>
+              Plataforma
+            </label>
+            <div class="custom-select-wrapper">
+              <select id="platform" class="custom-select">
+                <option value="">Todas las plataformas</option>
+              </select>
+            </div>
+          </div>
 
-      <button id="adult-filter" class="modern-toggle" data-state="false" title="Filtro de contenido +18">
-        <span class="toggle-icon">🚫</span>
-        <span class="toggle-text">Excluir contenido +18</span>
-      </button>
+          <!-- Ordenamiento -->
+          <div class="filter-group">
+            <label class="filter-label">
+              <i class="fas fa-sort"></i>
+              Ordenar por
+            </label>
+            <div class="sort-options">
+              <select id="sort" class="custom-select sort-select">
+                <option value="popularity.desc">Más populares</option>
+                <option value="vote_average.desc">Mejor valoradas</option>
+                <option value="release_date.desc">Más recientes</option>
+                <option value="vote_count.desc">Más vistas</option>
+              </select>
+            </div>
+          </div>
 
-      <select id="sort" class="modern-select">
-        <option value="popularity.desc">⭐ Popularidad</option>
-        <option value="vote_average.desc">🏆 Mejor valoradas</option>
-        <option value="release_date.desc">🆕 Más nuevas</option>
-        <option value="vote_count.desc">👁️ Más vistas</option>
-      </select>
-
-      <button id="clear-filters-btn" class="clear-filters-btn modern-clear-btn">
-        <i class="fas fa-undo"></i>
-      </button>
+          <!-- Filtro adulto -->
+          <div class="filter-group adult-filter-group">
+            <label class="filter-label">
+              <i class="fas fa-user-shield"></i>
+              Contenido adulto
+            </label>
+            <div class="adult-filter-options">
+              <button id="adult-filter" class="adult-toggle" data-state="false">
+                <span class="toggle-icon">🚫</span>
+                <span class="toggle-text">Excluir contenido +18</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
