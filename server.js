@@ -807,7 +807,7 @@ async function processMovieTorrentResults(searchResults, movieTitle) {
   const movieTorrents = [];
   
   try {
-    console.log(`🔧 Processing ${searchResults.length} search results for: ${normalizedTitle}`);
+    console.log(`🔧 Processing ${searchResults.length} search results for: ${movieTitle}`);
     
     for (let i = 0; i < Math.min(searchResults.length, 10); i++) {
       const torrent = searchResults[i];
