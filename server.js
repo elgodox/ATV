@@ -57,40 +57,55 @@ const torrentSearch = require('torrent-search-api');
 function setupTorrentProviders() {
   console.log('🔧 Configurando proveedores de torrents...');
   
-  const availableProviders = torrentSearch.getProviders().map(p => p.name);
-  console.log('📋 Proveedores disponibles:', availableProviders);
-  
-  // Lista de proveedores a habilitar (en orden de preferencia)
-  const preferredProviders = [
-    '1337x',
-    'Rarbg', 
-    'ThePirateBay',
-    'Limetorrents',
-    'KickassTorrents',
-    'Eztv',
-    'Yts'
-  ];
-  
-  let enabledCount = 0;
-  for (const provider of preferredProviders) {
-    try {
-      if (availableProviders.includes(provider)) {
-        torrentSearch.enableProvider(provider);
-        console.log(`✅ Proveedor habilitado: ${provider}`);
-        enabledCount++;
-      } else {
-        console.log(`⚠️  Proveedor no disponible: ${provider}`);
+  try {
+    // Usar enablePublicProviders() como en la búsqueda manual exitosa
+    torrentSearch.enablePublicProviders();
+    console.log('✅ Habilitados todos los proveedores públicos');
+    
+    const activeProviders = torrentSearch.getActiveProviders();
+    console.log(`🎯 Total proveedores activos: ${activeProviders.length}`);
+    activeProviders.forEach(p => console.log(`   - ${p.name}`));
+    
+    return activeProviders.length > 0;
+  } catch (error) {
+    console.log(`❌ Error configurando proveedores públicos: ${error.message}`);
+    
+    // Fallback al método anterior si falla
+    const availableProviders = torrentSearch.getProviders().map(p => p.name);
+    console.log('📋 Proveedores disponibles:', availableProviders);
+    
+    // Lista de proveedores a habilitar (en orden de preferencia)
+    const preferredProviders = [
+      '1337x',
+      'Rarbg', 
+      'ThePirateBay',
+      'Limetorrents',
+      'KickassTorrents',
+      'Eztv',
+      'Yts'
+    ];
+    
+    let enabledCount = 0;
+    for (const provider of preferredProviders) {
+      try {
+        if (availableProviders.includes(provider)) {
+          torrentSearch.enableProvider(provider);
+          console.log(`✅ Proveedor habilitado: ${provider}`);
+          enabledCount++;
+        } else {
+          console.log(`⚠️  Proveedor no disponible: ${provider}`);
+        }
+      } catch (error) {
+        console.log(`❌ Error habilitando ${provider}:`, error.message);
       }
-    } catch (error) {
-      console.log(`❌ Error habilitando ${provider}:`, error.message);
     }
+    
+    const activeProviders = torrentSearch.getActiveProviders();
+    console.log(`🎯 Total proveedores activos: ${activeProviders.length}`);
+    activeProviders.forEach(p => console.log(`   - ${p.name}`));
+    
+    return enabledCount > 0;
   }
-  
-  const activeProviders = torrentSearch.getActiveProviders();
-  console.log(`🎯 Total proveedores activos: ${activeProviders.length}`);
-  activeProviders.forEach(p => console.log(`   - ${p.name}`));
-  
-  return enabledCount > 0;
 }
 
 // API para verificar el estado de los proveedores de torrent
@@ -682,45 +697,77 @@ app.get('/api/torrents', async (req, res) => {
     if (!movieTitle) {
       return res.status(400).json({ message: 'Movie title is required' });
     }
+
+    // Normalizar el título para mejorar las búsquedas
+    const normalizedTitle = movieTitle
+      .replace(/'/g, '') // Remover apóstrofes
+      .replace(/\s+/g, ' ') // Normalizar espacios múltiples
+      .trim();
   
     console.log(`🎬 Movie torrent search request: ${movieTitle}`);
+    if (movieTitle !== normalizedTitle) {
+      console.log(`🔧 Normalized search title: ${normalizedTitle}`);
+    }
   
     try {
-      // Primero intentar con YTS
-      const torrentsUrl = `https://yts.mx/api/v2/list_movies.json?query_term=${encodeURIComponent(movieTitle)}`;
+      // Buscar en YTS primero
+      const torrentsUrl = `https://yts.mx/api/v2/list_movies.json?query_term=${encodeURIComponent(normalizedTitle)}`;
       
-      let movieTorrents = [];
+      let ytsMovies = [];
+      let torrentSearchMovies = [];
       
+      // Buscar en YTS
       try {
-        console.log(`🔍 Searching YTS for: ${movieTitle}`);
+        console.log(`🔍 Searching YTS for: ${normalizedTitle}`);
         const response = await fetch(torrentsUrl);
         const data = await response.json();
         
         // Si la respuesta de YTS contiene películas, procesarlas
         if (data?.data?.movies?.length > 0) {
           console.log(`✅ Found ${data.data.movies.length} movies from YTS`);
-          movieTorrents = data.data.movies;
+          ytsMovies = data.data.movies;
+          console.log(`📝 YTS results:`, ytsMovies.map(m => ({ title: m.title, torrents: m.torrents?.length || 0 })));
+        } else {
+          console.log(`❌ No results from YTS for: ${normalizedTitle}`);
         }
       } catch (ytsError) {
         console.log(`⚠️  YTS search failed: ${ytsError.message}`);
       }
       
-      // Si YTS no devuelve resultados, intentar con TorrentSearchApi
-      if (movieTorrents.length === 0 && hasActiveProviders) {
-        console.log(`🔄 Trying TorrentSearchApi for movie: ${movieTitle}`);
+      // Siempre buscar también en TorrentSearchApi para obtener más resultados
+      if (hasActiveProviders) {
+        console.log(`🔄 Trying TorrentSearchApi for movie: ${normalizedTitle}`);
         
         try {
-          const searchResults = await torrentSearch.search(movieTitle, 'Movies', 20);
-          console.log(`📊 Found ${searchResults.length} results from TorrentSearchApi`);
+          // Usar 'All' en lugar de 'Movies' para obtener más resultados
+          const searchResults = await torrentSearch.search(normalizedTitle, 'All', 20);
+          console.log(`📊 Found ${searchResults.length} raw results from TorrentSearchApi`);
           
           if (searchResults.length > 0) {
+            console.log(`📝 TorrentSearchApi raw results:`, searchResults.slice(0, 3).map(r => ({ 
+              title: r.title, 
+              provider: r.provider, 
+              seeds: r.seeds,
+              size: r.size 
+            })));
+            
             // Procesar resultados de TorrentSearchApi
-            movieTorrents = await processMovieTorrentResults(searchResults, movieTitle);
+            torrentSearchMovies = await processMovieTorrentResults(searchResults, movieTitle);
+            console.log(`✅ Processed ${torrentSearchMovies.length} movies from TorrentSearchApi`);
+            console.log(`📝 Processed TorrentSearchApi results:`, torrentSearchMovies.map(m => ({ 
+              id: m.id, 
+              title: m.title, 
+              torrents: m.torrents?.length || 0,
+              torrentDetails: m.torrents?.map(t => ({ quality: t.quality, seeds: t.seeds, size: t.size }))
+            })));
           }
         } catch (torrentSearchError) {
           console.log(`⚠️  TorrentSearchApi failed: ${torrentSearchError.message}`);
         }
       }
+      
+      // Combinar resultados de ambas fuentes
+      let movieTorrents = [...ytsMovies, ...torrentSearchMovies];
       
       // Si no se encontraron torrents reales, usar datos mock
       if (movieTorrents.length === 0) {
@@ -734,7 +781,13 @@ app.get('/api/torrents', async (req, res) => {
         });
       }
       
-      console.log(`📤 Returning ${movieTorrents.length} movie torrents`);
+      console.log(`📤 Final movie torrents count: ${movieTorrents.length}`);
+      console.log(`📝 Final results summary:`, movieTorrents.map(m => ({ 
+        id: m.id, 
+        title: m.title, 
+        torrents: m.torrents?.length || 0,
+        source: m.torrents?.[0]?.url ? 'TorrentSearchApi' : 'YTS'
+      })));
       res.json(movieTorrents);
       
     } catch (error) {
@@ -757,14 +810,29 @@ async function processMovieTorrentResults(searchResults, movieTitle) {
   const movieTorrents = [];
   
   try {
+    console.log(`🔧 Processing ${searchResults.length} search results for: ${normalizedTitle}`);
+    
     for (let i = 0; i < Math.min(searchResults.length, 10); i++) {
       const torrent = searchResults[i];
       
-      if (!torrent) continue;
+      if (!torrent) {
+        console.log(`⚠️  Skipping null torrent at index ${i}`);
+        continue;
+      }
+      
+      console.log(`🔍 Processing torrent ${i + 1}: ${torrent.title} (Provider: ${torrent.provider})`);
       
       try {
         // Obtener el magnet link
+        console.log(`🧲 Getting magnet for: ${torrent.title}`);
         const magnetLink = await torrentSearch.getMagnet(torrent);
+        
+        if (!magnetLink) {
+          console.log(`❌ No magnet link obtained for: ${torrent.title}`);
+          continue;
+        }
+        
+        console.log(`✅ Got magnet link for: ${torrent.title}`);
         
         // Convertir al formato esperado por el frontend
         const normalizedTorrent = {
@@ -784,6 +852,14 @@ async function processMovieTorrentResults(searchResults, movieTitle) {
           }]
         };
         
+        console.log(`📦 Normalized torrent:`, {
+          id: normalizedTorrent.id,
+          title: normalizedTorrent.title,
+          quality: normalizedTorrent.torrents[0].quality,
+          seeds: normalizedTorrent.torrents[0].seeds,
+          hasHash: !!normalizedTorrent.torrents[0].hash
+        });
+        
         movieTorrents.push(normalizedTorrent);
         
       } catch (magnetError) {
@@ -791,7 +867,7 @@ async function processMovieTorrentResults(searchResults, movieTitle) {
       }
     }
     
-    console.log(`✅ Processed ${movieTorrents.length} movie torrents`);
+    console.log(`✅ Successfully processed ${movieTorrents.length} out of ${Math.min(searchResults.length, 10)} movie torrents`);
     return movieTorrents;
     
   } catch (error) {

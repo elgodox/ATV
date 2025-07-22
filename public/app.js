@@ -1186,40 +1186,59 @@ async function fetchTorrents(movieTitle) {
     const data = await response.json();
 
     if (data.length > 0) {
-      const movie = data[0];
-      const torrents = movie.torrents;
-      torrents.sort((a, b) => {
-        const qualityOrder = ["4K", "1080p", "720p"];
-        return qualityOrder.indexOf(a.quality) - qualityOrder.indexOf(b.quality);
+      // Aplanar todos los torrents de todos los resultados
+      let allTorrents = [];
+      data.forEach(movie => {
+        if (movie.torrents && movie.torrents.length > 0) {
+          movie.torrents.forEach(torrent => {
+            allTorrents.push({
+              ...torrent,
+              title: movie.title // Agregar título de la película al torrent
+            });
+          });
+        }
       });
-      let torrentButtons = `
-        <div class="torrent-quote">
-          <h3>Torrents disponibles</h3>
-          <div class="torrent-buttons">
-      `;
-      torrents.forEach((torrent) => {
-        const magnetLink = `magnet:?xt=urn:btih:${torrent.hash}&dn=${encodeURIComponent(movieTitle)}&tr=udp://tracker.openbittorrent.com:80/announce`;
-        torrentButtons += `
-          <div class="torrent-item">
-            <button class="torrent-button" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${movieTitle}" onclick="toggleTorrentActions(this)">
-              <span class="torrent-quality">${torrent.quality}</span>
-              <span class="torrent-size">${torrent.size}</span>
-            </button>
-            <div class="torrent-actions" style="display: none;">
-              <button class="action-button watch-online" onclick="watchOnlineWithStats('${magnetLink}', '${movieTitle}')">
-                <span class="action-icon">▶</span>
-                <span class="action-text">Ver Online</span>
-              </button>
-              <a class="action-button download-torrent" href="${magnetLink}" download>
-                <span class="action-icon">🧲</span>
-                <span class="action-text">Descargar</span>
-              </a>
-            </div>
-          </div>
+
+      if (allTorrents.length > 0) {
+        allTorrents.sort((a, b) => {
+          const qualityOrder = ["4K", "1080p", "720p", "DVDRip", "WEB-DL", "SD"];
+          return qualityOrder.indexOf(a.quality) - qualityOrder.indexOf(b.quality);
+        });
+        let torrentButtons = `
+          <div class="torrent-quote">
+            <h3>Torrents disponibles</h3>
+            <div class="torrent-buttons">
         `;
-      });
-      torrentButtons += `</div></div>`;
-      elements.modalDescription.insertAdjacentHTML("beforeend", torrentButtons);
+        allTorrents.forEach((torrent, index) => {
+          const magnetLink = torrent.url || `magnet:?xt=urn:btih:${torrent.hash}&dn=${encodeURIComponent(movieTitle)}&tr=udp://tracker.openbittorrent.com:80/announce`;
+          torrentButtons += `
+            <div class="torrent-item">
+              <button class="torrent-button" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${movieTitle}" onclick="toggleTorrentActions(this)">
+                <span class="torrent-quality">${torrent.quality}</span>
+                <span class="torrent-size">${torrent.size}</span>
+                <span class="torrent-seeds">🌱 ${torrent.seeds || 0}</span>
+              </button>
+              <div class="torrent-actions" style="display: none;">
+                <button class="action-button watch-online" onclick="watchOnlineWithStats('${magnetLink}', '${movieTitle}')">
+                  <span class="action-icon">▶</span>
+                  <span class="action-text">Ver Online</span>
+                </button>
+                <a class="action-button download-torrent" href="${magnetLink}" download>
+                  <span class="action-icon">🧲</span>
+                  <span class="action-text">Descargar</span>
+                </a>
+              </div>
+            </div>
+          `;
+        });
+        torrentButtons += `</div></div>`;
+        elements.modalDescription.insertAdjacentHTML("beforeend", torrentButtons);
+      } else {
+        elements.modalDescription.insertAdjacentHTML(
+          "beforeend",
+          '<div class="no-torrents-message">No se encontraron torrents válidos para esta película.</div>'
+        );
+      }
     } else {
       elements.modalDescription.insertAdjacentHTML(
         "beforeend",
