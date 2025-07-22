@@ -1237,6 +1237,10 @@ async function fetchTorrents(movieTitle) {
           const magnetLink = torrent.magnet || torrent.url || `magnet:?xt=urn:btih:${torrent.hash}&dn=${encodeURIComponent(movieTitle)}&tr=udp://tracker.openbittorrent.com:80/announce`;
           const providerInfo = torrent.isDemo ? " 🎭 Demo" : "";
           
+          // Escapar comillas simples y dobles para evitar errores de sintaxis
+          const escapedMagnetLink = magnetLink.replace(/'/g, "\\'").replace(/"/g, '\\"');
+          const escapedMovieTitle = movieTitle.replace(/'/g, "\\'").replace(/"/g, '\\"');
+          
           torrentButtons += `
             <div class="torrent-item${torrent.isDemo ? ' demo-torrent' : ''}">
               <button class="torrent-button" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${movieTitle}" onclick="toggleTorrentActions(this)">
@@ -1245,7 +1249,7 @@ async function fetchTorrents(movieTitle) {
                 <span class="torrent-seeds">🌱 ${torrent.seeds || 0}</span>
               </button>
               <div class="torrent-actions" style="display: none;">
-                <button class="action-button watch-online" onclick="watchOnlineWithStats('${magnetLink}', '${movieTitle}')">
+                <button class="action-button watch-online" onclick="event.stopPropagation(); watchOnlineWithStats('${escapedMagnetLink}', '${escapedMovieTitle}')">
                   <span class="action-icon">▶</span>
                   <span class="action-text">Ver Online</span>
                 </button>
@@ -1447,6 +1451,10 @@ function displayTVTorrents(torrents, container, tvTitle) {
     const torrentTitle = torrent.title;
     const providerInfo = torrent.isDemo ? " 🎭 Demo" : "";
     
+    // Escapar comillas simples y dobles para evitar errores de sintaxis
+    const escapedMagnetLink = magnetLink.replace(/'/g, "\\'").replace(/"/g, '\\"');
+    const escapedTorrentTitle = torrentTitle.replace(/'/g, "\\'").replace(/"/g, '\\"');
+    
     torrentButtons += `
       <div class="torrent-item${torrent.isDemo ? ' demo-torrent' : ''}">
         <button class="torrent-button" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${torrentTitle}" onclick="toggleTorrentActions(this)">
@@ -1455,7 +1463,7 @@ function displayTVTorrents(torrents, container, tvTitle) {
           <span class="torrent-seeds">🌱 ${torrent.seeds}</span>
         </button>
         <div class="torrent-actions" style="display: none;">
-          <button class="action-button watch-online" onclick="watchOnlineWithStats('${magnetLink}', '${torrentTitle}')">
+          <button class="action-button watch-online" onclick="event.stopPropagation(); watchOnlineWithStats('${escapedMagnetLink}', '${escapedTorrentTitle}')">
             <span class="action-icon">▶</span>
             <span class="action-text">Ver Online</span>
           </button>
