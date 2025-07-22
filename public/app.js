@@ -1186,35 +1186,61 @@ async function fetchTorrents(movieTitle) {
     const data = await response.json();
 
     if (data.length > 0) {
-      // Aplanar todos los torrents de todos los resultados
+      // Handle both old YTS format and new direct torrent format
       let allTorrents = [];
-      data.forEach(movie => {
-        if (movie.torrents && movie.torrents.length > 0) {
-          movie.torrents.forEach(torrent => {
-            allTorrents.push({
-              ...torrent,
-              title: movie.title // Agregar título de la película al torrent
+      
+      // Check if data is direct torrent array (new format) or YTS movie format (old format)
+      if (data[0] && data[0].title && data[0].magnet) {
+        // New format: direct torrent array
+        allTorrents = data.map(torrent => ({
+          ...torrent,
+          title: torrent.title || movieTitle
+        }));
+      } else {
+        // Old YTS format: movies with torrents array
+        data.forEach(movie => {
+          if (movie.torrents && movie.torrents.length > 0) {
+            movie.torrents.forEach(torrent => {
+              allTorrents.push({
+                ...torrent,
+                title: movie.title // Agregar título de la película al torrent
+              });
             });
-          });
-        }
-      });
+          }
+        });
+      }
 
       if (allTorrents.length > 0) {
+        // Check if any torrents are demo data
+        const hasDemo = allTorrents.some(torrent => torrent.isDemo);
+        
         allTorrents.sort((a, b) => {
           const qualityOrder = ["4K", "1080p", "720p", "DVDRip", "WEB-DL", "SD"];
           return qualityOrder.indexOf(a.quality) - qualityOrder.indexOf(b.quality);
         });
+        
         let torrentButtons = `
           <div class="torrent-quote">
-            <h3>Torrents disponibles</h3>
-            <div class="torrent-buttons">
-        `;
-        allTorrents.forEach((torrent, index) => {
-          const magnetLink = torrent.url || `magnet:?xt=urn:btih:${torrent.hash}&dn=${encodeURIComponent(movieTitle)}&tr=udp://tracker.openbittorrent.com:80/announce`;
+            <h3>Torrents disponibles</h3>`;
+        
+        // Add demo data warning if applicable
+        if (hasDemo) {
           torrentButtons += `
-            <div class="torrent-item">
+            <div class="demo-warning" style="background: #ff6b35; color: white; padding: 8px 12px; border-radius: 4px; margin-bottom: 10px; font-size: 14px;">
+              ⚠️ Datos de demostración - Los torrents reales no están disponibles debido a restricciones de red
+            </div>`;
+        }
+        
+        torrentButtons += `<div class="torrent-buttons">`;
+        
+        allTorrents.forEach((torrent, index) => {
+          const magnetLink = torrent.magnet || torrent.url || `magnet:?xt=urn:btih:${torrent.hash}&dn=${encodeURIComponent(movieTitle)}&tr=udp://tracker.openbittorrent.com:80/announce`;
+          const providerInfo = torrent.isDemo ? " 🎭 Demo" : "";
+          
+          torrentButtons += `
+            <div class="torrent-item${torrent.isDemo ? ' demo-torrent' : ''}">
               <button class="torrent-button" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${movieTitle}" onclick="toggleTorrentActions(this)">
-                <span class="torrent-quality">${torrent.quality}</span>
+                <span class="torrent-quality">${torrent.quality}${providerInfo}</span>
                 <span class="torrent-size">${torrent.size}</span>
                 <span class="torrent-seeds">🌱 ${torrent.seeds || 0}</span>
               </button>
@@ -1399,20 +1425,32 @@ async function searchTVTorrents(tvTitle, season, episode, resultsContainer) {
 
 // Función para mostrar los torrents de TV
 function displayTVTorrents(torrents, container, tvTitle) {
+  // Check if any torrents are demo data
+  const hasDemo = torrents.some(torrent => torrent.isDemo);
+  
   let torrentButtons = `
     <div class="torrent-quote">
-      <h4>Torrents encontrados</h4>
-      <div class="torrent-buttons">
-  `;
+      <h4>Torrents encontrados</h4>`;
+  
+  // Add demo data warning if applicable
+  if (hasDemo) {
+    torrentButtons += `
+      <div class="demo-warning" style="background: #ff6b35; color: white; padding: 8px 12px; border-radius: 4px; margin-bottom: 10px; font-size: 14px;">
+        ⚠️ Datos de demostración - Los torrents reales no están disponibles debido a restricciones de red
+      </div>`;
+  }
+  
+  torrentButtons += `<div class="torrent-buttons">`;
   
   torrents.forEach((torrent) => {
     const magnetLink = torrent.magnet;
     const torrentTitle = torrent.title;
+    const providerInfo = torrent.isDemo ? " 🎭 Demo" : "";
     
     torrentButtons += `
-      <div class="torrent-item">
+      <div class="torrent-item${torrent.isDemo ? ' demo-torrent' : ''}">
         <button class="torrent-button" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${torrentTitle}" onclick="toggleTorrentActions(this)">
-          <span class="torrent-quality">${torrent.quality}</span>
+          <span class="torrent-quality">${torrent.quality}${providerInfo}</span>
           <span class="torrent-size">${torrent.size}</span>
           <span class="torrent-seeds">🌱 ${torrent.seeds}</span>
         </button>

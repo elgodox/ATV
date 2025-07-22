@@ -270,7 +270,9 @@ function generateMockTorrents(title, type = 'movie', season = null, episode = nu
       magnet: `magnet:?xt=urn:btih:${hash}&dn=${encodeURIComponent(torrentTitle)}`,
       quality: quality.name,
       type: type,
-      hash: hash
+      hash: hash,
+      isDemo: true,
+      demoMessage: "Demo torrent data - real torrents not available"
     };
     
     if (type === 'tv') {
@@ -772,13 +774,10 @@ app.get('/api/torrents', async (req, res) => {
       // Si no se encontraron torrents reales, usar datos mock
       if (movieTorrents.length === 0) {
         console.log(`🎭 No real movie torrents found, using mock data for: ${movieTitle}`);
+        console.log(`🚧 Real torrent search failed - likely due to network/firewall restrictions`);
         movieTorrents = generateMockTorrents(movieTitle, 'movie');
         
-        // Agregar mensaje informativo
-        movieTorrents.forEach(torrent => {
-          torrent.isDemo = true;
-          torrent.demoMessage = "Demo torrent data - real torrents not available";
-        });
+        // Mock data already includes isDemo and demoMessage from generateMockTorrents
       }
       
       console.log(`📤 Final movie torrents count: ${movieTorrents.length}`);
@@ -795,11 +794,9 @@ app.get('/api/torrents', async (req, res) => {
       
       // En caso de error completo, devolver datos mock
       console.log(`🎭 Error fallback: generating mock data for ${movieTitle}`);
+      console.log(`🚧 Search error: ${error.message} - Using demo data`);
       const mockTorrents = generateMockTorrents(movieTitle, 'movie');
-      mockTorrents.forEach(torrent => {
-        torrent.isDemo = true;
-        torrent.demoMessage = "Demo torrent data - search service temporarily unavailable";
-      });
+      // Mock data already includes isDemo and demoMessage from generateMockTorrents
       
       res.json(mockTorrents);
     }
@@ -1165,14 +1162,16 @@ async function processTorrentResults(searchResults, tvTitle, season, episode) {
           leeches: torrent.peers || torrent.leechers || Math.floor(Math.random() * 20) + 5,
           provider: torrent.provider || 'Unknown',
           desc: torrent.desc || torrent.link || '',
-          magnet: magnetLink,
+          magnet: magnetLink || torrent.magnet,
           quality: extractQualityFromTitle(torrent.title || torrent.name),
           type: 'tv',
           season: season,
           episode: episode,
           // Extraer hash del magnet si está disponible
-          hash: magnetLink ? magnetLink.match(/xt=urn:btih:([^&]+)/i)?.[1] : undefined,
-          isDemo: false
+          hash: magnetLink ? magnetLink.match(/xt=urn:btih:([^&]+)/i)?.[1] : (torrent.hash || undefined),
+          // Preserve demo flags if they exist, otherwise mark as real torrent
+          isDemo: torrent.isDemo || false,
+          demoMessage: torrent.demoMessage || undefined
         };
         
         torrents.push(normalizedTorrent);
@@ -1189,13 +1188,15 @@ async function processTorrentResults(searchResults, tvTitle, season, episode) {
           leeches: Math.floor(Math.random() * 20) + 5,
           provider: torrent.provider || 'Unknown',
           desc: torrent.desc || torrent.link || '',
-          magnet: null,
+          magnet: torrent.magnet || null,
           quality: extractQualityFromTitle(torrent.title || torrent.name),
           type: 'tv',
           season: season,
           episode: episode,
           error: 'Could not retrieve magnet link',
-          isDemo: false
+          // Preserve demo flags if they exist, otherwise mark as real torrent
+          isDemo: torrent.isDemo || false,
+          demoMessage: torrent.demoMessage || undefined
         });
       }
     }

@@ -2875,3 +2875,47 @@ h1 {
     font-size: 0.8em;
   }
 }
+
+/* Demo torrent styling */
+.demo-warning {
+  animation: pulse-warning 2s infinite;
+  border-left: 4px solid #ff8a65;
+}
+
+@keyframes pulse-warning {
+  0% { opacity: 0.8; }
+  50% { opacity: 1; }
+  100% { opacity: 0.8; }
+}
+
+.demo-torrent {
+  position: relative;
+}
+
+.demo-torrent .torrent-button {
+  border-color: #ff6b35;
+  background: rgba(255, 107, 53, 0.1);
+}
+
+.demo-torrent .torrent-button::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(255, 107, 53, 0.1) 4px,
+    rgba(255, 107, 53, 0.1) 8px
+  );
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.demo-torrent .torrent-button:hover {
+  border-color: #ff8a65;
+  background: rgba(255, 107, 53, 0.15);
+}
