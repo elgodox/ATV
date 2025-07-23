@@ -2776,32 +2776,76 @@ function isSubtitleRelevant(subtitle, requestedTitle, season = null, episode = n
   const normalizedMovieName = normalizeString(movieName);
   const normalizedSeriesName = normalizeString(seriesName);
 
-  // Check if any of the subtitle metadata contains words from the requested title
   const requestWords = normalizedRequest.split(' ').filter(word => word.length > 2);
   
-  // Function to calculate word match score
-  const calculateMatchScore = (text, requestWords) => {
-    const textWords = text.split(' ');
-    let matchedWords = 0;
+  // Function to calculate sophisticated match score with positional awareness
+  const calculateMatchScore = (text, requestWords, isMainTitle = false) => {
+    const textWords = text.split(' ').filter(word => word.length > 2);
     
+    // For exact phrase match, require it to be at the beginning or a major part
+    if (text.includes(normalizedRequest)) {
+      const position = text.indexOf(normalizedRequest);
+      // If it's a main title field and the match is at the beginning, high score
+      if (isMainTitle && position === 0) {
+        return 1.0;
+      }
+      // If it's just incidental (like "Foundation" in "Shoah Foundation Story"), lower score
+      if (position > 10 || text.split(' ').length > requestWords.length * 2) {
+        return 0.3; // Reduced score for incidental matches
+      }
+      return 0.8;
+    }
+    
+    // Check for word-by-word match
+    let matchedWords = 0;
+    let exactMatches = 0;
+    let sequentialMatches = 0;
+    
+    // Check for sequential word matches (higher weight)
+    for (let i = 0; i <= textWords.length - requestWords.length; i++) {
+      let consecutive = 0;
+      for (let j = 0; j < requestWords.length; j++) {
+        if (i + j < textWords.length && textWords[i + j] === requestWords[j]) {
+          consecutive++;
+        } else {
+          break;
+        }
+      }
+      sequentialMatches = Math.max(sequentialMatches, consecutive);
+    }
+    
+    // Individual word matches
     requestWords.forEach(requestWord => {
-      if (textWords.some(textWord => 
+      if (textWords.includes(requestWord)) {
+        exactMatches++;
+        matchedWords++;
+      } else if (textWords.some(textWord => 
         textWord.includes(requestWord) || requestWord.includes(textWord)
       )) {
-        matchedWords++;
+        matchedWords += 0.5;
       }
     });
     
-    return requestWords.length > 0 ? matchedWords / requestWords.length : 0;
+    // Bonus for sequential matches (words in order)
+    const sequentialBonus = sequentialMatches === requestWords.length ? 0.4 : 
+                           sequentialMatches > 0 ? sequentialMatches / requestWords.length * 0.2 : 0;
+    
+    // Bonus for all exact matches
+    const exactMatchBonus = exactMatches === requestWords.length ? 0.3 : 0;
+    
+    const baseScore = requestWords.length > 0 ? matchedWords / requestWords.length : 0;
+    
+    return Math.min(1.0, baseScore + sequentialBonus + exactMatchBonus);
   };
 
-  // Calculate match scores for different fields
-  const fileNameScore = calculateMatchScore(normalizedFileName, requestWords);
-  const movieNameScore = calculateMatchScore(normalizedMovieName, requestWords);
-  const seriesNameScore = calculateMatchScore(normalizedSeriesName, requestWords);
+  // Calculate match scores for different fields with different weights
+  // Filename is most reliable, movie/series names can be misleading
+  const fileNameScore = calculateMatchScore(normalizedFileName, requestWords, true);
+  const movieNameScore = calculateMatchScore(normalizedMovieName, requestWords, true);
+  const seriesNameScore = calculateMatchScore(normalizedSeriesName, requestWords, true);
   
-  // Best match score among all fields
-  const bestScore = Math.max(fileNameScore, movieNameScore, seriesNameScore);
+  // Weighted scoring - filename is most reliable, others need higher threshold
+  const weightedScore = (fileNameScore * 0.7) + (Math.max(movieNameScore, seriesNameScore) * 0.3);
   
   // For TV series, also check season/episode if provided
   if (season !== null) {
@@ -2813,16 +2857,22 @@ function isSubtitleRelevant(subtitle, requestedTitle, season = null, episode = n
       const hasEpisodeMatch = episodePattern.test(fileName);
       
       // For TV shows with specific season/episode, require both season and episode match
-      // plus at least 30% title match
-      return hasSeasonMatch && hasEpisodeMatch && bestScore >= 0.3;
+      // plus at least 40% title match
+      return hasSeasonMatch && hasEpisodeMatch && weightedScore >= 0.4;
     } else {
-      // For season-only requests, require season match plus at least 30% title match
-      return hasSeasonMatch && bestScore >= 0.3;
+      // For season-only requests, require season match plus at least 40% title match
+      return hasSeasonMatch && weightedScore >= 0.4;
     }
   }
   
-  // For movies or general searches, require at least 50% word match
-  return bestScore >= 0.5;
+  // For movies or general searches, if filename has strong match, use it
+  if (fileNameScore >= 0.7) {
+    return true;
+  }
+  
+  // Otherwise require higher threshold for weighted score
+  // This will filter out incidental matches like "Foundation" in "Shoah Foundation Story"
+  return weightedScore >= 0.7;
 }
 
 // Function to convert SRT format to WebVTT format for browser compatibility
