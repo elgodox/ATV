@@ -997,12 +997,12 @@ async function displayTVSeasonTrailers(id, type, title, dataOriginal) {
     return;
   }
   
-  // Crear selector de temporadas
+  // Crear selector de temporadas minimalista
   let seasonSelector = `
     <div class="tv-trailer-selector">
       <div class="selector-header">
-        <h4><i class="fas fa-tv"></i> Trailers por Temporada</h4>
-        <p>Selecciona una temporada para ver su trailer:</p>
+        <h4><i class="fas fa-tv"></i> Trailers</h4>
+        <p>Selecciona una temporada:</p>
       </div>
       <div class="season-buttons">
   `;
@@ -1015,16 +1015,27 @@ async function displayTVSeasonTrailers(id, type, title, dataOriginal) {
     </button>
   `;
   
-  // Agregar botones para cada temporada
-  regularSeasons.forEach(season => {
+  // Agregar botones para cada temporada (más compactos)
+  regularSeasons.slice(0, 8).forEach(season => { // Limitar a 8 temporadas para mantener compacto
     seasonSelector += `
       <button class="season-btn" data-season="${season.season_number}" onclick="loadSeasonTrailer('${id}', '${type}', '${title}', ${season.season_number})">
         <i class="fas fa-play-circle"></i>
-        <span>Temporada ${season.season_number}</span>
-        <small>${season.episode_count} episodios</small>
+        <span>T${season.season_number}</span>
+        <small>${season.episode_count}ep</small>
       </button>
     `;
   });
+  
+  // Si hay más de 8 temporadas, agregar indicador
+  if (regularSeasons.length > 8) {
+    seasonSelector += `
+      <button class="season-btn" disabled style="opacity: 0.5;">
+        <i class="fas fa-ellipsis-h"></i>
+        <span>+${regularSeasons.length - 8}</span>
+        <small>más</small>
+      </button>
+    `;
+  }
   
   seasonSelector += `
       </div>

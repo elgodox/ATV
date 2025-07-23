@@ -1054,7 +1054,7 @@ h1 {
   color: white;
 }
 
-/* Material UI Modal with Glassmorphism */
+/* Minimalist Modal */
 .modal {
   display: none;
   position: fixed;
@@ -1063,21 +1063,19 @@ h1 {
   top: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   overflow: auto;
-  animation: modalFadeIn 0.3s ease-out;
+  animation: modalFadeIn 0.2s ease-out;
 }
 
 @keyframes modalFadeIn {
   from {
     opacity: 0;
-    backdrop-filter: blur(0px);
   }
   to {
     opacity: 1;
-    backdrop-filter: blur(20px);
   }
 }
 
@@ -1087,155 +1085,134 @@ h1 {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .modal-content {
   width: 90%;
-  max-width: 800px;
-  margin: 5% auto;
-  padding: 32px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 24px;
+  max-width: 900px;
+  margin: 3% auto;
+  padding: 24px;
+  background: rgba(25, 25, 35, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   color: white;
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    0 2px 16px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
   position: relative;
-  animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: modalSlideIn 0.3s ease-out;
 }
 
 @keyframes modalSlideIn {
   from {
     opacity: 0;
-    transform: translateY(-40px) scale(0.95);
+    transform: translateY(-20px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
-.modal-content:hover {
-  box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.4),
-    0 4px 20px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  transform: translateY(-2px);
-}
-
 .modal-content h2 {
-  font-size: 1.75rem;
+  font-size: 1.6rem;
   font-weight: 600;
-  margin: 0 0 16px 0;
+  margin: 0 0 12px 0;
   color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   line-height: 1.3;
 }
 
 .modal-content p {
-  font-size: 1rem;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.85);
-  margin: 0 0 24px 0;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0 0 20px 0;
 }
 
 .close {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 28px;
+  top: 15px;
+  right: 15px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 24px;
   font-weight: 300;
-  background: rgba(0, 0, 0, 0.8);
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 50%;
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 1002;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .close:hover,
 .close:focus {
   color: rgba(255, 255, 255, 1);
-  background: rgba(255, 0, 0, 0.8);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: scale(1.15);
-  box-shadow: 0 6px 20px rgba(255, 0, 0, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
 }
 
 /* Minimalist torrent section styling */
 .torrent-quote {
-  background: #1e1e1e;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 16px;
-  margin: 16px 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 12px;
+  margin: 12px 0;
   position: relative;
 }
 
 .torrent-quote h3 {
-  margin: 0 0 12px 0;
-  font-size: 1em;
-  color: #ffffff;
+  margin: 0 0 8px 0;
+  font-size: 0.9em;
+  color: rgba(255, 255, 255, 0.9);
   font-weight: 500;
 }
 
-/* Material UI Torrent buttons grid */
+/* Minimalist torrent buttons grid */
 .torrent-buttons {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-  margin-top: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
   align-items: start;
 }
 
 .torrent-button {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 44px;
+  gap: 6px;
+  min-height: 36px;
   position: relative;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .torrent-button::after {
   content: '⌄';
   position: absolute;
-  right: 8px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 0.875rem;
-  opacity: 0.7;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  font-size: 0.7rem;
+  opacity: 0.6;
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 .torrent-button.active::after {
@@ -1244,10 +1221,8 @@ h1 {
 }
 
 .torrent-button:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .torrent-button:hover::after {
@@ -1255,41 +1230,37 @@ h1 {
 }
 
 .torrent-button:active {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(1px);
 }
 
 /* Minimalist quality badges */
 .torrent-quality {
   background: rgba(255, 255, 255, 0.1);
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 0.75em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.7em;
   font-weight: 500;
 }
 
 .torrent-size {
-  opacity: 0.8;
-  font-size: 0.8em;
+  opacity: 0.7;
+  font-size: 0.75em;
 }
 
-/* Material UI Trailer styling */
+/* Minimalist trailer styling */
 #modal-trailer {
-  margin-top: 24px;
-  border-radius: 16px;
+  margin-top: 16px;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 #modal-trailer iframe {
   width: 100%;
-  height: 360px;
+  height: 320px;
   border: none;
-  border-radius: 16px;
+  border-radius: 8px;
   background: rgba(0, 0, 0, 0.8);
 }
 
@@ -1298,193 +1269,196 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 16px;
+  padding: 30px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
 }
 
 .trailer-loading i {
-  margin-right: 10px;
-  font-size: 18px;
-}
-
-/* Información del trailer */
-.trailer-info {
-  border-radius: 8px;
-  padding: 8px 12px;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.trailer-info.official {
-  background: rgba(76, 175, 80, 0.2);
-  border: 1px solid rgba(76, 175, 80, 0.4);
-  color: #4CAF50;
-}
-
-.trailer-info.tmdb {
-  background: rgba(33, 150, 243, 0.2);
-  border: 1px solid rgba(33, 150, 243, 0.4);
-  color: #2196F3;
-}
-
-.trailer-info.external {
-  background: rgba(255, 152, 0, 0.2);
-  border: 1px solid rgba(255, 152, 0, 0.4);
-  color: #FF9800;
-}
-
-.trailer-info i {
   margin-right: 8px;
+  font-size: 16px;
 }
 
-.season-info {
-  background: rgba(156, 39, 176, 0.2);
-  border: 1px solid rgba(156, 39, 176, 0.4);
-  border-radius: 8px;
-  padding: 6px 10px;
+/* Minimalist trailer info */
+.trailer-info {
+  border-radius: 4px;
+  padding: 4px 8px;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
-  color: #9C27B0;
-  font-size: 13px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.trailer-info.official {
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  color: #81C784;
+}
+
+.trailer-info.tmdb {
+  background: rgba(33, 150, 243, 0.15);
+  border: 1px solid rgba(33, 150, 243, 0.3);
+  color: #64B5F6;
+}
+
+.trailer-info.external {
+  background: rgba(255, 152, 0, 0.15);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  color: #FFB74D;
+}
+
+.trailer-info i {
+  margin-right: 6px;
+}
+
+.season-info {
+  background: rgba(156, 39, 176, 0.15);
+  border: 1px solid rgba(156, 39, 176, 0.3);
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  color: #BA68C8;
+  font-size: 11px;
   font-weight: 500;
 }
 
 .season-info i {
-  margin-right: 6px;
+  margin-right: 4px;
 }
 
-/* Selector de temporadas para series de TV */
+/* Selector de temporadas minimalista para series de TV */
 .tv-trailer-selector {
-  padding: 16px;
+  padding: 12px;
 }
 
 .selector-header {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .selector-header h4 {
   color: rgba(255, 255, 255, 0.9);
-  margin: 0 0 8px 0;
-  font-size: 18px;
+  margin: 0 0 6px 0;
+  font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
+  font-weight: 500;
 }
 
 .selector-header p {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.6);
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .season-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 6px;
   justify-content: center;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .season-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 6px 10px;
   color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  min-width: 100px;
-  backdrop-filter: blur(8px);
+  gap: 2px;
+  min-width: 70px;
+  font-size: 11px;
 }
 
 .season-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
-  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .season-btn.active {
-  background: rgba(33, 150, 243, 0.3);
-  border-color: rgba(33, 150, 243, 0.6);
-  color: #2196F3;
+  background: rgba(64, 128, 255, 0.2);
+  border-color: rgba(64, 128, 255, 0.4);
+  color: #64B5F6;
 }
 
 .season-btn i {
-  font-size: 18px;
-  margin-bottom: 4px;
+  font-size: 14px;
+  margin-bottom: 2px;
 }
 
 .season-btn span {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 500;
+  font-size: 11px;
 }
 
 .season-btn small {
-  font-size: 11px;
+  font-size: 9px;
   opacity: 0.7;
 }
 
 #selected-trailer-container {
-  min-height: 300px;
-  border-radius: 12px;
+  min-height: 280px;
+  border-radius: 8px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 #selected-trailer-container iframe {
   width: 100%;
-  height: 300px;
+  height: 280px;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
-/* Carrusel de imágenes cuando no hay trailer */
+/* Carrusel de imágenes cuando no hay trailer - minimalist */
 .image-carousel {
   text-align: center;
   position: relative;
 }
 
 .no-trailer-message {
-  background: rgba(255, 193, 7, 0.2);
-  border: 1px solid rgba(255, 193, 7, 0.4);
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 16px;
-  color: #FFC107;
-  font-size: 14px;
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 10px;
+  color: #FFD54F;
+  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .no-trailer-message i {
-  margin-right: 8px;
+  margin-right: 6px;
 }
 
 .image-slider {
   position: relative;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 8px;
   max-width: 100%;
 }
 
 .fallback-image {
   width: 100%;
-  height: 300px;
+  height: 280px;
   object-fit: cover;
   display: none;
-  border-radius: 12px;
+  border-radius: 8px;
   transition: opacity 0.3s ease;
 }
 
@@ -1497,7 +1471,7 @@ h1 {
 }
 
 .slider-controls {
-  margin-top: 16px;
+  margin-top: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1802,50 +1776,69 @@ h1 {
   }
 }
 
-  /* Material UI Modal responsive - Mobile */
+  /* Modal responsive - Mobile */
   .modal-content {
-    width: 92%;
-    max-width: 500px;
-    margin: 10% auto;
-    padding: 24px;
-    border-radius: 20px;
+    width: 95%;
+    max-width: none;
+    margin: 2% auto;
+    padding: 16px;
+    border-radius: 8px;
   }
 
   .modal-content h2 {
     font-size: 1.4rem;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
 
   .modal-content p {
-    font-size: 0.95rem;
-    line-height: 1.5;
-    margin-bottom: 20px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin-bottom: 16px;
   }
 
   #modal-trailer iframe {
-    height: 280px;
+    height: 200px;
+  }
+
+  #selected-trailer-container iframe {
+    height: 200px;
   }
 
   .close {
-    width: 42px;
-    height: 42px;
-    font-size: 24px;
-    top: 15px;
-    right: 15px;
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+    top: 10px;
+    right: 10px;
   }
 
-  /* Material UI Torrent buttons for mobile */
+  /* Torrent buttons for mobile */
   .torrent-buttons {
     grid-template-columns: 1fr;
-    gap: 10px;
-    margin-top: 16px;
+    gap: 6px;
+    margin-top: 10px;
   }
 
   .torrent-button {
-    padding: 14px 20px;
-    font-size: 0.875rem;
-    min-height: 48px;
-    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    min-height: 40px;
+    border-radius: 6px;
+  }
+
+  /* Season buttons for mobile */
+  .season-buttons {
+    gap: 4px;
+  }
+
+  .season-btn {
+    padding: 4px 6px;
+    min-width: 60px;
+    font-size: 10px;
+  }
+
+  .season-btn i {
+    font-size: 12px;
   }
 
   /* Texto más pequeño en las tarjetas de películas */
@@ -1880,50 +1873,61 @@ h1 {
     margin-bottom: 15px;
   }
 
-  /* Material UI Modal responsive - Tablet */
+  /* Modal responsive - Tablet */
   .modal-content {
-    width: 88%;
-    max-width: 580px;
-    margin: 8% auto;
-    padding: 28px;
-    border-radius: 22px;
+    width: 90%;
+    max-width: 600px;
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 10px;
   }
 
   .modal-content h2 {
-    font-size: 1.6rem;
-    margin-bottom: 16px;
+    font-size: 1.5rem;
+    margin-bottom: 12px;
   }
 
   .modal-content p {
-    font-size: 1rem;
-    line-height: 1.6;
-    margin-bottom: 22px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 18px;
   }
 
   #modal-trailer iframe {
-    height: 320px;
+    height: 260px;
+  }
+
+  #selected-trailer-container iframe {
+    height: 260px;
   }
 
   .close {
-    width: 46px;
-    height: 46px;
-    font-size: 26px;
-    top: 18px;
-    right: 18px;
+    width: 38px;
+    height: 38px;
+    font-size: 22px;
+    top: 12px;
+    right: 12px;
   }
 
-  /* Material UI Torrent buttons for tablet */
+  /* Torrent buttons for tablet */
   .torrent-buttons {
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 10px;
-    margin-top: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+    margin-top: 14px;
   }
 
   .torrent-button {
-    padding: 12px 16px;
-    font-size: 0.875rem;
-    min-height: 42px;
-    border-radius: 11px;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    min-height: 38px;
+    border-radius: 6px;
+  }
+
+  /* Season buttons for tablet */
+  .season-btn {
+    padding: 5px 8px;
+    min-width: 65px;
+    font-size: 10px;
   }
 
   /* Texto en las tarjetas de películas */
