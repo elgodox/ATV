@@ -1703,6 +1703,9 @@ async function fetchTorrents(movieTitle) {
                 <span class="torrent-size">${torrent.size}</span>
                 <span class="torrent-seeds">🌱 ${torrent.seeds || 0}</span>
               </button>
+              <div class="torrent-name" style="font-size: 12px; color: #888; margin: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${torrent.title || movieTitle}">
+                📁 ${torrent.title || movieTitle}
+              </div>
               <div class="torrent-actions" style="display: none;">
                 <button class="action-button watch-online" onclick="event.stopPropagation(); watchOnlineWithStats('${escapedMagnetLink}', '${escapedMovieTitle}')">
                   <span class="action-icon">▶</span>
@@ -1917,6 +1920,9 @@ function displayTVTorrents(torrents, container, tvTitle) {
           <span class="torrent-size">${torrent.size}</span>
           <span class="torrent-seeds">🌱 ${torrent.seeds}</span>
         </button>
+        <div class="torrent-name" style="font-size: 12px; color: #888; margin: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${torrentTitle}">
+          📁 ${torrentTitle}
+        </div>
         <div class="torrent-actions" style="display: none;">
           <button class="action-button watch-online" onclick="event.stopPropagation(); watchOnlineWithStats('${escapedMagnetLink}', '${escapedTorrentTitle}')">
             <span class="action-icon">▶</span>

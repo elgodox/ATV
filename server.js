@@ -1354,20 +1354,7 @@ async function searchRealTVTorrents(tvTitle, season, episode) {
       
       if (searchResults && searchResults.length > 0) {
         console.log(`📊 Found ${searchResults.length} real torrents from providers`);
-        
-        // Verificar que los resultados no sean falsos positivos
-        const validResults = searchResults.filter(r => 
-          r && (r.title || r.name) && 
-          (r.title || r.name).toLowerCase().includes(tvTitle.toLowerCase().substring(0, 5))
-        );
-        
-        if (validResults.length > 0) {
-          console.log(`✅ ${validResults.length} results seem relevant`);
-          return await processTorrentResults(validResults, tvTitle, season, episode);
-        } else {
-          console.log(`⚠️  Results don't seem relevant to "${tvTitle}"`);
-          searchResults = [];
-        }
+        return await processTorrentResults(searchResults, tvTitle, season, episode);
       } else {
         console.log(`📊 No real torrents found`);
       }
@@ -1412,17 +1399,138 @@ async function searchRealTVTorrents(tvTitle, season, episode) {
   }
 }
 
+// Function to check if a torrent is relevant to the search query
+function isTorrentRelevant(torrent, requestedTitle, season = null, episode = null) {
+  if (!torrent || !(torrent.title || torrent.name)) {
+    return false;
+  }
+
+  const torrentTitle = torrent.title || torrent.name;
+  
+  // Normalize strings for comparison (lowercase, remove special chars)
+  const normalizeString = (str) => {
+    return str.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const normalizedRequest = normalizeString(requestedTitle);
+  const normalizedTorrentTitle = normalizeString(torrentTitle);
+
+  const requestWords = normalizedRequest.split(' ').filter(word => word.length > 2);
+  
+  // Function to calculate sophisticated match score with positional awareness
+  const calculateMatchScore = (text, requestWords) => {
+    const textWords = text.split(' ').filter(word => word.length > 2);
+    
+    // For exact phrase match, check position to avoid false positives
+    if (text.includes(normalizedRequest)) {
+      const position = text.indexOf(normalizedRequest);
+      // If the match is at the beginning, high score
+      if (position === 0 || position <= 5) {
+        return 1.0;
+      }
+      // If it's incidental (like "The Chosen" in "Zorro The Chosen One"), lower score
+      const wordsBeforeMatch = text.substring(0, position).split(' ').filter(w => w.length > 2).length;
+      if (wordsBeforeMatch > 2 || text.split(' ').length > requestWords.length * 2.5) {
+        return 0.2; // Very low score for incidental matches
+      }
+      return 0.8;
+    }
+    
+    // Check for word-by-word match
+    let matchedWords = 0;
+    let exactMatches = 0;
+    let sequentialMatches = 0;
+    
+    // Check for sequential word matches (higher weight)
+    for (let i = 0; i <= textWords.length - requestWords.length; i++) {
+      let consecutive = 0;
+      for (let j = 0; j < requestWords.length; j++) {
+        if (i + j < textWords.length && textWords[i + j] === requestWords[j]) {
+          consecutive++;
+        } else {
+          break;
+        }
+      }
+      sequentialMatches = Math.max(sequentialMatches, consecutive);
+    }
+    
+    // Individual word matches
+    requestWords.forEach(requestWord => {
+      if (textWords.includes(requestWord)) {
+        exactMatches++;
+        matchedWords++;
+      } else if (textWords.some(textWord => 
+        textWord.includes(requestWord) || requestWord.includes(textWord)
+      )) {
+        matchedWords += 0.5;
+      }
+    });
+    
+    // Bonus for sequential matches (words in order)
+    const sequentialBonus = sequentialMatches === requestWords.length ? 0.4 : 
+                           sequentialMatches > 0 ? sequentialMatches / requestWords.length * 0.2 : 0;
+    
+    // Bonus for all exact matches
+    const exactMatchBonus = exactMatches === requestWords.length ? 0.3 : 0;
+    
+    const baseScore = requestWords.length > 0 ? matchedWords / requestWords.length : 0;
+    
+    return Math.min(1.0, baseScore + sequentialBonus + exactMatchBonus);
+  };
+
+  // Calculate match score for torrent title
+  const titleScore = calculateMatchScore(normalizedTorrentTitle, requestWords);
+  
+  // For TV series, also check season/episode if provided
+  if (season !== null) {
+    const seasonPattern = new RegExp(`s0?${season}(?![0-9])|season\\s*0?${season}(?![0-9])`, 'i');
+    const hasSeasonMatch = seasonPattern.test(torrentTitle);
+    
+    if (episode !== null) {
+      const episodePattern = new RegExp(`e0?${episode}(?![0-9])|episode\\s*0?${episode}(?![0-9])`, 'i');
+      const hasEpisodeMatch = episodePattern.test(torrentTitle);
+      
+      // For TV shows with specific season/episode, require both season and episode match
+      // plus at least 50% title match (stricter than subtitles since false positives are more problematic)
+      return hasSeasonMatch && hasEpisodeMatch && titleScore >= 0.5;
+    } else {
+      // For season-only requests, require season match plus at least 50% title match
+      return hasSeasonMatch && titleScore >= 0.5;
+    }
+  }
+  
+  // For movies or general searches, require high title match to avoid false positives
+  // This will filter out incidental matches like "The Chosen" in "Zorro The Chosen One"
+  return titleScore >= 0.7;
+}
+
 // Función auxiliar para procesar resultados de torrents
 async function processTorrentResults(searchResults, tvTitle, season, episode) {
   try {
+    // Filter torrents for relevance first
+    console.log(`🔍 Filtering ${searchResults.length} torrents for relevance to "${tvTitle}"`);
+    const relevantTorrents = searchResults.filter(torrent => 
+      isTorrentRelevant(torrent, tvTitle, season, episode)
+    );
+    
+    if (relevantTorrents.length === 0) {
+      console.log(`⚠️  No relevant torrents found for "${tvTitle}" after filtering`);
+      return [];
+    }
+    
+    console.log(`✅ Found ${relevantTorrents.length} relevant torrents out of ${searchResults.length} total`);
+    
     // Procesar resultados y obtener magnets
     const torrents = [];
-    const maxResults = Math.min(searchResults.length, 20);
+    const maxResults = Math.min(relevantTorrents.length, 20);
     
     console.log(`🔄 Processing ${maxResults} torrent results...`);
     
     for (let i = 0; i < maxResults; i++) {
-      const torrent = searchResults[i];
+      const torrent = relevantTorrents[i];
       
       if (!torrent) continue;
       
