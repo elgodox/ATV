@@ -1992,6 +1992,57 @@ function displayTVTorrents(torrents, container, tvTitle) {
   container.innerHTML = torrentButtons;
 }
 
+// Función para verificar compatibilidad de códecs
+function checkCodecSupport() {
+  const video = document.createElement('video');
+  const codecSupport = {
+    h264: video.canPlayType('video/mp4; codecs="avc1.42E01E"') !== '',
+    h265: video.canPlayType('video/mp4; codecs="hev1.1.6.L93.B0"') !== '',
+    vp9: video.canPlayType('video/webm; codecs="vp9"') !== '',
+    av1: video.canPlayType('video/mp4; codecs="av01.0.05M.08"') !== '',
+    // Audio codecs
+    aac: video.canPlayType('audio/mp4; codecs="mp4a.40.2"') !== '',
+    mp3: video.canPlayType('audio/mpeg') !== '',
+    opus: video.canPlayType('audio/webm; codecs="opus"') !== '',
+    vorbis: video.canPlayType('audio/webm; codecs="vorbis"') !== '',
+    flac: video.canPlayType('audio/flac') !== '',
+    dts: video.canPlayType('audio/mp4; codecs="dts"') === '', // Normalmente no soportado
+    ac3: video.canPlayType('audio/mp4; codecs="ac-3"') === '', // Normalmente no soportado
+  };
+  
+  console.log('Codec support:', codecSupport);
+  return codecSupport;
+}
+
+// Función para mostrar información sobre problemas de audio comunes
+function showAudioTroubleshooting() {
+  const troubleshootingMessage = `
+    <div style="background: rgba(255, 193, 7, 0.1); border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin: 10px 0;">
+      <h4 style="color: #ffc107; margin: 0 0 10px 0;">🔧 Solución de problemas de audio</h4>
+      <p style="margin: 5px 0; font-size: 0.9em; color: #fff;">
+        <strong>Si no escuchas audio:</strong><br>
+        1. Verifica que el volumen no esté en 0 o muteado<br>
+        2. Algunos archivos MKV usan códecs de audio no compatibles (DTS, AC3)<br>
+        3. Prueba con otro torrent que tenga formato MP4<br>
+        4. Asegúrate de que tu navegador esté actualizado
+      </p>
+    </div>
+  `;
+  
+  // Buscar un contenedor donde mostrar el mensaje
+  const playerContainer = document.getElementById('video-player-container');
+  if (playerContainer) {
+    // Verificar si ya existe el mensaje para no duplicarlo
+    const existingTroubleshooting = playerContainer.querySelector('.audio-troubleshooting');
+    if (!existingTroubleshooting) {
+      const troubleshootingDiv = document.createElement('div');
+      troubleshootingDiv.className = 'audio-troubleshooting';
+      troubleshootingDiv.innerHTML = troubleshootingMessage;
+      playerContainer.appendChild(troubleshootingDiv);
+    }
+  }
+}
+
 // Función para iniciar el reproductor de video WebTorrent
 function startPlayer(magnetLink, movieTitle) {
   const playerContainer = document.getElementById('video-player-container');
@@ -2250,18 +2301,136 @@ function startPlayer(magnetLink, movieTitle) {
             return;
         }
 
+        // Configuraciones mejoradas para el reproductor de video
+        videoPlayer.muted = false; // Asegurar que no esté muteado
+        videoPlayer.volume = 1.0; // Volumen al máximo
+        videoPlayer.autoplay = false; // No reproducir automáticamente
+        videoPlayer.preload = 'metadata'; // Precargar metadatos
+
+        // Función para verificar y habilitar audio
+        function ensureAudioEnabled() {
+            if (videoPlayer.muted) {
+                videoPlayer.muted = false;
+                console.log('Audio was muted, unmuting...');
+            }
+            if (videoPlayer.volume === 0) {
+                videoPlayer.volume = 1.0;
+                console.log('Volume was 0, setting to maximum...');
+            }
+        }
+
+        // Función para detectar problemas de audio
+        function detectAudioIssues() {
+            // Verificar compatibilidad de códecs
+            const codecSupport = checkCodecSupport();
+            
+            // Verificar si hay pistas de audio disponibles
+            setTimeout(() => {
+                if (videoPlayer.audioTracks && videoPlayer.audioTracks.length === 0) {
+                    console.warn('No audio tracks detected in video file');
+                    showNotification('⚠️ No se detectaron pistas de audio en este archivo', 'warning', 5000);
+                    showAudioTroubleshooting();
+                }
+                
+                // Verificar códecs de audio para archivos MKV
+                if (selectedFile.name.toLowerCase().endsWith('.mkv')) {
+                    console.log('MKV file detected, checking audio compatibility...');
+                    showNotification('📁 Archivo MKV detectado. Si no hay audio, podría ser un problema de códec.', 'info', 6000);
+                    
+                    // Mostrar información de solución de problemas para archivos MKV
+                    setTimeout(() => {
+                        if (videoPlayer.muted || videoPlayer.volume === 0) {
+                            showAudioTroubleshooting();
+                        }
+                    }, 3000);
+                    
+                    // Intentar detectar si el audio funciona
+                    try {
+                        // Solo crear el contexto de audio si es necesario
+                        if (window.AudioContext || window.webkitAudioContext) {
+                            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                            const source = audioContext.createMediaElementSource(videoPlayer);
+                            source.connect(audioContext.destination);
+                            console.log('Audio context connected successfully for MKV file');
+                        }
+                    } catch (audioError) {
+                        console.warn('Audio context error:', audioError);
+                        showNotification('⚠️ Posible problema de compatibilidad de audio con este archivo MKV', 'warning', 7000);
+                        showAudioTroubleshooting();
+                    }
+                }
+                
+                // Verificar después de un tiempo si el audio realmente funciona
+                setTimeout(() => {
+                    if (videoPlayer.currentTime > 0 && !videoPlayer.paused && videoPlayer.volume > 0 && !videoPlayer.muted) {
+                        // El video está reproduciendo, verificar si realmente hay audio
+                        console.log('Video playing, checking for actual audio output...');
+                    }
+                }, 5000);
+            }, 1000);
+        }
+
         videoPlayer.oncanplay = () => {
             if (playerLoadingIndicator) playerLoadingIndicator.style.display = 'none';
             if (playerStatusMessage) playerStatusMessage.style.display = 'none';
             if (localSubtitleUploadContainer) { // Show subtitle upload oncanplay
                 localSubtitleUploadContainer.style.display = 'block';
             }
+            
+            // Asegurar que el audio esté habilitado cuando el video esté listo
+            ensureAudioEnabled();
+            detectAudioIssues();
         };
 
         videoPlayer.onplaying = () => {
             clearTimeout(stallTimeoutId);
             if (playerLoadingIndicator) playerLoadingIndicator.style.display = 'none';
             if (playerStatusMessage) playerStatusMessage.style.display = 'none';
+            
+            // Verificar audio nuevamente cuando comience la reproducción
+            ensureAudioEnabled();
+        };
+
+        // Event listener para errores de audio específicos
+        videoPlayer.onerror = (event) => {
+            const error = videoPlayer.error;
+            if (error) {
+                console.error('Video player error:', error);
+                let errorMessage = 'Error de reproducción';
+                
+                switch (error.code) {
+                    case MediaError.MEDIA_ERR_ABORTED:
+                        errorMessage = 'Reproducción cancelada';
+                        break;
+                    case MediaError.MEDIA_ERR_NETWORK:
+                        errorMessage = 'Error de red durante la descarga';
+                        break;
+                    case MediaError.MEDIA_ERR_DECODE:
+                        errorMessage = 'Error al decodificar el archivo (posible problema de códec)';
+                        if (selectedFile.name.toLowerCase().endsWith('.mkv')) {
+                            errorMessage += '. Los archivos MKV pueden tener códecs no compatibles.';
+                        }
+                        break;
+                    case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                        errorMessage = 'Formato de archivo no soportado';
+                        break;
+                }
+                
+                showNotification(errorMessage, 'error', 8000);
+            }
+        };
+
+        // Listener para cambios en el volumen/mute
+        videoPlayer.onvolumchange = () => {
+            if (videoPlayer.muted) {
+                console.log('Video was muted by user or system');
+                // Opcional: mostrar notificación si se mutea automáticamente
+                setTimeout(() => {
+                    if (videoPlayer.muted) {
+                        showNotification('🔇 El audio está desactivado. Haz clic en el botón de volumen para activarlo.', 'info', 5000);
+                    }
+                }, 500);
+            }
         };
     });
     // Enhanced file selection logic ends
@@ -3525,11 +3694,50 @@ async function closeVideoModal() {
   document.getElementById('video-modal').style.display = 'none';
   
   // Detener y limpiar el video player
+  const videoPlayer = document.getElementById('video-player');
+  if (videoPlayer) {
+    videoPlayer.pause();
+    videoPlayer.src = '';
+    videoPlayer.load();
+    
+    // Limpiar pistas de subtítulos
+    const tracks = videoPlayer.getElementsByTagName('track');
+    while (tracks.length > 0) {
+      videoPlayer.removeChild(tracks[0]);
+    }
+  }
+  
   if (currentVideoPlayer) {
     currentVideoPlayer.pause();
     currentVideoPlayer.src = '';
     currentVideoPlayer.load();
     currentVideoPlayer = null;
+  }
+  
+  // Limpiar URLs de blob de subtítulos locales
+  if (window.localSubtitleBlobUrls) {
+    window.localSubtitleBlobUrls.forEach(url => {
+      URL.revokeObjectURL(url);
+    });
+    window.localSubtitleBlobUrls = [];
+  }
+  
+  // Limpiar el cliente torrent WebTorrent si existe
+  if (window.currentTorrentClient) {
+    window.currentTorrentClient.destroy();
+    window.currentTorrentClient = null;
+  }
+  
+  // Limpiar mensaje de solución de problemas de audio
+  const troubleshootingDiv = document.querySelector('.audio-troubleshooting');
+  if (troubleshootingDiv) {
+    troubleshootingDiv.remove();
+  }
+  
+  // Limpiar timeout de stall si existe
+  if (stallTimeoutId) {
+    clearTimeout(stallTimeoutId);
+    stallTimeoutId = null;
   }
   
   // Limpiar estadísticas si están corriendo
