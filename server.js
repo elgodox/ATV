@@ -324,6 +324,14 @@ app.use(express.static('public'));
 // Servir archivos de subtítulos
 app.use('/subtitles', express.static(path.join(__dirname, 'uploads', 'subtitles')));
 
+// Ruta para servir configuración de Supabase al cliente
+app.get('/api/config', (req, res) => {
+  res.json({
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+  });
+});
+
 // Ruta para obtener géneros
 app.get('/api/genres', async (req, res) => {
   try {

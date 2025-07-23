@@ -1,19 +1,3 @@
-// Variables globales para auth y favorites
-let auth, favorites;
-
-// Cargar configuración de Supabase de manera asíncrona
-async function initSupabase() {
-  try {
-    const supabaseModule = await window.loadSupabaseConfig();
-    auth = supabaseModule.auth;
-    favorites = supabaseModule.favorites;
-    console.log('✅ Supabase configurado correctamente');
-  } catch (error) {
-    console.error('❌ Error configurando Supabase:', error);
-    // Continuar sin Supabase (modo offline/demo)
-  }
-}
-
 let currentPage = 1;
 let totalResults = 0;
 let isLoading = false;
@@ -21,7 +5,7 @@ let originalDescription = '';
 let spanishDescription = '';
 let originalTitle = '';
 let spanishTitle = '';
-let currentUser = null; // Reemplaza selectedAccount
+let selectedAccount;
 let showingFavorites = false; 
 let stallTimeoutId = null;
 window.localSubtitleBlobUrls = []; // Initialize for storing local subtitle blob URLs
@@ -552,23 +536,7 @@ function performSearch() {
   }
 }
 
-// Configurar event listeners de autenticación
-document.getElementById('login-btn').addEventListener('click', showLoginModal);
-document.getElementById('register-btn').addEventListener('click', showRegisterModal);
-document.getElementById('logout-btn').addEventListener('click', handleLogout);
-
-// Event listeners del modal
-document.getElementById('close-modal').addEventListener('click', hideAuthModal);
-document.getElementById('switch-to-register').addEventListener('click', switchToRegister);
-document.getElementById('login-form').addEventListener('submit', handleLogin);
-document.getElementById('register-form').addEventListener('submit', handleRegister);
-
-// Cerrar modal al hacer clic fuera
-document.getElementById('auth-modal').addEventListener('click', (e) => {
-  if (e.target.id === 'auth-modal') {
-    hideAuthModal();
-  }
-});
+document.getElementById('connect-metamask').addEventListener('click', connectMetaMask);
 
 // Debug: verificar que los elementos principales existan
 document.addEventListener('DOMContentLoaded', function() {
@@ -731,57 +699,31 @@ async function getTitles(page = 1) {
   
   // Verificar si el filtro de favoritos está activo
   if (showingFavorites) {
-    if (!currentUser) {
-      elements.movieGrid.innerHTML = '<p>Debes iniciar sesión para ver tus favoritos.</p>';
-      return;
+    const favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
+
+    // Filter favorites by the current type (movie or tv), or all if no type selected
+    let filteredFavorites = favorites;
+    if (type && type !== '') {
+      filteredFavorites = favorites.filter(fav => fav.type === type);
     }
 
-    try {
-      const favoritesResult = await favorites.getFavorites(currentUser.id);
-      
-      if (!favoritesResult.success) {
-        elements.movieGrid.innerHTML = '<p>Error al cargar favoritos.</p>';
-        return;
-      }
-
-      let userFavorites = favoritesResult.data || [];
-
-      // Filter favorites by the current type (movie or tv), or all if no type selected
-      if (type && type !== '') {
-        userFavorites = userFavorites.filter(fav => fav.movie_data.type === type);
-      }
-
-      if (userFavorites.length === 0) {
+    if (filteredFavorites.length === 0) {
         elements.movieGrid.innerHTML = '<p>No tienes favoritos en esta categoría.</p>';
         showSearchLoading(false);
         isLoading = false;
         return;
-      }
+    }
 
-      // Obtener los detalles de cada película/serie en la lista de favoritos
-      data = { results: [] };
+    // Obtener los detalles de cada película/serie en la lista de favoritos
+    data = { results: [] };
 
-      for (let favorite of userFavorites) {
-        const movieData = favorite.movie_data;
-        if (movieData && movieData.id) {
-          try {
-            const response = await fetch(`/api/titles/details?id=${movieData.id}&type=${movieData.type}&language=en`);
-            const movie = await response.json();
-            if (movie && movie.poster_path) { // Only include results with images
-              movie.content_type = movieData.type; // Asegurar que el tipo esté disponible
-              data.results.push(movie);
-            }
-          } catch (error) {
-            console.error('Error loading favorite movie details:', error);
-          }
+    for (let favorite of filteredFavorites) {
+        const response = await fetch(`/api/titles/details?id=${favorite.id}&type=${favorite.type}&language=en`);
+        const movie = await response.json();
+        if (movie && movie.poster_path) { // Only include results with images
+            movie.content_type = favorite.type; // Asegurar que el tipo esté disponible
+            data.results.push(movie);
         }
-      }
-    } catch (error) {
-      console.error('Error loading favorites:', error);
-      elements.movieGrid.innerHTML = '<p>Error al cargar favoritos.</p>';
-      showSearchLoading(false);
-      isLoading = false;
-      return;
     }
   } else if (searchQuery && searchQuery.length > 0) {
     // Si hay búsqueda, usar la nueva API que busca en ambos tipos
@@ -957,13 +899,12 @@ async function getTitles(page = 1) {
 function toggleWatched(movieId, type, event) {
   event.stopPropagation(); // Evita que se abra el modal al hacer clic en el ícono
 
-  if (!currentUser) {
-    showNotification("Primero debes iniciar sesión", 'warning');
+  if (!selectedAccount) {
+    alert("Primero debes conectar MetaMask");
     return;
   }
 
-  const watchedKey = `${currentUser.id}-watched`;
-  let watched = JSON.parse(localStorage.getItem(watchedKey)) || [];
+  let watched = JSON.parse(localStorage.getItem(selectedAccount + '-watched')) || [];
   const watchedIndex = watched.findIndex(item => item.id === movieId && item.type === type);
   
   const movieCard = document.querySelector(`#movie-card-${movieId}`);
@@ -981,7 +922,7 @@ function toggleWatched(movieId, type, event) {
   }
 
   // Guardar el estado actualizado en el localStorage
-  localStorage.setItem(watchedKey, JSON.stringify(watched));
+  localStorage.setItem(selectedAccount + '-watched', JSON.stringify(watched));
 
  // updateMovieGrid();
 }
@@ -989,10 +930,7 @@ function toggleWatched(movieId, type, event) {
 
 
 function isWatched(movieId, type) {
-  if (!currentUser) return false;
-  
-  const watchedKey = `${currentUser.id}-watched`;
-  let watched = JSON.parse(localStorage.getItem(watchedKey)) || [];
+  let watched = JSON.parse(localStorage.getItem(selectedAccount + '-watched')) || [];
   return watched.some(item => item.id === movieId && item.type === type);
 }
 
@@ -1026,30 +964,9 @@ window.addEventListener('scroll', () => {
 });
 
 // Verifica si la película está en favoritos
-async function isFavorite(movieId, type) {
-  if (!currentUser) return false;
-  
-  try {
-    // Buscar en los datos del DOM primero (más rápido)
-    const movieCard = document.querySelector(`[data-id="${movieId}"]`);
-    if (movieCard) {
-      const heartIcon = document.getElementById(`heart-icon-${movieId}`);
-      if (heartIcon && heartIcon.style.color === 'red') {
-        return true;
-      }
-    }
-    
-    // Si no está en el DOM, consultar Supabase
-    const movieTitle = movieCard?.querySelector('h3')?.textContent;
-    if (movieTitle) {
-      return await favorites.isFavorite(currentUser.id, movieTitle);
-    }
-    
-    return false;
-  } catch (error) {
-    console.error('Error checking favorite status:', error);
-    return false;
-  }
+function isFavorite(movieId, type) {
+  let favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
+  return favorites.some(fav => fav.id === movieId && fav.type === type);
 }
 // Función para obtener los detalles completos de una serie de TV
 async function fetchTVDetails(tvId) {
@@ -2750,202 +2667,31 @@ btcButton.addEventListener('click', function () {
   }, 2000); // Cambia el texto por 2 segundos
 });
 
-// ===== FUNCIONES DE AUTENTICACIÓN CON SUPABASE =====
+// Función para conectar a MetaMask y mostrar el filtro de favoritos si está conectado
+async function connectMetaMask() {
+  if (window.ethereum) {
+      try {
+          // Solicita la conexión a MetaMask
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          const accounts = await ethereum.request({ method: 'eth_accounts' });
+          selectedAccount = accounts[0]; // Guarda la cuenta conectada
+          console.log("Conectado a MetaMask:", selectedAccount);
 
-// Mostrar modal de login
-function showLoginModal() {
-  document.getElementById('modal-title').textContent = 'Iniciar Sesión';
-  document.getElementById('login-form').classList.remove('hidden');
-  document.getElementById('register-form').classList.add('hidden');
-  document.getElementById('switch-text').innerHTML = '¿No tienes cuenta? <a href="#" id="switch-to-register">Regístrate aquí</a>';
-  document.getElementById('switch-to-register').addEventListener('click', switchToRegister);
-  document.getElementById('auth-modal').classList.remove('hidden');
-}
+          // Deshabilitar el botón de MetaMask y cambiar su apariencia
+          const metamaskButton = document.getElementById('connect-metamask');
+          metamaskButton.disabled = true;
+          metamaskButton.textContent = "MetaMask Conectado";
 
-// Mostrar modal de registro
-function showRegisterModal() {
-  document.getElementById('modal-title').textContent = 'Registrarse';
-  document.getElementById('login-form').classList.add('hidden');
-  document.getElementById('register-form').classList.remove('hidden');
-  document.getElementById('switch-text').innerHTML = '¿Ya tienes cuenta? <a href="#" id="switch-to-login">Inicia sesión aquí</a>';
-  document.getElementById('switch-to-login').addEventListener('click', switchToLogin);
-  document.getElementById('auth-modal').classList.remove('hidden');
-}
+          // Mostrar el filtro de favoritos
+          document.getElementById('favorite-filter-group').style.display = 'flex';
 
-// Cambiar a registro
-function switchToRegister(e) {
-  e.preventDefault();
-  showRegisterModal();
-}
-
-// Cambiar a login
-function switchToLogin(e) {
-  e.preventDefault();
-  showLoginModal();
-}
-
-// Ocultar modal
-function hideAuthModal() {
-  document.getElementById('auth-modal').classList.add('hidden');
-  // Limpiar formularios
-  document.getElementById('login-form').reset();
-  document.getElementById('register-form').reset();
-}
-
-// Manejar login
-async function handleLogin(e) {
-  e.preventDefault();
-  
-  if (!auth) {
-    showNotification('Supabase no está configurado', 'error');
-    return;
-  }
-  
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
-  
-  if (!email || !password) {
-    showNotification('Por favor completa todos los campos', 'error');
-    return;
-  }
-  
-  try {
-    const result = await auth.signIn(email, password);
-    
-    if (result.success) {
-      showNotification('¡Bienvenido! Has iniciado sesión correctamente', 'success');
-      hideAuthModal();
-      updateAuthUI(result.data.user);
-    } else {
-      showNotification(result.error || 'Error al iniciar sesión', 'error');
-    }
-  } catch (error) {
-    showNotification('Error al iniciar sesión: ' + error.message, 'error');
-  }
-}
-
-// Manejar registro
-async function handleRegister(e) {
-  e.preventDefault();
-  
-  if (!auth) {
-    showNotification('Supabase no está configurado', 'error');
-    return;
-  }
-  
-  const email = document.getElementById('register-email').value;
-  const password = document.getElementById('register-password').value;
-  const confirmPassword = document.getElementById('register-confirm-password').value;
-  
-  if (!email || !password || !confirmPassword) {
-    showNotification('Por favor completa todos los campos', 'error');
-    return;
-  }
-  
-  if (password !== confirmPassword) {
-    showNotification('Las contraseñas no coinciden', 'error');
-    return;
-  }
-  
-  if (password.length < 6) {
-    showNotification('La contraseña debe tener al menos 6 caracteres', 'error');
-    return;
-  }
-  
-  try {
-    const result = await auth.signUp(email, password);
-    
-    if (result.success) {
-      showNotification('¡Registro exitoso! Revisa tu email para confirmar tu cuenta', 'success');
-      hideAuthModal();
-      // Si el usuario se registra y confirma inmediatamente
-      if (result.data.user && !result.data.user.email_confirmed_at) {
-        showNotification('Por favor confirma tu email antes de continuar', 'warning');
+          // Cargar los favoritos si el filtro está activado
+          loadTitles();
+      } catch (error) {
+          console.error("Error al conectar MetaMask", error);
       }
-    } else {
-      showNotification(result.error || 'Error al registrarse', 'error');
-    }
-  } catch (error) {
-    showNotification('Error al registrarse: ' + error.message, 'error');
-  }
-}
-
-// Manejar logout
-async function handleLogout() {
-  try {
-    const result = await auth.signOut();
-    
-    if (result.success) {
-      showNotification('Has cerrado sesión correctamente', 'success');
-      updateAuthUI(null);
-    } else {
-      showNotification('Error al cerrar sesión', 'error');
-    }
-  } catch (error) {
-    showNotification('Error al cerrar sesión: ' + error.message, 'error');
-  }
-}
-
-// Actualizar UI según estado de autenticación
-function updateAuthUI(user) {
-  currentUser = user;
-  
-  const authButtons = document.getElementById('auth-buttons');
-  const userInfo = document.getElementById('user-info');
-  const userEmail = document.getElementById('user-email');
-  const favoriteFilterGroup = document.getElementById('favorite-filter-group');
-  
-  if (user) {
-    // Usuario logueado
-    authButtons.classList.add('hidden');
-    userInfo.classList.remove('hidden');
-    userEmail.textContent = user.email;
-    
-    // Mostrar filtro de favoritos si existe
-    if (favoriteFilterGroup) {
-      favoriteFilterGroup.style.display = 'flex';
-    }
-    
-    // Cargar favoritos si el filtro está activado
-    loadTitles();
   } else {
-    // Usuario no logueado
-    authButtons.classList.remove('hidden');
-    userInfo.classList.add('hidden');
-    userEmail.textContent = '';
-    
-    // Ocultar filtro de favoritos
-    if (favoriteFilterGroup) {
-      favoriteFilterGroup.style.display = 'none';
-    }
-  }
-}
-
-// Inicializar autenticación al cargar la página
-async function initAuth() {
-  // Primero inicializar Supabase
-  await initSupabase();
-  
-  if (!auth) {
-    console.warn('⚠️ Supabase no disponible, funcionando en modo limitado');
-    updateAuthUI(null);
-    return;
-  }
-  
-  try {
-    const user = await auth.getCurrentUser();
-    updateAuthUI(user);
-    
-    // Escuchar cambios en la autenticación
-    auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN') {
-        updateAuthUI(session.user);
-      } else if (event === 'SIGNED_OUT') {
-        updateAuthUI(null);
-      }
-    });
-  } catch (error) {
-    console.error('Error inicializando autenticación:', error);
+      alert('MetaMask no está instalado');
   }
 }
 
@@ -2964,83 +2710,51 @@ async function getPlatforms(movieId) {
 
 
 // Alternar favoritos
-async function toggleFavorite(movieId, type, event) {
+function toggleFavorite(movieId, type, event) {
   // Evitar que el clic en el corazón se propague y abra el modal
   event.stopPropagation();
 
-  if (!currentUser) {
-      showNotification("Primero debes iniciar sesión", 'warning');
+  if (!selectedAccount) {
+      alert("Primero debes conectar MetaMask");
       return;
   }
 
-  try {
-    // Obtener datos de la película del DOM o de las variables globales
-    const movieCard = event.target.closest('.movie-card');
-    const movieTitle = movieCard?.querySelector('h3')?.textContent || `Movie ${movieId}`;
-    const movieImage = movieCard?.querySelector('img')?.src || '';
-    
-    const movieData = {
-      id: movieId,
-      title: movieTitle,
-      type: type,
-      image: movieImage,
-      // Agregar más datos si están disponibles
-    };
+  let favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
 
-    // Verificar si ya es favorito
-    const isFav = await favorites.isFavorite(currentUser.id, movieTitle);
-    
-    if (isFav) {
-      // Remover de favoritos
-      const result = await favorites.removeFavorite(currentUser.id, movieTitle);
-      if (result.success) {
-        document.getElementById(`heart-icon-${movieId}`).style.color = 'black';
-        showNotification('Eliminado de favoritos', 'success');
-      } else {
-        showNotification('Error al eliminar favorito', 'error');
-      }
-    } else {
-      // Agregar a favoritos
-      const result = await favorites.addFavorite(currentUser.id, movieData);
-      if (result.success) {
-        document.getElementById(`heart-icon-${movieId}`).style.color = 'red';
-        showNotification('Agregado a favoritos', 'success');
-      } else {
-        showNotification('Error al agregar favorito', 'error');
-      }
-    }
+  // Check if the favorite with the specific type is already in the list
+  const favoriteIndex = favorites.findIndex(fav => fav.id === movieId && fav.type === type);
 
-    // Actualizar la lista de favoritos
-    if (showingFavorites) {
-      loadFavorites();
-    }
-  } catch (error) {
-    console.error('Error toggleFavorite:', error);
-    showNotification('Error al actualizar favoritos', 'error');
+  // Agregar o quitar de favoritos
+  if (favoriteIndex !== -1) {
+      // Remove favorite
+      favorites.splice(favoriteIndex, 1);
+      document.getElementById(`heart-icon-${movieId}`).style.color = 'black'; // Cambiar a negro si se quita de favoritos
+  } else {
+      // Add new favorite with type
+      favorites.push({ id: movieId, type: type });
+      document.getElementById(`heart-icon-${movieId}`).style.color = 'red'; // Cambiar a rojo si se agrega a favoritos
   }
+
+  // Guardar favoritos en localStorage
+  localStorage.setItem(selectedAccount, JSON.stringify(favorites));
+
+  // Actualizar la lista de favoritos (opcional)
+  loadFavorites();
 }
 
-// Función para cargar los favoritos desde Supabase
-async function loadFavorites() {
-  if (!currentUser) return;
 
-  try {
-    const result = await favorites.getFavorites(currentUser.id);
-    
-    if (result.success) {
-      const userFavorites = result.data;
-      
-      // Actualizar el color de los corazones en la UI
-      userFavorites.forEach(favorite => {
-        const heartIcon = document.getElementById(`heart-icon-${favorite.movie_data.id}`);
-        if (heartIcon) {
-          heartIcon.style.color = 'red';
-        }
-      });
-    }
-  } catch (error) {
-    console.error('Error loading favorites:', error);
-  }
+
+// Función para cargar los favoritos desde localStorage
+function loadFavorites() {
+  const favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
+
+  // Iterar sobre todas las películas y actualizar el color del corazón
+  favorites.forEach(movieId => {
+      const heartIcon = document.getElementById(`heart-icon-${movieId}`);
+      if (heartIcon) {
+          heartIcon.style.color = 'red'; // Cambiar a rojo si está en favoritos
+      }
+  });
 }
 
 // Función para activar/desactivar el filtro de favoritos
@@ -3056,8 +2770,17 @@ fetchGenres();
 fetchProviders("movie"); // Cargar proveedores iniciales de películas (por defecto)
 
 window.onload = async function () {
-  // Inicializar autenticación con Supabase
-  await initAuth();
+  if (window.ethereum) {
+    const accounts = await ethereum.request({ method: 'eth_accounts' });
+    if (accounts.length > 0) {
+        selectedAccount = accounts[0];
+        const metamaskButton = document.getElementById('connect-metamask');
+        metamaskButton.disabled = true;
+        metamaskButton.textContent = "MetaMask Conectado";
+        document.getElementById('favorite-filter-group').style.display = 'flex';
+
+    }
+}
   updateGenreSelect();  // Cargar los géneros iniciales (por ejemplo, películas)
 };
 
@@ -4393,13 +4116,4 @@ document.addEventListener('click', function(event) {
       button.classList.remove('active');
     });
   }
-});
-
-// Inicializar la aplicación cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', async function() {
-  // Inicializar autenticación
-  await initAuth();
-  
-  // Otros inicializadores que puedan existir
-  console.log('Aplicación inicializada con autenticación Supabase');
 });

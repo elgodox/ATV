@@ -5,10 +5,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ATV</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
@@ -23,10 +25,24 @@
         data-btc-address="bc1qpc5xzv2lrl3g4kjlmqz83aqnnyu7d0r30utryw">
         <i class="fab fa-bitcoin"></i> Buy me a coffee ☕
       </a>
-      <a href="javascript:void(0);" id="connect-metamask" class="button metamask-btn">
-        <img src="https://cdn.iconscout.com/icon/free/png-256/metamask-2728406-2261817.png" alt="MetaMask Logo">
-        Conectar MetaMask
-      </a>
+      
+      <!-- Botones de autenticación -->
+      <div id="auth-buttons" class="auth-section">
+        <button id="login-btn" class="button auth-btn">
+          <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+        </button>
+        <button id="register-btn" class="button auth-btn secondary">
+          <i class="fas fa-user-plus"></i> Registrarse
+        </button>
+      </div>
+      
+      <!-- Información del usuario logueado -->
+      <div id="user-info" class="user-info hidden">
+        <span id="user-email" class="user-email"></span>
+        <button id="logout-btn" class="button auth-btn logout">
+          <i class="fas fa-sign-out-alt"></i> Salir
+        </button>
+      </div>
 
     </div>
   </header>
@@ -388,6 +404,57 @@
     </div>
   </div>
 
+  <!-- Modal de Autenticación -->
+  <div id="auth-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">Iniciar Sesión</h2>
+        <button id="close-modal" class="close-modal">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Formulario de Login -->
+        <form id="login-form" class="auth-form">
+          <div class="form-group">
+            <label for="login-email">Email:</label>
+            <input type="email" id="login-email" autocomplete="email" required>
+          </div>
+          <div class="form-group">
+            <label for="login-password">Contraseña:</label>
+            <input type="password" id="login-password" autocomplete="current-password" required>
+          </div>
+          <button type="submit" class="submit-btn">Iniciar Sesión</button>
+        </form>
+
+        <!-- Formulario de Registro -->
+        <form id="register-form" class="auth-form hidden">
+          <div class="form-group">
+            <label for="register-email">Email:</label>
+            <input type="email" id="register-email" autocomplete="email" required>
+          </div>
+          <div class="form-group">
+            <label for="register-password">Contraseña:</label>
+            <input type="password" id="register-password" autocomplete="new-password" required minlength="6">
+          </div>
+          <div class="form-group">
+            <label for="register-confirm-password">Confirmar Contraseña:</label>
+            <input type="password" id="register-confirm-password" autocomplete="new-password" required minlength="6">
+          </div>
+          <button type="submit" class="submit-btn">Registrarse</button>
+        </form>
+
+        <!-- Switch entre Login y Register -->
+        <div class="auth-switch">
+          <p id="switch-text">¿No tienes cuenta? 
+            <a href="#" id="switch-to-register">Regístrate aquí</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="module-loader.js"></script>
+  <script src="supabase-config.js"></script>
   <script src="app.js"></script>
   <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 

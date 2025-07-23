@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@supabase/supabase-js": "^2.52.1",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "multer": "^2.0.0",
@@ -24,5 +25,5 @@
       "ip": "2.0.1"
     }
   },
-  "description": ""
+  "description": "ATV - Aplicación para buscar y ver películas y series con autenticación Supabase"
 }
