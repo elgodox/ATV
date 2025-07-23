@@ -1626,6 +1626,7 @@ async function showDetails(id, type, movieCard) {
     }
 
     // Mostrar el modal
+    elements.modal.classList.remove('hidden');
     elements.modal.style.display = 'block';
 
   } catch (error) {
@@ -2157,6 +2158,7 @@ function startPlayer(magnetLink, movieTitle) {
   // Show the video modal first
   const videoModal = document.getElementById('video-modal');
   if (videoModal) {
+    videoModal.classList.remove('hidden');
     videoModal.style.display = 'block';
   } else {
     showNotification('Error: No se encontró el modal de video', 'error');
@@ -2593,6 +2595,7 @@ function startPlayer(magnetLink, movieTitle) {
 
 // Función para cerrar el modal
 async function closeModal() {
+  elements.modal.classList.add('hidden');
   elements.modal.style.display = "none";
   elements.modalTrailer.innerHTML = ""; // Limpiar tráiler cuando se cierra el modal
 
@@ -3121,7 +3124,9 @@ window.showTorrentOptions = function(magnetLink, movieTitle) {
 // Función para explorar archivos en el torrent y mostrar el modal de selección
 async function watchOnline(magnetURI, movieTitle) {
   // Mostrar modal de selección de archivos
-  document.getElementById('file-selection-modal').style.display = 'block';
+  const fileSelectionModal = document.getElementById('file-selection-modal');
+  fileSelectionModal.classList.remove('hidden');
+  fileSelectionModal.style.display = 'block';
   document.getElementById('torrent-loading').style.display = 'block';
   document.getElementById('file-list').style.display = 'none';
 
@@ -3219,7 +3224,9 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
   pendingTorrentRequests.set(torrentHash, true);
   
   // Mostrar modal de selección de archivos
-  document.getElementById('file-selection-modal').style.display = 'block';
+  const fileSelectionModal = document.getElementById('file-selection-modal');
+  fileSelectionModal.classList.remove('hidden');
+  fileSelectionModal.style.display = 'block';
   document.getElementById('torrent-loading').style.display = 'block';
   document.getElementById('file-list').style.display = 'none';
 
@@ -3422,7 +3429,9 @@ function playVideoFileWithStats(fileIndex) {
   closeFileSelectionModal();
 
   // Mostrar modal del reproductor de video
-  document.getElementById('video-modal').style.display = 'block';
+  const videoModalEl = document.getElementById('video-modal');
+  videoModalEl.classList.remove('hidden');
+  videoModalEl.style.display = 'block';
   
   const videoPlayer = document.getElementById('video-player');
   currentVideoPlayer = videoPlayer;
@@ -3968,7 +3977,9 @@ function disableSubtitles() {
 
 // Función para cerrar el modal del reproductor de video
 async function closeVideoModal() {
-  document.getElementById('video-modal').style.display = 'none';
+  const videoModal = document.getElementById('video-modal');
+  videoModal.classList.add('hidden');
+  videoModal.style.display = 'none';
   
   // Detener y limpiar el video player
   const videoPlayer = document.getElementById('video-player');
@@ -4095,7 +4106,9 @@ async function closeVideoModal() {
 
 // Función para cerrar el modal de selección de archivos
 function closeFileSelectionModal() {
-  document.getElementById('file-selection-modal').style.display = 'none';
+  const fileSelectionModal = document.getElementById('file-selection-modal');
+  fileSelectionModal.classList.add('hidden');
+  fileSelectionModal.style.display = 'none';
   // Limpiar solicitudes pendientes al cerrar
   pendingTorrentRequests.clear();
 }
