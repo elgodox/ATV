@@ -932,6 +932,17 @@ async function fetchTVDetails(tvId) {
 
 // Función mejorada para cargar trailers con múltiples fuentes y mejor relevancia
 async function loadEnhancedTrailer(id, type, title, dataOriginal) {
+  // Para series de TV, mostrar selector de temporadas si hay múltiples temporadas
+  if (type === 'tv' && dataOriginal && dataOriginal.number_of_seasons > 1) {
+    await displayTVSeasonTrailers(id, type, title, dataOriginal);
+  } else {
+    // Para películas o series con una sola temporada, cargar trailer directamente
+    await loadSingleTrailer(id, type, title, dataOriginal);
+  }
+}
+
+// Función para cargar un solo trailer (películas o series sin selector de temporada)
+async function loadSingleTrailer(id, type, title, dataOriginal, season = null) {
   // Mostrar indicador de carga
   elements.modalTrailer.innerHTML = '<div class="trailer-loading"><i class="fas fa-spinner fa-spin"></i> Buscando trailer...</div>';
   
@@ -956,6 +967,10 @@ async function loadEnhancedTrailer(id, type, title, dataOriginal) {
     if (year) {
       params.append('year', year);
     }
+    
+    if (season) {
+      params.append('season', season);
+    }
 
     const response = await fetch(`/api/enhanced-trailer?${params}`);
     
@@ -964,17 +979,128 @@ async function loadEnhancedTrailer(id, type, title, dataOriginal) {
       displayTrailer(trailerData);
     } else {
       // Si no se encontró trailer, mostrar fallback con imágenes
-      await displayImageFallback(dataOriginal, title);
+      await displayImageFallback(dataOriginal, title, season);
     }
   } catch (error) {
     console.error('Error loading enhanced trailer:', error);
-    await displayImageFallback(dataOriginal, title);
+    await displayImageFallback(dataOriginal, title, season);
   }
+}
+
+// Función para mostrar selector de temporadas y trailers para series de TV
+async function displayTVSeasonTrailers(id, type, title, dataOriginal) {
+  const seasons = dataOriginal.seasons || [];
+  const regularSeasons = seasons.filter(season => season.season_number > 0);
+  
+  if (regularSeasons.length === 0) {
+    await loadSingleTrailer(id, type, title, dataOriginal);
+    return;
+  }
+  
+  // Crear selector de temporadas
+  let seasonSelector = `
+    <div class="tv-trailer-selector">
+      <div class="selector-header">
+        <h4><i class="fas fa-tv"></i> Trailers por Temporada</h4>
+        <p>Selecciona una temporada para ver su trailer:</p>
+      </div>
+      <div class="season-buttons">
+  `;
+  
+  // Agregar botón para trailer general
+  seasonSelector += `
+    <button class="season-btn active" data-season="general" onclick="loadSeasonTrailer('${id}', '${type}', '${title}', null)">
+      <i class="fas fa-film"></i>
+      <span>General</span>
+    </button>
+  `;
+  
+  // Agregar botones para cada temporada
+  regularSeasons.forEach(season => {
+    seasonSelector += `
+      <button class="season-btn" data-season="${season.season_number}" onclick="loadSeasonTrailer('${id}', '${type}', '${title}', ${season.season_number})">
+        <i class="fas fa-play-circle"></i>
+        <span>Temporada ${season.season_number}</span>
+        <small>${season.episode_count} episodios</small>
+      </button>
+    `;
+  });
+  
+  seasonSelector += `
+      </div>
+      <div id="selected-trailer-container">
+        <!-- El trailer seleccionado aparecerá aquí -->
+      </div>
+    </div>
+  `;
+  
+  elements.modalTrailer.innerHTML = seasonSelector;
+  
+  // Cargar trailer general por defecto
+  await loadSeasonTrailerContent(id, type, title, dataOriginal, null);
+}
+
+// Función para cargar trailer de temporada específica
+async function loadSeasonTrailerContent(id, type, title, dataOriginal, season) {
+  const container = document.getElementById('selected-trailer-container');
+  if (!container) return;
+  
+  // Mostrar indicador de carga
+  container.innerHTML = '<div class="trailer-loading"><i class="fas fa-spinner fa-spin"></i> Buscando trailer...</div>';
+  
+  try {
+    // Extraer año de lanzamiento
+    let year = null;
+    if (dataOriginal && dataOriginal.first_air_date) {
+      year = new Date(dataOriginal.first_air_date).getFullYear();
+    }
+
+    // Usar la nueva API mejorada
+    const params = new URLSearchParams({
+      title: title,
+      type: type,
+      id: id
+    });
+    
+    if (year) {
+      params.append('year', year);
+    }
+    
+    if (season) {
+      params.append('season', season);
+    }
+
+    const response = await fetch(`/api/enhanced-trailer?${params}`);
+    
+    if (response.ok) {
+      const trailerData = await response.json();
+      displayTrailerInContainer(trailerData, container);
+    } else {
+      // Si no se encontró trailer, mostrar fallback con imágenes
+      await displayImageFallbackInContainer(dataOriginal, title, season, container);
+    }
+  } catch (error) {
+    console.error('Error loading season trailer:', error);
+    await displayImageFallbackInContainer(dataOriginal, title, season, container);
+  }
+}
+
+// Función global para cargar trailer de temporada (llamada desde onClick)
+window.loadSeasonTrailer = async function(id, type, title, season) {
+  // Actualizar botones activos
+  document.querySelectorAll('.season-btn').forEach(btn => btn.classList.remove('active'));
+  const clickedBtn = document.querySelector(`[data-season="${season || 'general'}"]`);
+  if (clickedBtn) clickedBtn.classList.add('active');
+  
+  // Obtener datos originales desde variables globales o DOM
+  const dataOriginal = window.currentDataOriginal || null;
+  
+  await loadSeasonTrailerContent(id, type, title, dataOriginal, season);
 }
 
 // Función para mostrar el trailer
 function displayTrailer(trailerData) {
-  const { videoId, source, title, official, fromTMDb } = trailerData;
+  const { videoId, source, title, official, fromTMDb, season } = trailerData;
   
   let embedUrl;
   let trailerInfo = '';
@@ -984,16 +1110,25 @@ function displayTrailer(trailerData) {
     embedUrl = `https://www.youtube.com/embed/${videoId}`;
   } else if (source === 'vimeo') {
     embedUrl = `https://player.vimeo.com/video/${videoId}`;
+  } else if (source === 'dailymotion') {
+    embedUrl = `https://www.dailymotion.com/embed/video/${videoId}`;
   } else {
     elements.modalTrailer.innerHTML = "<p>Fuente de video no soportada.</p>";
     return;
   }
   
-  // Mostrar información del trailer si es relevante
+  // Mostrar información del trailer
   if (official) {
-    trailerInfo = '<div class="trailer-info"><i class="fas fa-check-circle"></i> Trailer Oficial</div>';
+    trailerInfo = '<div class="trailer-info official"><i class="fas fa-check-circle"></i> Trailer Oficial</div>';
   } else if (fromTMDb) {
-    trailerInfo = '<div class="trailer-info"><i class="fas fa-star"></i> De TMDb</div>';
+    trailerInfo = '<div class="trailer-info tmdb"><i class="fas fa-star"></i> De TMDb</div>';
+  } else {
+    trailerInfo = '<div class="trailer-info external"><i class="fas fa-external-link-alt"></i> Fuente Externa</div>';
+  }
+  
+  // Agregar información de temporada si aplica
+  if (season) {
+    trailerInfo += `<div class="season-info"><i class="fas fa-tv"></i> Temporada ${season}</div>`;
   }
   
   elements.modalTrailer.innerHTML = `
@@ -1002,8 +1137,52 @@ function displayTrailer(trailerData) {
   `;
 }
 
+// Función para mostrar trailer en contenedor específico
+function displayTrailerInContainer(trailerData, container) {
+  const { videoId, source, title, official, fromTMDb, season } = trailerData;
+  
+  let embedUrl;
+  let trailerInfo = '';
+  
+  // Crear URL del embed según la fuente
+  if (source === 'youtube') {
+    embedUrl = `https://www.youtube.com/embed/${videoId}`;
+  } else if (source === 'vimeo') {
+    embedUrl = `https://player.vimeo.com/video/${videoId}`;
+  } else if (source === 'dailymotion') {
+    embedUrl = `https://www.dailymotion.com/embed/video/${videoId}`;
+  } else {
+    container.innerHTML = "<p>Fuente de video no soportada.</p>";
+    return;
+  }
+  
+  // Mostrar información del trailer
+  if (official) {
+    trailerInfo = '<div class="trailer-info official"><i class="fas fa-check-circle"></i> Trailer Oficial</div>';
+  } else if (fromTMDb) {
+    trailerInfo = '<div class="trailer-info tmdb"><i class="fas fa-star"></i> De TMDb</div>';
+  } else {
+    trailerInfo = '<div class="trailer-info external"><i class="fas fa-external-link-alt"></i> Fuente Externa</div>';
+  }
+  
+  // Agregar información de temporada si aplica
+  if (season) {
+    trailerInfo += `<div class="season-info"><i class="fas fa-tv"></i> Temporada ${season}</div>`;
+  }
+  
+  container.innerHTML = `
+    ${trailerInfo}
+    <iframe src="${embedUrl}" frameborder="0" allowfullscreen></iframe>
+  `;
+}
+
 // Función para mostrar imágenes cuando no hay trailer disponible
-async function displayImageFallback(dataOriginal, title) {
+async function displayImageFallback(dataOriginal, title, season = null) {
+  await displayImageFallbackInContainer(dataOriginal, title, season, elements.modalTrailer);
+}
+
+// Función para mostrar imágenes en contenedor específico
+async function displayImageFallbackInContainer(dataOriginal, title, season, container) {
   try {
     const images = [];
     
@@ -1019,7 +1198,13 @@ async function displayImageFallback(dataOriginal, title) {
     
     if (images.length > 0) {
       let imageCarousel = '<div class="image-carousel">';
-      imageCarousel += '<div class="no-trailer-message"><i class="fas fa-info-circle"></i> No hay trailer disponible. Aquí tienes algunas imágenes:</div>';
+      
+      // Mensaje personalizado para temporadas
+      const message = season ? 
+        `<i class="fas fa-info-circle"></i> No hay trailer disponible para la temporada ${season}. Aquí tienes algunas imágenes:` :
+        '<i class="fas fa-info-circle"></i> No hay trailer disponible. Aquí tienes algunas imágenes:';
+      
+      imageCarousel += `<div class="no-trailer-message">${message}</div>`;
       
       if (images.length === 1) {
         imageCarousel += `<img src="${images[0]}" alt="${title}" class="fallback-image">`;
@@ -1044,13 +1229,21 @@ async function displayImageFallback(dataOriginal, title) {
       }
       
       imageCarousel += '</div>';
-      elements.modalTrailer.innerHTML = imageCarousel;
+      container.innerHTML = imageCarousel;
     } else {
-      elements.modalTrailer.innerHTML = '<div class="no-content"><i class="fas fa-film"></i><p>No hay trailer ni imágenes disponibles.</p></div>';
+      const message = season ? 
+        `<i class="fas fa-film"></i><p>No hay trailer ni imágenes disponibles para la temporada ${season}.</p>` :
+        '<i class="fas fa-film"></i><p>No hay trailer ni imágenes disponibles.</p>';
+      
+      container.innerHTML = `<div class="no-content">${message}</div>`;
     }
   } catch (error) {
     console.error('Error displaying image fallback:', error);
-    elements.modalTrailer.innerHTML = '<div class="no-content"><i class="fas fa-exclamation-triangle"></i><p>No hay trailer disponible.</p></div>';
+    const message = season ? 
+      `<i class="fas fa-exclamation-triangle"></i><p>No hay trailer disponible para la temporada ${season}.</p>` :
+      '<i class="fas fa-exclamation-triangle"></i><p>No hay trailer disponible.</p>';
+    
+    container.innerHTML = `<div class="no-content">${message}</div>`;
   }
 }
 
@@ -1150,6 +1343,8 @@ async function showDetails(id, type, movieCard) {
     elements.modalDescription.innerHTML = `<p id="description-text">${spanishDescription}</p>`;
 
     // Buscar trailer usando la nueva API mejorada
+    // Guardar datos para uso global
+    window.currentDataOriginal = dataOriginal;
     await loadEnhancedTrailer(id, type, originalTitle, dataOriginal);
 
     // Mostrar los detalles adicionales (Géneros, Temporadas, Estado, Plataformas, Valoración)

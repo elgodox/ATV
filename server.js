@@ -645,7 +645,7 @@ app.get('/api/vimeo-trailer', async (req, res) => {
 
 // Nueva ruta mejorada para buscar trailers con múltiples fuentes
 app.get('/api/enhanced-trailer', async (req, res) => {
-  const { title, year, type, id } = req.query;
+  const { title, year, type, id, season } = req.query;
   
   if (!title) {
     return res.status(400).json({ error: 'Title is required' });
@@ -657,7 +657,15 @@ app.get('/api/enhanced-trailer', async (req, res) => {
     // 1. Primero intentar obtener trailer oficial de TMDb si tenemos el ID
     if (id && API_KEY) {
       try {
-        const tmdbUrl = `https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}&append_to_response=videos`;
+        let tmdbUrl;
+        
+        // Para series de TV con temporada específica, buscar trailers de la temporada
+        if (type === 'tv' && season) {
+          tmdbUrl = `https://api.themoviedb.org/3/tv/${id}/season/${season}?api_key=${API_KEY}&append_to_response=videos`;
+        } else {
+          tmdbUrl = `https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}&append_to_response=videos`;
+        }
+        
         const tmdbResponse = await fetch(tmdbUrl);
         const tmdbData = await tmdbResponse.json();
         
@@ -683,7 +691,8 @@ app.get('/api/enhanced-trailer', async (req, res) => {
               source: bestTrailer.site.toLowerCase(),
               title: bestTrailer.name,
               official: bestTrailer.official,
-              fromTMDb: true
+              fromTMDb: true,
+              season: season || null
             };
           }
         }
@@ -695,7 +704,17 @@ app.get('/api/enhanced-trailer', async (req, res) => {
     // 2. Si no se encontró en TMDb, buscar en YouTube con búsqueda mejorada
     if (!trailerResult) {
       try {
-        const searchTerm = year ? `${title} ${year} trailer` : `${title} trailer`;
+        let searchTerm;
+        
+        // Para series de TV con temporada, incluir temporada en búsqueda
+        if (type === 'tv' && season) {
+          searchTerm = year ? 
+            `${title} season ${season} ${year} trailer` : 
+            `${title} season ${season} trailer`;
+        } else {
+          searchTerm = year ? `${title} ${year} trailer` : `${title} trailer`;
+        }
+        
         const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchTerm)}`;
         
         const response = await fetch(youtubeUrl);
@@ -709,18 +728,39 @@ app.get('/api/enhanced-trailer', async (req, res) => {
           const videoTitle = match[2];
           
           // Filtrar resultados más relevantes
-          if (videoTitle.toLowerCase().includes('trailer') && 
-              !videoTitle.toLowerCase().includes('reaction') &&
-              !videoTitle.toLowerCase().includes('review') &&
-              !videoTitle.toLowerCase().includes('fan made')) {
-            trailerResult = {
-              videoId: videoId,
-              source: 'youtube',
-              title: videoTitle,
-              official: false,
-              fromTMDb: false
-            };
-            break;
+          const lowerTitle = videoTitle.toLowerCase();
+          if (lowerTitle.includes('trailer') && 
+              !lowerTitle.includes('reaction') &&
+              !lowerTitle.includes('review') &&
+              !lowerTitle.includes('fan made') &&
+              !lowerTitle.includes('parody')) {
+            
+            // Para series, verificar si el título incluye la temporada si se especificó
+            if (type === 'tv' && season) {
+              if (lowerTitle.includes(`season ${season}`) || 
+                  lowerTitle.includes(`s${season}`) ||
+                  lowerTitle.includes(`temporada ${season}`)) {
+                trailerResult = {
+                  videoId: videoId,
+                  source: 'youtube',
+                  title: videoTitle,
+                  official: false,
+                  fromTMDb: false,
+                  season: season
+                };
+                break;
+              }
+            } else {
+              trailerResult = {
+                videoId: videoId,
+                source: 'youtube',
+                title: videoTitle,
+                official: false,
+                fromTMDb: false,
+                season: season || null
+              };
+              break;
+            }
           }
         }
         
@@ -730,9 +770,10 @@ app.get('/api/enhanced-trailer', async (req, res) => {
           trailerResult = {
             videoId: firstVideoId,
             source: 'youtube',
-            title: 'Video relacionado',
+            title: season ? `Video relacionado - Temporada ${season}` : 'Video relacionado',
             official: false,
-            fromTMDb: false
+            fromTMDb: false,
+            season: season || null
           };
         }
       } catch (error) {
@@ -743,7 +784,16 @@ app.get('/api/enhanced-trailer', async (req, res) => {
     // 3. Si no se encontró en YouTube, intentar Vimeo
     if (!trailerResult && VIMEO_ACCESS_TOKEN) {
       try {
-        const searchTerm = year ? `${title} ${year} trailer` : `${title} trailer`;
+        let searchTerm;
+        
+        if (type === 'tv' && season) {
+          searchTerm = year ? 
+            `${title} season ${season} ${year} trailer` : 
+            `${title} season ${season} trailer`;
+        } else {
+          searchTerm = year ? `${title} ${year} trailer` : `${title} trailer`;
+        }
+        
         const vimeoUrl = `https://api.vimeo.com/videos?query=${encodeURIComponent(searchTerm)}&per_page=5`;
         
         const response = await fetch(vimeoUrl, {
@@ -756,7 +806,12 @@ app.get('/api/enhanced-trailer', async (req, res) => {
         if (data.data && data.data.length > 0) {
           const relevantTrailer = data.data.find(video => {
             const name = video.name.toLowerCase();
-            return name.includes('trailer') && !name.includes('fan') && !name.includes('reaction');
+            const isTrailer = name.includes('trailer') && !name.includes('fan') && !name.includes('reaction');
+            
+            if (type === 'tv' && season) {
+              return isTrailer && (name.includes(`season ${season}`) || name.includes(`s${season}`));
+            }
+            return isTrailer;
           }) || data.data[0];
           
           trailerResult = {
@@ -764,11 +819,59 @@ app.get('/api/enhanced-trailer', async (req, res) => {
             source: 'vimeo',
             title: relevantTrailer.name,
             official: false,
-            fromTMDb: false
+            fromTMDb: false,
+            season: season || null
           };
         }
       } catch (error) {
         console.log('Vimeo trailer search failed:', error.message);
+      }
+    }
+
+    // 4. Si no se encontró en Vimeo, intentar Dailymotion
+    if (!trailerResult) {
+      try {
+        let searchTerm;
+        
+        if (type === 'tv' && season) {
+          searchTerm = year ? 
+            `${title} season ${season} ${year} trailer` : 
+            `${title} season ${season} trailer`;
+        } else {
+          searchTerm = year ? `${title} ${year} trailer` : `${title} trailer`;
+        }
+        
+        // Usar API pública de Dailymotion para búsqueda
+        const dailymotionUrl = `https://www.dailymotion.com/json/videos?search=${encodeURIComponent(searchTerm)}&fields=id,title&limit=5`;
+        
+        const response = await fetch(dailymotionUrl);
+        const data = await response.json();
+        
+        if (data.list && data.list.length > 0) {
+          const relevantTrailer = data.list.find(video => {
+            const title = video.title.toLowerCase();
+            const isTrailer = title.includes('trailer') && 
+                            !title.includes('reaction') && 
+                            !title.includes('review') && 
+                            !title.includes('fan');
+            
+            if (type === 'tv' && season) {
+              return isTrailer && (title.includes(`season ${season}`) || title.includes(`s${season}`));
+            }
+            return isTrailer;
+          }) || data.list[0];
+          
+          trailerResult = {
+            videoId: relevantTrailer.id,
+            source: 'dailymotion',
+            title: relevantTrailer.title,
+            official: false,
+            fromTMDb: false,
+            season: season || null
+          };
+        }
+      } catch (error) {
+        console.log('Dailymotion trailer search failed:', error.message);
       }
     }
 
