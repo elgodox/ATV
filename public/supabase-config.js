@@ -1,6 +1,24 @@
 // Supabase configuration
-// Supabase is now loaded globally from /lib/supabase.js
-const { createClient } = supabase;
+// Wait for Supabase to be loaded globally from /lib/supabase.js
+function waitForSupabase() {
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && window.supabase) {
+      resolve(window.supabase);
+      return;
+    }
+    
+    const checkSupabase = () => {
+      if (typeof window !== 'undefined' && window.supabase) {
+        resolve(window.supabase);
+      } else {
+        setTimeout(checkSupabase, 100);
+      }
+    };
+    checkSupabase();
+  });
+}
+
+let createClient = null;
 
 // Variables para almacenar la configuración de Supabase
 let SUPABASE_URL = 'https://your-project.supabase.co';
@@ -10,6 +28,10 @@ let supabaseClient = null;
 // Función para inicializar la configuración de Supabase
 export async function initializeSupabaseConfig() {
   try {
+    // Wait for Supabase to be available
+    const supabaseLib = await waitForSupabase();
+    createClient = supabaseLib.createClient;
+    
     const response = await fetch('/api/supabase-config');
     const config = await response.json();
     
