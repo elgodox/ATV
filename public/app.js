@@ -812,8 +812,33 @@ async function getTitles(page = 1) {
     const providers = await fetchProvider(title.id, contentType);
     const providerNames = providers ? providers.join(', ') : 'No disponible';
 
-    // Verificar el título y la fecha según si es película o serie de TV
-    const titleName = title.original_title || title.original_name || 'Título desconocido';
+    // Función auxiliar para detectar caracteres no latinos
+    const containsNonLatinChars = (str) => {
+      if (!str) return false;
+      // Detectar caracteres asiáticos (coreano, japonés, chino, etc.)
+      return /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(str);
+    };
+
+    // Lógica inteligente para seleccionar el título - priorizar caracteres latinos
+    let titleName;
+    if (title.title && !containsNonLatinChars(title.title)) {
+      // Para películas, usar title si está en caracteres latinos
+      titleName = title.title;
+    } else if (title.name && !containsNonLatinChars(title.name)) {
+      // Para series, usar name si está en caracteres latinos
+      titleName = title.name;
+    } else if (title.original_title && !containsNonLatinChars(title.original_title)) {
+      // Si original_title está en caracteres latinos, usarlo
+      titleName = title.original_title;
+    } else if (title.original_name && !containsNonLatinChars(title.original_name)) {
+      // Si original_name está en caracteres latinos, usarlo
+      titleName = title.original_name;
+    } else {
+      // Como último recurso, usar cualquiera que esté disponible
+      titleName = title.title || title.name || title.original_title || title.original_name || 'Título desconocido';
+    }
+
+    // Verificar la fecha según si es película o serie de TV
     const releaseDate = title.release_date || title.first_air_date || 'Fecha desconocida';
 
     let seasons = '';
@@ -1354,8 +1379,30 @@ async function showDetails(id, type, movieCard) {
     const urlSpanish = `/api/titles/details?id=${id}&type=${type}&language=es`;
     const dataSpanish = await fetch(urlSpanish).then(response => response.json());
 
-    // Guardar el título y la descripción
-    originalTitle = dataOriginal.original_title || dataOriginal.original_name || "No Title";
+    // Función auxiliar para detectar caracteres no latinos
+    const containsNonLatinChars = (str) => {
+      if (!str) return false;
+      // Detectar caracteres asiáticos (coreano, japonés, chino, etc.)
+      return /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(str);
+    };
+
+    // Lógica inteligente para seleccionar el título del modal - priorizar caracteres latinos
+    if (dataOriginal.title && !containsNonLatinChars(dataOriginal.title)) {
+      // Para películas, usar title si está en caracteres latinos
+      originalTitle = dataOriginal.title;
+    } else if (dataOriginal.name && !containsNonLatinChars(dataOriginal.name)) {
+      // Para series, usar name si está en caracteres latinos
+      originalTitle = dataOriginal.name;
+    } else if (dataOriginal.original_title && !containsNonLatinChars(dataOriginal.original_title)) {
+      // Si original_title está en caracteres latinos, usarlo
+      originalTitle = dataOriginal.original_title;
+    } else if (dataOriginal.original_name && !containsNonLatinChars(dataOriginal.original_name)) {
+      // Si original_name está en caracteres latinos, usarlo
+      originalTitle = dataOriginal.original_name;
+    } else {
+      // Como último recurso, usar cualquiera que esté disponible
+      originalTitle = dataOriginal.title || dataOriginal.name || dataOriginal.original_title || dataOriginal.original_name || "No Title";
+    }
     spanishTitle = dataSpanish.title || dataSpanish.name || originalTitle; // Si no hay traducción, usa el original
     originalDescription = dataOriginal.overview || "No description available in English.";
     spanishDescription = dataSpanish.overview || "No hay descripción disponible en español.";
@@ -1421,12 +1468,35 @@ async function showDetails(id, type, movieCard) {
 
     // Buscar torrents según el tipo de contenido
     if (type === "movie") {
-      await fetchTorrents(dataOriginal.title);
+      // Usar el mismo originalTitle que ya se calculó con lógica inteligente
+      await fetchTorrents(originalTitle);
     } else if (type === "tv") {
       // Para series de TV, obtener los detalles completos y buscar torrents
       const tvDetails = await fetchTVDetails(id);
       if (tvDetails) {
-        await fetchTVTorrents(dataOriginal.original_name || dataOriginal.name, tvDetails);
+        // Función auxiliar para detectar caracteres no latinos
+        const containsNonLatinChars = (str) => {
+          if (!str) return false;
+          // Detectar caracteres asiáticos (coreano, japonés, chino, etc.)
+          return /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(str);
+        };
+        
+        // Lógica inteligente para seleccionar el nombre de la serie
+        let tvTitle;
+        if (dataOriginal.name && !containsNonLatinChars(dataOriginal.name)) {
+          // Si name existe y está en caracteres latinos, usarlo
+          tvTitle = dataOriginal.name;
+        } else if (dataOriginal.original_name && !containsNonLatinChars(dataOriginal.original_name)) {
+          // Si original_name existe y está en caracteres latinos, usarlo
+          tvTitle = dataOriginal.original_name;
+        } else {
+          // Como último recurso, usar el que esté disponible
+          tvTitle = dataOriginal.name || dataOriginal.original_name;
+        }
+        
+        console.log(`🔍 TV Title for torrent search: "${tvTitle}" (name: "${dataOriginal.name}", original_name: "${dataOriginal.original_name}")`);
+        
+        await fetchTVTorrents(tvTitle, tvDetails);
       } else {
         elements.modalDescription.insertAdjacentHTML(
           "beforeend",
@@ -3138,8 +3208,8 @@ async function loadOnlineSubtitle(subtitleUrl) {
     // Determine if this is an OpenSubtitles URL (our backend endpoint) or external URL
     let finalUrl;
     if (subtitleUrl.startsWith('/api/subtitles/opensubtitles-download/')) {
-      // This is already our backend OpenSubtitles endpoint, use it directly
-      finalUrl = subtitleUrl;
+      // This is our backend OpenSubtitles endpoint, use the proxy to handle it
+      finalUrl = `/api/subtitles/proxy?url=${encodeURIComponent(subtitleUrl)}`;
     } else {
       // This is an external URL, use the proxy
       finalUrl = `/api/subtitles/proxy?url=${encodeURIComponent(subtitleUrl)}`;
