@@ -90,7 +90,6 @@ function testVideoStreamingFeatures() {
     'online-subtitle-select',
     'subtitle-file',
     'uploaded-subtitle-select',
-    'subtitle-enabled-toggle',
     'select-file-btn',
     'upload-subtitle-btn'
   ];
@@ -3125,15 +3124,6 @@ function setupSubtitleControls() {
     }
   };
 
-  // Toggle principal de subtítulos
-  document.getElementById('subtitle-enabled-toggle').onchange = function() {
-    if (this.checked) {
-      enableSubtitles();
-    } else {
-      disableSubtitles();
-    }
-  };
-
   // Cambio de subtítulos del torrent
   document.getElementById('torrent-subtitle-select').onchange = function() {
     if (this.value) {
@@ -3266,8 +3256,8 @@ async function loadOnlineSubtitle(subtitleUrl) {
     // Determine if this is an OpenSubtitles URL (our backend endpoint) or external URL
     let finalUrl;
     if (subtitleUrl.startsWith('/api/subtitles/opensubtitles-download/')) {
-      // This is our backend OpenSubtitles endpoint, use the proxy to handle it
-      finalUrl = `/api/subtitles/proxy?url=${encodeURIComponent(subtitleUrl)}`;
+      // This is our backend OpenSubtitles endpoint, use it directly (no proxy needed)
+      finalUrl = subtitleUrl;
     } else {
       // This is an external URL, use the proxy
       finalUrl = `/api/subtitles/proxy?url=${encodeURIComponent(subtitleUrl)}`;
@@ -3401,25 +3391,79 @@ function addSubtitleTrack(src, label, language) {
     // Agregar event listeners para el track
     track.addEventListener('load', () => {
       console.log('Subtítulo cargado exitosamente:', src);
-      showNotification('Subtítulos activados', 'success');
+      showNotification('Subtítulos activados automáticamente', 'success');
     });
     
     track.addEventListener('error', (e) => {
       console.error('Error cargando subtítulo:', {
         error: e,
         src: src,
-        track: track
+        track: track,
+        readyState: track.readyState,
+        error: track.error
       });
       
-      // Proporcionar mensaje de error más específico
+      // Intentar obtener información más detallada del error
       let errorMessage = 'Error al cargar el archivo de subtítulo';
-      if (src.includes('undefined')) {
+      
+      if (track.error) {
+        switch (track.error.code) {
+          case MediaError.MEDIA_ERR_ABORTED:
+            errorMessage = 'Descarga de subtítulo cancelada';
+            break;
+          case MediaError.MEDIA_ERR_NETWORK:
+            errorMessage = 'Error de red al descargar subtítulo';
+            break;
+          case MediaError.MEDIA_ERR_DECODE:
+            errorMessage = 'Error al decodificar el archivo de subtítulo';
+            break;
+          case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+            errorMessage = 'Formato de subtítulo no soportado';
+            break;
+          default:
+            errorMessage = `Error desconocido (código: ${track.error.code})`;
+        }
+      } else if (src.includes('undefined')) {
         errorMessage = 'URL de subtítulo inválida (contiene "undefined")';
       } else if (!src.startsWith('http') && !src.startsWith('/')) {
         errorMessage = 'URL de subtítulo no válida';
       }
       
       showNotification(errorMessage, 'error');
+      
+      // Intentar verificar si el archivo es accesible
+      console.log('Verificando accesibilidad del subtítulo...');
+      fetch(src, {method: 'HEAD'})
+        .then(response => {
+          console.log('Respuesta del servidor para subtítulo:', {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries())
+          });
+          
+          // Si es un subtítulo de OpenSubtitles, hacer debug adicional
+          if (src.includes('/api/subtitles/opensubtitles-download/')) {
+            const debugUrl = src.replace('/api/subtitles/opensubtitles-download/', '/api/subtitles/debug/');
+            console.log('Haciendo debug del subtítulo:', debugUrl);
+            
+            fetch(debugUrl)
+              .then(debugResponse => debugResponse.json())
+              .then(debugData => {
+                console.log('Debug info del subtítulo:', debugData);
+                if (!debugData.hasContent) {
+                  showNotification('El archivo de subtítulo está vacío', 'warning');
+                } else if (!debugData.looksLikeSRT) {
+                  showNotification('El formato del subtítulo no es válido', 'warning');
+                }
+              })
+              .catch(debugErr => {
+                console.error('Error en debug del subtítulo:', debugErr);
+              });
+          }
+        })
+        .catch(err => {
+          console.error('Error verificando subtítulo:', err);
+        });
     });
 
     videoPlayer.appendChild(track);
@@ -3427,8 +3471,10 @@ function addSubtitleTrack(src, label, language) {
     // Habilitar automáticamente los subtítulos cuando se cargan
     setTimeout(() => {
       if (videoPlayer.textTracks.length > 0) {
+        // Activar automáticamente la primera pista de subtítulos
         videoPlayer.textTracks[0].mode = 'showing';
         console.log('Subtítulos habilitados automáticamente');
+        showNotification('Subtítulos activados automáticamente', 'success', 2000);
       }
     }, 100);
     
@@ -3438,11 +3484,10 @@ function addSubtitleTrack(src, label, language) {
   }
 }
 
-// Función para habilitar subtítulos
+// Función para habilitar subtítulos automáticamente
 function enableSubtitles() {
   const videoPlayer = document.getElementById('video-player');
   const tracks = videoPlayer.textTracks;
-  const toggle = document.getElementById('subtitle-enabled-toggle');
   
   let tracksEnabled = 0;
   for (let i = 0; i < tracks.length; i++) {
@@ -3451,19 +3496,16 @@ function enableSubtitles() {
   }
   
   if (tracksEnabled > 0) {
-    showNotification(`${tracksEnabled} pista(s) de subtítulos habilitadas`, 'success');
-    if (toggle) toggle.checked = true;
-  } else {
-    showNotification('No hay subtítulos disponibles para habilitar', 'warning');
-    if (toggle) toggle.checked = false;
+    showNotification(`${tracksEnabled} pista(s) de subtítulos habilitadas automáticamente`, 'success');
   }
+  
+  return tracksEnabled > 0;
 }
 
 // Función para deshabilitar subtítulos
 function disableSubtitles() {
   const videoPlayer = document.getElementById('video-player');
   const tracks = videoPlayer.textTracks;
-  const toggle = document.getElementById('subtitle-enabled-toggle');
   
   let tracksDisabled = 0;
   for (let i = 0; i < tracks.length; i++) {
@@ -3473,11 +3515,9 @@ function disableSubtitles() {
   
   if (tracksDisabled > 0) {
     showNotification('Subtítulos deshabilitados', 'info');
-    if (toggle) toggle.checked = false;
-  } else {
-    showNotification('No hay subtítulos para deshabilitar', 'warning');
-    if (toggle) toggle.checked = false;
   }
+  
+  return tracksDisabled > 0;
 }
 
 // Función para cerrar el modal del reproductor de video

@@ -2997,98 +2997,11 @@ app.get('/api/subtitles/proxy', async (req, res) => {
   console.log(`Proxying subtitle from: ${url}`);
 
   try {
-    // Verificar si es una URL interna (opensubtitles)
+    // Verificar si es una URL interna (opensubtitles) - redirigir al endpoint correcto
     if (url.startsWith('/api/subtitles/opensubtitles-download/')) {
-      // En lugar de redirigir, procesar directamente
-      console.log(`Processing OpenSubtitles download directly: ${url}`);
-      
-      // Extraer subtitleId y fileId de la URL
-      const urlParts = url.split('/');
-      const subtitleId = urlParts[4]; // /api/subtitles/opensubtitles-download/SUBTITLE_ID/FILE_ID
-      const fileId = urlParts[5];
-      
-      if (!subtitleId || !fileId) {
-        return res.status(400).json({ message: 'Invalid OpenSubtitles URL format' });
-      }
-      
-      // Procesar la descarga directamente en lugar de redirigir
-      try {
-        console.log(`Downloading OpenSubtitles subtitle: ${subtitleId}/${fileId}`);
-        
-        // Verificar que tengamos la API key
-        if (!OPENSUBTITLES_API_KEY) {
-          throw new Error('OpenSubtitles API key not configured');
-        }
-        
-        // Llamar a la API de OpenSubtitles para obtener la URL de descarga
-        const downloadResponse = await fetch(`https://api.opensubtitles.com/api/v1/download`, {
-          method: 'POST',
-          headers: {
-            'Api-Key': OPENSUBTITLES_API_KEY,
-            'Content-Type': 'application/json',
-            'User-Agent': 'ATV v1.0'
-          },
-          body: JSON.stringify({
-            file_id: parseInt(fileId),
-            sub_format: 'srt'
-          })
-        });
-
-        if (!downloadResponse.ok) {
-          const errorData = await downloadResponse.json().catch(() => ({}));
-          console.error('OpenSubtitles download API error:', errorData);
-          throw new Error(`OpenSubtitles API error: ${downloadResponse.status} - ${errorData.message || downloadResponse.statusText}`);
-        }
-
-        const downloadData = await downloadResponse.json();
-        
-        if (!downloadData.link) {
-          throw new Error('No download link received from OpenSubtitles');
-        }
-
-        console.log('OpenSubtitles download link obtained:', downloadData.link);
-
-        // Descargar el archivo de subtítulos
-        const subtitleResponse = await fetch(downloadData.link, {
-          headers: {
-            'User-Agent': 'ATV v1.0'
-          }
-        });
-
-        if (!subtitleResponse.ok) {
-          throw new Error(`Failed to download subtitle file: ${subtitleResponse.statusText}`);
-        }
-
-        // Configurar headers para la respuesta
-        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Content-Disposition', `attachment; filename="subtitle_${subtitleId}.srt"`);
-
-        // Pipe el contenido del subtítulo al cliente
-        return subtitleResponse.body.pipe(res);
-
-      } catch (error) {
-        console.error('Error downloading OpenSubtitles subtitle:', error);
-        
-        // Proporcionar un mensaje de error más específico
-        let errorMessage = 'Error al descargar subtítulo';
-        if (error.message.includes('API key not configured')) {
-          errorMessage = 'La integración con OpenSubtitles no está configurada. Contacta al administrador para configurar la API key.';
-        } else if (error.message.includes('401') || error.message.includes('403')) {
-          errorMessage = 'Error de autenticación con OpenSubtitles. Verifica la configuración de la API.';
-        } else if (error.message.includes('404')) {
-          errorMessage = 'Subtítulo no encontrado. Es posible que haya expirado o ya no esté disponible.';
-        } else if (error.message.includes('429')) {
-          errorMessage = 'Demasiadas solicitudes. Intenta nuevamente en unos minutos.';
-        } else if (error.message.includes('download link')) {
-          errorMessage = 'No se pudo obtener el enlace de descarga del subtítulo.';
-        }
-        
-        return res.status(500).json({ 
-          message: errorMessage,
-          details: error.message 
-        });
-      }
+      // Redirigir al endpoint específico en lugar de procesar aquí
+      console.log(`Redirecting OpenSubtitles URL to specific endpoint: ${url}`);
+      return res.redirect(url);
     }
 
     // Para URLs externas, verificar que sean válidas
@@ -3225,16 +3138,91 @@ app.post('/api/subtitles/upload', upload.single('subtitle'), (req, res) => {
   res.json(subtitleInfo);
 });
 
+// Handle preflight requests for OpenSubtitles downloads
+app.options('/api/subtitles/opensubtitles-download/:subtitleId/:fileId', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
+  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  res.status(200).end();
+});
+
+// API de debug para verificar subtítulos de OpenSubtitles
+app.get('/api/subtitles/debug/:subtitleId/:fileId', async (req, res) => {
+  const { subtitleId, fileId } = req.params;
+  
+  console.log(`[SUBTITLE DEBUG] Request for: subtitleId=${subtitleId}, fileId=${fileId}`);
+  
+  if (!OPENSUBTITLES_API_KEY) {
+    return res.status(500).json({ error: 'OpenSubtitles API key not configured' });
+  }
+
+  try {
+    // Llamar a la API de OpenSubtitles para obtener la URL de descarga
+    const downloadResponse = await fetch(`https://api.opensubtitles.com/api/v1/download`, {
+      method: 'POST',
+      headers: {
+        'Api-Key': OPENSUBTITLES_API_KEY,
+        'Content-Type': 'application/json',
+        'User-Agent': 'ATV v1.0'
+      },
+      body: JSON.stringify({
+        file_id: parseInt(fileId),
+        sub_format: 'srt'
+      })
+    });
+
+    const downloadData = await downloadResponse.json();
+    
+    if (!downloadData.link) {
+      return res.status(500).json({ error: 'No download link received' });
+    }
+
+    // Descargar el archivo para debug
+    const subtitleResponse = await fetch(downloadData.link);
+    const content = await subtitleResponse.text();
+    
+    // Retornar información de debug
+    res.json({
+      subtitleId,
+      fileId,
+      downloadUrl: downloadData.link,
+      contentLength: content.length,
+      contentPreview: content.substring(0, 500),
+      contentEndsPreview: content.substring(Math.max(0, content.length - 200)),
+      hasContent: content.trim().length > 0,
+      looksLikeSRT: /^\d+\s*\r?\n\d{2}:\d{2}:\d{2},\d{3}\s*-->\s*\d{2}:\d{2}:\d{2},\d{3}/m.test(content),
+      lineEndings: {
+        crlf: (content.match(/\r\n/g) || []).length,
+        lf: (content.match(/(?<!\r)\n/g) || []).length,
+        cr: (content.match(/\r(?!\n)/g) || []).length
+      }
+    });
+    
+  } catch (error) {
+    console.error('[SUBTITLE DEBUG] Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API específica para descargar subtítulos de OpenSubtitles
 app.get('/api/subtitles/opensubtitles-download/:subtitleId/:fileId', async (req, res) => {
   const { subtitleId, fileId } = req.params;
   
+  console.log(`[SUBTITLE DOWNLOAD] Request received: subtitleId=${subtitleId}, fileId=${fileId}`);
+  
   if (!subtitleId || !fileId) {
+    console.log('[SUBTITLE DOWNLOAD] Missing parameters');
     return res.status(400).json({ message: 'Subtitle ID and File ID are required' });
   }
 
+  if (!OPENSUBTITLES_API_KEY) {
+    console.log('[SUBTITLE DOWNLOAD] No OpenSubtitles API key configured');
+    return res.status(500).json({ message: 'OpenSubtitles API key not configured' });
+  }
+
   try {
-    console.log(`Downloading OpenSubtitles subtitle: ${subtitleId}/${fileId}`);
+    console.log(`[SUBTITLE DOWNLOAD] Downloading OpenSubtitles subtitle: ${subtitleId}/${fileId}`);
     
     // Llamar a la API de OpenSubtitles para obtener la URL de descarga
     const downloadResponse = await fetch(`https://api.opensubtitles.com/api/v1/download`, {
@@ -3250,19 +3238,22 @@ app.get('/api/subtitles/opensubtitles-download/:subtitleId/:fileId', async (req,
       })
     });
 
+    console.log(`[SUBTITLE DOWNLOAD] OpenSubtitles API response status: ${downloadResponse.status}`);
+
     if (!downloadResponse.ok) {
       const errorData = await downloadResponse.json().catch(() => ({}));
-      console.error('OpenSubtitles download API error:', errorData);
+      console.error('[SUBTITLE DOWNLOAD] OpenSubtitles download API error:', errorData);
       throw new Error(`OpenSubtitles API error: ${downloadResponse.status} - ${errorData.message || downloadResponse.statusText}`);
     }
 
     const downloadData = await downloadResponse.json();
     
     if (!downloadData.link) {
+      console.error('[SUBTITLE DOWNLOAD] No download link received from OpenSubtitles');
       throw new Error('No download link received from OpenSubtitles');
     }
 
-    console.log('OpenSubtitles download link obtained:', downloadData.link);
+    console.log('[SUBTITLE DOWNLOAD] OpenSubtitles download link obtained:', downloadData.link);
 
     // Descargar el archivo de subtítulos
     const subtitleResponse = await fetch(downloadData.link, {
@@ -3271,34 +3262,90 @@ app.get('/api/subtitles/opensubtitles-download/:subtitleId/:fileId', async (req,
       }
     });
 
+    console.log('[SUBTITLE DOWNLOAD] Subtitle file response status:', subtitleResponse.status);
+
     if (!subtitleResponse.ok) {
       throw new Error(`Failed to download subtitle file: ${subtitleResponse.statusText}`);
     }
 
-    // Configurar headers para la respuesta
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Content-Disposition', `attachment; filename="subtitle_${subtitleId}.srt"`);
+    // Leer el contenido del subtítulo como texto
+    const subtitleContent = await subtitleResponse.text();
+    console.log('[SUBTITLE DOWNLOAD] Subtitle content length:', subtitleContent.length);
 
-    // Pipe el contenido del subtítulo al cliente
-    subtitleResponse.body.pipe(res);
+    // Verificar que el contenido no esté vacío
+    if (!subtitleContent || subtitleContent.trim().length === 0) {
+      throw new Error('Subtitle file is empty');
+    }
+
+    // Limpiar y normalizar el contenido del subtítulo
+    let cleanContent = subtitleContent;
+    
+    // Eliminar BOM si existe
+    cleanContent = cleanContent.replace(/^\uFEFF/, '');
+    
+    // Normalizar terminadores de línea a LF (más compatible con navegadores)
+    cleanContent = cleanContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    
+    // Verificar que tenga el formato SRT básico
+    const srtPattern = /^\d+\s*\n\d{2}:\d{2}:\d{2},\d{3}\s*-->\s*\d{2}:\d{2}:\d{2},\d{3}/m;
+    if (!srtPattern.test(cleanContent)) {
+      console.log('[SUBTITLE DOWNLOAD] Warning: Content does not appear to be valid SRT format');
+      // Intentar arreglar formato básico si es posible
+      cleanContent = cleanContent.trim();
+      if (!cleanContent.endsWith('\n')) {
+        cleanContent += '\n';
+      }
+    }
+
+    // Asegurar que termine con una línea vacía
+    if (!cleanContent.endsWith('\n\n')) {
+      cleanContent += '\n';
+    }
+
+    console.log('[SUBTITLE DOWNLOAD] Content preview:', cleanContent.substring(0, 200));
+    console.log('[SUBTITLE DOWNLOAD] Content ends with:', cleanContent.substring(Math.max(0, cleanContent.length - 50)));
+
+    // Convertir SRT a WebVTT para mejor compatibilidad con navegadores
+    const webvttContent = convertSrtToWebVtt(cleanContent);
+    console.log('[SUBTITLE DOWNLOAD] Converted to WebVTT, length:', webvttContent.length);
+
+    // Configurar headers para la respuesta
+    res.setHeader('Content-Type', 'text/vtt; charset=utf-8'); // Usar text/vtt que es más estándar para subtítulos
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length');
+    // NO usar Content-Disposition: attachment para subtítulos que se cargan en el video player
+    res.setHeader('Content-Length', Buffer.byteLength(webvttContent, 'utf8'));
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache por 1 hora
+
+    console.log('[SUBTITLE DOWNLOAD] Sending subtitle content to client');
+    
+    // Enviar el contenido en formato WebVTT
+    res.send(webvttContent);
 
   } catch (error) {
-    console.error('Error downloading OpenSubtitles subtitle:', error);
+    console.error('[SUBTITLE DOWNLOAD] Error downloading OpenSubtitles subtitle:', error);
     
     // Proporcionar un mensaje de error más específico
     let errorMessage = 'Error al descargar subtítulo';
+    let statusCode = 500;
+    
     if (error.message.includes('401') || error.message.includes('403')) {
       errorMessage = 'Error de autenticación con OpenSubtitles. Verifica la configuración de la API.';
+      statusCode = 401;
     } else if (error.message.includes('404')) {
       errorMessage = 'Subtítulo no encontrado. Es posible que haya expirado o ya no esté disponible.';
+      statusCode = 404;
     } else if (error.message.includes('429')) {
       errorMessage = 'Demasiadas solicitudes. Intenta nuevamente en unos minutos.';
+      statusCode = 429;
     } else if (error.message.includes('download link')) {
       errorMessage = 'No se pudo obtener el enlace de descarga del subtítulo.';
+      statusCode = 502;
     }
     
-    res.status(500).json({ 
+    res.status(statusCode).json({ 
       message: errorMessage,
       details: error.message 
     });
