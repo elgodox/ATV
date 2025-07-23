@@ -930,6 +930,169 @@ async function fetchTVDetails(tvId) {
 }
 
 
+// Función mejorada para cargar trailers con múltiples fuentes y mejor relevancia
+async function loadEnhancedTrailer(id, type, title, dataOriginal) {
+  // Mostrar indicador de carga
+  elements.modalTrailer.innerHTML = '<div class="trailer-loading"><i class="fas fa-spinner fa-spin"></i> Buscando trailer...</div>';
+  
+  try {
+    // Extraer año de lanzamiento para búsqueda más precisa
+    let year = null;
+    if (dataOriginal) {
+      if (type === 'movie') {
+        year = dataOriginal.release_date ? new Date(dataOriginal.release_date).getFullYear() : null;
+      } else if (type === 'tv') {
+        year = dataOriginal.first_air_date ? new Date(dataOriginal.first_air_date).getFullYear() : null;
+      }
+    }
+
+    // Usar la nueva API mejorada
+    const params = new URLSearchParams({
+      title: title,
+      type: type,
+      id: id
+    });
+    
+    if (year) {
+      params.append('year', year);
+    }
+
+    const response = await fetch(`/api/enhanced-trailer?${params}`);
+    
+    if (response.ok) {
+      const trailerData = await response.json();
+      displayTrailer(trailerData);
+    } else {
+      // Si no se encontró trailer, mostrar fallback con imágenes
+      await displayImageFallback(dataOriginal, title);
+    }
+  } catch (error) {
+    console.error('Error loading enhanced trailer:', error);
+    await displayImageFallback(dataOriginal, title);
+  }
+}
+
+// Función para mostrar el trailer
+function displayTrailer(trailerData) {
+  const { videoId, source, title, official, fromTMDb } = trailerData;
+  
+  let embedUrl;
+  let trailerInfo = '';
+  
+  // Crear URL del embed según la fuente
+  if (source === 'youtube') {
+    embedUrl = `https://www.youtube.com/embed/${videoId}`;
+  } else if (source === 'vimeo') {
+    embedUrl = `https://player.vimeo.com/video/${videoId}`;
+  } else {
+    elements.modalTrailer.innerHTML = "<p>Fuente de video no soportada.</p>";
+    return;
+  }
+  
+  // Mostrar información del trailer si es relevante
+  if (official) {
+    trailerInfo = '<div class="trailer-info"><i class="fas fa-check-circle"></i> Trailer Oficial</div>';
+  } else if (fromTMDb) {
+    trailerInfo = '<div class="trailer-info"><i class="fas fa-star"></i> De TMDb</div>';
+  }
+  
+  elements.modalTrailer.innerHTML = `
+    ${trailerInfo}
+    <iframe src="${embedUrl}" frameborder="0" allowfullscreen></iframe>
+  `;
+}
+
+// Función para mostrar imágenes cuando no hay trailer disponible
+async function displayImageFallback(dataOriginal, title) {
+  try {
+    const images = [];
+    
+    // Recopilar imágenes disponibles de TMDb
+    if (dataOriginal) {
+      if (dataOriginal.backdrop_path) {
+        images.push(`https://image.tmdb.org/t/p/w780${dataOriginal.backdrop_path}`);
+      }
+      if (dataOriginal.poster_path) {
+        images.push(`https://image.tmdb.org/t/p/w500${dataOriginal.poster_path}`);
+      }
+    }
+    
+    if (images.length > 0) {
+      let imageCarousel = '<div class="image-carousel">';
+      imageCarousel += '<div class="no-trailer-message"><i class="fas fa-info-circle"></i> No hay trailer disponible. Aquí tienes algunas imágenes:</div>';
+      
+      if (images.length === 1) {
+        imageCarousel += `<img src="${images[0]}" alt="${title}" class="fallback-image">`;
+      } else {
+        imageCarousel += '<div class="image-slider">';
+        images.forEach((image, index) => {
+          imageCarousel += `<img src="${image}" alt="${title}" class="fallback-image ${index === 0 ? 'active' : ''}" data-index="${index}">`;
+        });
+        imageCarousel += '</div>';
+        
+        if (images.length > 1) {
+          imageCarousel += `
+            <div class="slider-controls">
+              <button class="slider-btn prev" onclick="changeImage(-1)"><i class="fas fa-chevron-left"></i></button>
+              <div class="slider-dots">
+                ${images.map((_, index) => `<span class="dot ${index === 0 ? 'active' : ''}" onclick="currentSlide(${index + 1})"></span>`).join('')}
+              </div>
+              <button class="slider-btn next" onclick="changeImage(1)"><i class="fas fa-chevron-right"></i></button>
+            </div>
+          `;
+        }
+      }
+      
+      imageCarousel += '</div>';
+      elements.modalTrailer.innerHTML = imageCarousel;
+    } else {
+      elements.modalTrailer.innerHTML = '<div class="no-content"><i class="fas fa-film"></i><p>No hay trailer ni imágenes disponibles.</p></div>';
+    }
+  } catch (error) {
+    console.error('Error displaying image fallback:', error);
+    elements.modalTrailer.innerHTML = '<div class="no-content"><i class="fas fa-exclamation-triangle"></i><p>No hay trailer disponible.</p></div>';
+  }
+}
+
+// Funciones para controlar el carrusel de imágenes
+let currentImageIndex = 0;
+
+function changeImage(direction) {
+  const images = document.querySelectorAll('.fallback-image');
+  const dots = document.querySelectorAll('.dot');
+  
+  if (images.length <= 1) return;
+  
+  images[currentImageIndex].classList.remove('active');
+  dots[currentImageIndex].classList.remove('active');
+  
+  currentImageIndex += direction;
+  
+  if (currentImageIndex >= images.length) {
+    currentImageIndex = 0;
+  } else if (currentImageIndex < 0) {
+    currentImageIndex = images.length - 1;
+  }
+  
+  images[currentImageIndex].classList.add('active');
+  dots[currentImageIndex].classList.add('active');
+}
+
+function currentSlide(index) {
+  const images = document.querySelectorAll('.fallback-image');
+  const dots = document.querySelectorAll('.dot');
+  
+  if (images.length <= 1) return;
+  
+  images[currentImageIndex].classList.remove('active');
+  dots[currentImageIndex].classList.remove('active');
+  
+  currentImageIndex = index - 1;
+  
+  images[currentImageIndex].classList.add('active');
+  dots[currentImageIndex].classList.add('active');
+}
+
 
 let currentImdbId = null; // Variable global para guardar el ID de IMDb
 
@@ -986,22 +1149,8 @@ async function showDetails(id, type, movieCard) {
     // Mostrar la descripción en español inicialmente
     elements.modalDescription.innerHTML = `<p id="description-text">${spanishDescription}</p>`;
 
-    // Intentar buscar tráiler en el servidor (primero YouTube, luego Vimeo)
-
-    const youtubeTrailer = await fetch(`/api/youtube-trailer?title=${encodeURIComponent(originalTitle)}`).then(response => response.json());
-
-    if (youtubeTrailer.videoId) {
-      // Mostrar tráiler de YouTube si se encuentra
-      elements.modalTrailer.innerHTML = `<iframe src="https://www.youtube.com/embed/${youtubeTrailer.videoId}" frameborder="0" allowfullscreen></iframe>`;
-    } else {
-      // Si no se encuentra en YouTube, intentar buscar en Vimeo
-      const vimeoTrailer = await fetch(`/api/vimeo-trailer?title=${encodeURIComponent(originalTitle)}`).then(response => response.json());
-      if (vimeoTrailer.videoId) {
-        elements.modalTrailer.innerHTML = `<iframe src="https://player.vimeo.com/video/${vimeoTrailer.videoId}" frameborder="0" allowfullscreen></iframe>`;
-      } else {
-        elements.modalTrailer.innerHTML = "<p>No hay tráiler disponible.</p>";
-      }
-    }
+    // Buscar trailer usando la nueva API mejorada
+    await loadEnhancedTrailer(id, type, originalTitle, dataOriginal);
 
     // Mostrar los detalles adicionales (Géneros, Temporadas, Estado, Plataformas, Valoración)
 

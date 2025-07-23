@@ -1293,6 +1293,155 @@ h1 {
   background: rgba(0, 0, 0, 0.8);
 }
 
+/* Estilos para trailer loading */
+.trailer-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+}
+
+.trailer-loading i {
+  margin-right: 10px;
+  font-size: 18px;
+}
+
+/* Información del trailer */
+.trailer-info {
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  color: #4CAF50;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.trailer-info i {
+  margin-right: 8px;
+}
+
+/* Carrusel de imágenes cuando no hay trailer */
+.image-carousel {
+  text-align: center;
+  position: relative;
+}
+
+.no-trailer-message {
+  background: rgba(255, 193, 7, 0.2);
+  border: 1px solid rgba(255, 193, 7, 0.4);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  color: #FFC107;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.no-trailer-message i {
+  margin-right: 8px;
+}
+
+.image-slider {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  max-width: 100%;
+}
+
+.fallback-image {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+  display: none;
+  border-radius: 12px;
+  transition: opacity 0.3s ease;
+}
+
+.fallback-image.active {
+  display: block;
+}
+
+.fallback-image:only-child {
+  display: block;
+}
+
+.slider-controls {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.slider-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+
+.slider-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.slider-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.dot.active {
+  background: rgba(255, 255, 255, 0.8);
+  transform: scale(1.2);
+}
+
+.dot:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.no-content {
+  padding: 40px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.no-content i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.no-content p {
+  font-size: 16px;
+  margin: 0;
+}
+
 /* Contenedor para alinear el toggle con el título */
 .modal-header-content {
   display: flex;

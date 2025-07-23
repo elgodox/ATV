@@ -549,23 +549,49 @@ app.get('/api/search-all', async (req, res) => {
 // Ruta para buscar tráiler en YouTube
 app.get('/api/youtube-trailer', async (req, res) => {
   const title = req.query.title;
+  const year = req.query.year;
   if (!title) {
     return res.status(400).json({ error: 'Title is required' });
   }
 
-  const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(title + ' trailer')}`;
+  // Mejorar búsqueda incluyendo año si está disponible
+  const searchTerm = year ? `${title} ${year} trailer` : `${title} trailer`;
+  const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchTerm)}`;
 
   try {
     const response = await fetch(searchUrl);
     const data = await response.text();
 
-    // Extraer el primer ID de video de los resultados
-    const videoIdMatch = data.match(/"videoId":"(.*?)"/);
-    if (videoIdMatch && videoIdMatch[1]) {
-      return res.json({ videoId: videoIdMatch[1] }); // Devuelve el ID del video
+    // Intentar extraer múltiples videos y filtrar por relevancia
+    const videoMatches = data.matchAll(/"videoId":"([^"]+)".*?"title":"([^"]+)"/g);
+    
+    for (const match of videoMatches) {
+      const videoId = match[1];
+      const videoTitle = match[2];
+      
+      // Filtrar por trailers oficiales y evitar reacciones/reviews
+      if (videoTitle.toLowerCase().includes('trailer') && 
+          !videoTitle.toLowerCase().includes('reaction') &&
+          !videoTitle.toLowerCase().includes('review') &&
+          !videoTitle.toLowerCase().includes('fan made')) {
+        return res.json({ 
+          videoId: videoId,
+          title: videoTitle,
+          source: 'youtube'
+        });
+      }
     }
 
-    // Si no se encuentra el tráiler
+    // Fallback: extraer el primer ID de video de los resultados
+    const videoIdMatch = data.match(/"videoId":"(.*?)"/);
+    if (videoIdMatch && videoIdMatch[1]) {
+      return res.json({ 
+        videoId: videoIdMatch[1],
+        title: 'Video relacionado',
+        source: 'youtube'
+      });
+    }
+
     return res.status(404).json({ error: 'Trailer not found' });
   } catch (error) {
     console.error('Error fetching YouTube trailer:', error);
@@ -576,11 +602,14 @@ app.get('/api/youtube-trailer', async (req, res) => {
 // Ruta para buscar tráiler en Vimeo
 app.get('/api/vimeo-trailer', async (req, res) => {
   const title = req.query.title;
+  const year = req.query.year;
   if (!title) {
     return res.status(400).json({ error: 'Title is required' });
   }
 
-  const searchUrl = `https://api.vimeo.com/videos?query=${encodeURIComponent(title + ' trailer')}&per_page=1`;
+  // Mejorar búsqueda incluyendo año si está disponible
+  const searchTerm = year ? `${title} ${year} trailer` : `${title} trailer`;
+  const searchUrl = `https://api.vimeo.com/videos?query=${encodeURIComponent(searchTerm)}&per_page=5`;
 
   try {
     const response = await fetch(searchUrl, {
@@ -591,14 +620,167 @@ app.get('/api/vimeo-trailer', async (req, res) => {
     const data = await response.json();
 
     if (data.data && data.data.length > 0) {
-      const vimeoTrailerId = data.data[0].uri.split('/').pop();  // Extraer el ID del video
-      return res.json({ videoId: vimeoTrailerId });
+      // Buscar el trailer más relevante (filtrar por palabras clave)
+      const relevantTrailer = data.data.find(video => {
+        const name = video.name.toLowerCase();
+        const description = video.description ? video.description.toLowerCase() : '';
+        return (name.includes('trailer') || name.includes('official')) && 
+               !name.includes('fan') && !name.includes('reaction') && !name.includes('review');
+      }) || data.data[0]; // Fallback al primer resultado
+
+      const vimeoTrailerId = relevantTrailer.uri.split('/').pop();
+      return res.json({ 
+        videoId: vimeoTrailerId,
+        title: relevantTrailer.name,
+        source: 'vimeo'
+      });
     }
 
     return res.status(404).json({ error: 'Trailer not found on Vimeo' });
   } catch (error) {
     console.error('Error fetching Vimeo trailer:', error);
     return res.status(500).json({ error: 'Error fetching Vimeo trailer' });
+  }
+});
+
+// Nueva ruta mejorada para buscar trailers con múltiples fuentes
+app.get('/api/enhanced-trailer', async (req, res) => {
+  const { title, year, type, id } = req.query;
+  
+  if (!title) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+
+  try {
+    let trailerResult = null;
+
+    // 1. Primero intentar obtener trailer oficial de TMDb si tenemos el ID
+    if (id && API_KEY) {
+      try {
+        const tmdbUrl = `https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}&append_to_response=videos`;
+        const tmdbResponse = await fetch(tmdbUrl);
+        const tmdbData = await tmdbResponse.json();
+        
+        if (tmdbData.videos && tmdbData.videos.results.length > 0) {
+          // Buscar trailers oficiales primero
+          const officialTrailers = tmdbData.videos.results.filter(video => 
+            video.type === 'Trailer' && 
+            video.official === true && 
+            (video.site === 'YouTube' || video.site === 'Vimeo')
+          );
+          
+          // Si no hay trailers oficiales, buscar cualquier trailer
+          const anyTrailers = tmdbData.videos.results.filter(video => 
+            video.type === 'Trailer' && 
+            (video.site === 'YouTube' || video.site === 'Vimeo')
+          );
+          
+          const bestTrailer = officialTrailers[0] || anyTrailers[0];
+          
+          if (bestTrailer) {
+            trailerResult = {
+              videoId: bestTrailer.key,
+              source: bestTrailer.site.toLowerCase(),
+              title: bestTrailer.name,
+              official: bestTrailer.official,
+              fromTMDb: true
+            };
+          }
+        }
+      } catch (error) {
+        console.log('TMDb trailer search failed:', error.message);
+      }
+    }
+
+    // 2. Si no se encontró en TMDb, buscar en YouTube con búsqueda mejorada
+    if (!trailerResult) {
+      try {
+        const searchTerm = year ? `${title} ${year} trailer` : `${title} trailer`;
+        const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchTerm)}`;
+        
+        const response = await fetch(youtubeUrl);
+        const data = await response.text();
+        
+        // Extraer múltiples IDs de video y sus títulos
+        const videoMatches = data.matchAll(/"videoId":"([^"]+)".*?"title":"([^"]+)"/g);
+        
+        for (const match of videoMatches) {
+          const videoId = match[1];
+          const videoTitle = match[2];
+          
+          // Filtrar resultados más relevantes
+          if (videoTitle.toLowerCase().includes('trailer') && 
+              !videoTitle.toLowerCase().includes('reaction') &&
+              !videoTitle.toLowerCase().includes('review') &&
+              !videoTitle.toLowerCase().includes('fan made')) {
+            trailerResult = {
+              videoId: videoId,
+              source: 'youtube',
+              title: videoTitle,
+              official: false,
+              fromTMDb: false
+            };
+            break;
+          }
+        }
+        
+        // Fallback al primer video si no hay uno específicamente marcado como trailer
+        if (!trailerResult && data.match(/"videoId":"(.*?)"/)) {
+          const firstVideoId = data.match(/"videoId":"(.*?)"/)[1];
+          trailerResult = {
+            videoId: firstVideoId,
+            source: 'youtube',
+            title: 'Video relacionado',
+            official: false,
+            fromTMDb: false
+          };
+        }
+      } catch (error) {
+        console.log('YouTube trailer search failed:', error.message);
+      }
+    }
+
+    // 3. Si no se encontró en YouTube, intentar Vimeo
+    if (!trailerResult && VIMEO_ACCESS_TOKEN) {
+      try {
+        const searchTerm = year ? `${title} ${year} trailer` : `${title} trailer`;
+        const vimeoUrl = `https://api.vimeo.com/videos?query=${encodeURIComponent(searchTerm)}&per_page=5`;
+        
+        const response = await fetch(vimeoUrl, {
+          headers: {
+            'Authorization': `Bearer ${VIMEO_ACCESS_TOKEN}`
+          }
+        });
+        const data = await response.json();
+        
+        if (data.data && data.data.length > 0) {
+          const relevantTrailer = data.data.find(video => {
+            const name = video.name.toLowerCase();
+            return name.includes('trailer') && !name.includes('fan') && !name.includes('reaction');
+          }) || data.data[0];
+          
+          trailerResult = {
+            videoId: relevantTrailer.uri.split('/').pop(),
+            source: 'vimeo',
+            title: relevantTrailer.name,
+            official: false,
+            fromTMDb: false
+          };
+        }
+      } catch (error) {
+        console.log('Vimeo trailer search failed:', error.message);
+      }
+    }
+
+    if (trailerResult) {
+      return res.json(trailerResult);
+    } else {
+      return res.status(404).json({ error: 'No trailer found' });
+    }
+
+  } catch (error) {
+    console.error('Error in enhanced trailer search:', error);
+    return res.status(500).json({ error: 'Error searching for trailer' });
   }
 });
 
