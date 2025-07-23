@@ -3141,17 +3141,19 @@ h1 {
 .selector-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   align-items: center;
+  max-width: 400px;
+  margin: 0 auto;
 }
 
 .selector-group {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  min-width: 200px;
-  max-width: 300px;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
 }
 
 .selector-group label {
@@ -3188,21 +3190,24 @@ h1 {
 }
 
 .search-torrents-btn {
-  padding: 12px 24px;
+  padding: 14px 28px;
   background: linear-gradient(135deg, #8b45ff 0%, #6930c3 100%);
   color: white;
   border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  font-size: 1em;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 1.05em;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 8px;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 15px rgba(139, 69, 255, 0.3);
 }
 
 .search-torrents-btn::before {
@@ -3252,44 +3257,73 @@ h1 {
   margin-left: 10px;
 }
 
-/* Responsive design for TV selector */
-@media (max-width: 768px) {
+/* Responsive design for TV selector - Enhanced for multiple resolutions */
+@media (max-width: 480px) {
   .tv-torrent-selector {
     padding: 16px;
-    margin: 16px 0;
+    margin: 16px 8px;
   }
   
   .tv-torrent-selector h3 {
     font-size: 1.1em;
   }
   
+  .selector-container {
+    gap: 16px;
+    max-width: 100%;
+  }
+  
   .selector-group {
     max-width: 100%;
-    min-width: 100%;
   }
   
   .search-torrents-btn {
-    padding: 10px 20px;
-    font-size: 0.95em;
+    padding: 12px 24px;
+    font-size: 1em;
+    max-width: 100%;
   }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .tv-torrent-selector {
+    padding: 20px;
+    margin: 20px 16px;
+  }
+  
+  .selector-container {
+    gap: 18px;
+    max-width: 360px;
+  }
+  
+  .selector-group {
+    max-width: 280px;
+  }
+  
+  .search-torrents-btn {
+    max-width: 280px;
   }
 }
 
 @media (min-width: 769px) {
+  .tv-torrent-selector {
+    padding: 24px;
+    margin: 24px auto;
+    max-width: 500px;
+  }
+  
   .selector-container {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: end;
+    gap: 24px;
+    max-width: 400px;
   }
   
   .selector-group {
-    flex: 1;
-    max-width: 200px;
+    max-width: 320px;
   }
   
   .search-torrents-btn {
-    flex-shrink: 0;
-    margin-left: 15px;
+    max-width: 320px;
+    padding: 16px 32px;
+    font-size: 1.1em;
   }
 }
 
