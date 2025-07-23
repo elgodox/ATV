@@ -1355,6 +1355,40 @@ function currentSlide(index) {
 
 let currentImdbId = null; // Variable global para guardar el ID de IMDb
 
+// Función para limpiar el contenido del modal
+function clearModalContent() {
+  // Limpiar contenido dinámico que se añade con insertAdjacentHTML
+  const existingMovieDetails = document.querySelector('.movie-details');
+  if (existingMovieDetails) {
+    existingMovieDetails.remove();
+  }
+  
+  const existingTorrentQuote = document.querySelector('.torrent-quote');
+  if (existingTorrentQuote) {
+    existingTorrentQuote.remove();
+  }
+  
+  const existingNoTorrentsMessage = document.querySelector('.no-torrents-message');
+  if (existingNoTorrentsMessage) {
+    existingNoTorrentsMessage.remove();
+  }
+  
+  // Limpiar selectores de temporada y episodio para series de TV
+  const existingSeasonSelect = document.querySelector('.season-episode-selector');
+  if (existingSeasonSelect) {
+    existingSeasonSelect.remove();
+  }
+  
+  // Limpiar cualquier mensaje adicional que pueda haberse añadido
+  const existingMessages = document.querySelectorAll('.modal .additional-message');
+  existingMessages.forEach(msg => msg.remove());
+  
+  // Limpiar contenido de los elementos principales
+  elements.modalTitle.innerHTML = '';
+  elements.modalDescription.innerHTML = '';
+  elements.modalTrailer.innerHTML = '';
+}
+
 // Función para obtener detalles y mostrar el modal
 async function showDetails(id, type, movieCard) {
 
@@ -1362,6 +1396,9 @@ async function showDetails(id, type, movieCard) {
   const lottiePlayer = document.querySelector('lottie-player');
   lottiePlayer.stop();  // Detener la animación
   lottiePlayer.play();  // Reproducir la animación desde el principio
+
+  // Limpiar el contenido anterior del modal
+  clearModalContent();
 
   // Deshabilitar la tarjeta de la película temporalmente
   movieCard.style.pointerEvents = 'none'; // Deshabilita clics en la tarjeta
@@ -1430,13 +1467,6 @@ async function showDetails(id, type, movieCard) {
     // Mostrar la descripción en español inicialmente
     elements.modalDescription.innerHTML = `<p id="description-text">${spanishDescription}</p>`;
 
-    // Buscar trailer usando la nueva API mejorada
-    // Guardar datos para uso global
-    window.currentDataOriginal = dataOriginal;
-    await loadEnhancedTrailer(id, type, originalTitle, dataOriginal);
-
-    // Mostrar los detalles adicionales (Géneros, Temporadas, Estado, Plataformas, Valoración)
-
     // Obtener géneros
     const genres = dataOriginal.genres ? dataOriginal.genres.map(genre => genre.name).join(', ') : 'Sin género';
 
@@ -1455,8 +1485,8 @@ async function showDetails(id, type, movieCard) {
     // Renderizar la valoración con estrellas
     const stars = renderStars(dataOriginal.vote_average);
 
-    // Agregar los detalles adicionales debajo de la descripción pero encima de los torrents
-    elements.modalDescription.insertAdjacentHTML('beforeend', `
+    // Insertar los detalles (movie-details) después de modal-description pero antes de modal-trailer
+    const movieDetailsHTML = `
       <div class="movie-details">
         <p><strong>Género:</strong> ${genres}</p>
         ${type === 'tv' ? `<p><strong>Temporadas:</strong> ${seasons}</p>` : ''}
@@ -1464,9 +1494,17 @@ async function showDetails(id, type, movieCard) {
         <p><strong>Plataformas:</strong> ${providerNames}</p>
         <p><strong>Valoración:</strong> ${stars}</p>
       </div>
-    `);
+    `;
+    
+    // Insertar movie-details después de modal-description
+    elements.modalDescription.insertAdjacentHTML('afterend', movieDetailsHTML);
 
-    // Buscar torrents según el tipo de contenido
+    // Buscar trailer usando la nueva API mejorada (modal-trailer va después de movie-details)
+    // Guardar datos para uso global
+    window.currentDataOriginal = dataOriginal;
+    await loadEnhancedTrailer(id, type, originalTitle, dataOriginal);
+
+    // Buscar torrents según el tipo de contenido (torrent-quote va al final)
     if (type === "movie") {
       // Usar el mismo originalTitle que ya se calculó con lógica inteligente
       await fetchTorrents(originalTitle);
@@ -1498,8 +1536,8 @@ async function showDetails(id, type, movieCard) {
         
         await fetchTVTorrents(tvTitle, tvDetails);
       } else {
-        elements.modalDescription.insertAdjacentHTML(
-          "beforeend",
+        elements.modalTrailer.insertAdjacentHTML(
+          "afterend",
           '<div class="no-torrents-message">No se pudieron obtener los detalles de la serie para buscar torrents.</div>'
         );
       }
@@ -1698,12 +1736,19 @@ async function fetchTorrents(movieTitle) {
           
           torrentButtons += `
             <div class="torrent-item${torrent.isDemo ? ' demo-torrent' : ''}">
-              <button class="torrent-button" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${movieTitle}" onclick="toggleTorrentActions(this)">
-                <span class="torrent-quality">${torrent.quality}${providerInfo}</span>
-                <span class="torrent-size">${torrent.size}</span>
-                <span class="torrent-seeds">🌱 ${torrent.seeds || 0}</span>
-              </button>
-              <div class="torrent-name" style="font-size: 12px; color: #888; margin: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${torrent.title || movieTitle}">
+              <div class="torrent-header">
+                <button class="torrent-button" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${movieTitle}" onclick="toggleTorrentActions(this)">
+                  <div class="torrent-info-left">
+                    <span class="torrent-quality">${torrent.quality}${providerInfo}</span>
+                    <span class="torrent-size">${torrent.size}</span>
+                  </div>
+                  <div class="torrent-info-right">
+                    <span class="torrent-seeds">🌱 ${torrent.seeds || 0}</span>
+                    <span class="torrent-expand">⌄</span>
+                  </div>
+                </button>
+              </div>
+              <div class="torrent-name" title="${torrent.title || movieTitle}">
                 📁 ${torrent.title || movieTitle}
               </div>
               <div class="torrent-actions" style="display: none;">
@@ -1720,23 +1765,23 @@ async function fetchTorrents(movieTitle) {
           `;
         });
         torrentButtons += `</div></div>`;
-        elements.modalDescription.insertAdjacentHTML("beforeend", torrentButtons);
+        elements.modalTrailer.insertAdjacentHTML("afterend", torrentButtons);
       } else {
-        elements.modalDescription.insertAdjacentHTML(
-          "beforeend",
+        elements.modalTrailer.insertAdjacentHTML(
+          "afterend",
           '<div class="no-torrents-message">No se encontraron torrents válidos para esta película.</div>'
         );
       }
     } else {
-      elements.modalDescription.insertAdjacentHTML(
-        "beforeend",
+      elements.modalTrailer.insertAdjacentHTML(
+        "afterend",
         '<div class="no-torrents-message">No hay torrents disponibles para esta película.</div>'
       );
     }
   } catch (error) {
     // Mostrar mensaje de error amigable en el modal
-    elements.modalDescription.insertAdjacentHTML(
-      "beforeend",
+    elements.modalTrailer.insertAdjacentHTML(
+      "afterend",
       `<div class="no-torrents-message" style="background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%); border-color: #f44336; color: #ffebee;">
         <span style="font-size: 2em; display: block; margin-bottom: 10px;">⚠️</span>
         No se pudieron obtener torrents. Intenta más tarde.
@@ -1752,7 +1797,7 @@ async function fetchTVTorrents(tvTitle, tvDetails) {
     // Crear interfaz de selección de temporada y episodio
     const seasonSelect = createSeasonEpisodeSelector(tvDetails);
     
-    elements.modalDescription.insertAdjacentHTML("beforeend", seasonSelect);
+    elements.modalTrailer.insertAdjacentHTML("afterend", seasonSelect);
     
     // Agregar event listeners para los selectores
     const seasonSelector = document.getElementById('season-selector');
@@ -1915,12 +1960,19 @@ function displayTVTorrents(torrents, container, tvTitle) {
     
     torrentButtons += `
       <div class="torrent-item${torrent.isDemo ? ' demo-torrent' : ''}">
-        <button class="torrent-button" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${torrentTitle}" onclick="toggleTorrentActions(this)">
-          <span class="torrent-quality">${torrent.quality}${providerInfo}</span>
-          <span class="torrent-size">${torrent.size}</span>
-          <span class="torrent-seeds">🌱 ${torrent.seeds}</span>
-        </button>
-        <div class="torrent-name" style="font-size: 12px; color: #888; margin: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${torrentTitle}">
+        <div class="torrent-header">
+          <button class="torrent-button" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${torrentTitle}" onclick="toggleTorrentActions(this)">
+            <div class="torrent-info-left">
+              <span class="torrent-quality">${torrent.quality}${providerInfo}</span>
+              <span class="torrent-size">${torrent.size}</span>
+            </div>
+            <div class="torrent-info-right">
+              <span class="torrent-seeds">🌱 ${torrent.seeds}</span>
+              <span class="torrent-expand">⌄</span>
+            </div>
+          </button>
+        </div>
+        <div class="torrent-name" title="${torrentTitle}">
           📁 ${torrentTitle}
         </div>
         <div class="torrent-actions" style="display: none;">
