@@ -321,6 +321,12 @@ app.use(express.json());
 // Servir archivos estáticos
 app.use(express.static('public'));
 
+// Servir el cliente de Supabase desde node_modules
+app.get('/lib/supabase.js', (req, res) => {
+  const supabasePath = path.join(__dirname, 'node_modules', '@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js');
+  res.sendFile(supabasePath);
+});
+
 // Servir archivos de subtítulos
 app.use('/subtitles', express.static(path.join(__dirname, 'uploads', 'subtitles')));
 

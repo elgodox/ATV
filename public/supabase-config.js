@@ -1,5 +1,6 @@
 // Supabase configuration
-import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+// Supabase is now loaded globally from /lib/supabase.js
+const { createClient } = window.supabase;
 
 // Supabase configuration - these should be replaced with your actual values
 // For production, these values should come from environment variables
@@ -9,6 +10,11 @@ const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'your-anon-key';
 // Show warning if using placeholder values
 if (SUPABASE_URL === 'https://your-project.supabase.co' || SUPABASE_ANON_KEY === 'your-anon-key') {
   console.warn('⚠️ Using placeholder Supabase configuration. Please update SUPABASE_URL and SUPABASE_ANON_KEY with your actual Supabase project values.');
+  console.warn('📋 Instructions:');
+  console.warn('1. Create a new project at https://supabase.com');
+  console.warn('2. Get your project URL and anon key from Settings > API');
+  console.warn('3. Set window.SUPABASE_URL and window.SUPABASE_ANON_KEY in your HTML or create a .env file');
+  console.warn('4. Run the SQL schema found in supabase-schema.sql in your Supabase SQL editor');
 }
 
 // Create Supabase client

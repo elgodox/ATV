@@ -1041,7 +1041,6 @@ async function toggleWatched(movieId, type, event) {
     showNotification('Error al gestionar estado de visto', 'error');
   }
 }
-}
 
 
 
