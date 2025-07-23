@@ -391,9 +391,21 @@ function initializeFiltersToggle() {
       if (isExpanded) {
         filtersContent.classList.remove('expanded');
         filtersToggle.classList.remove('active');
+        // Update ARIA attribute
+        filtersToggle.setAttribute('aria-expanded', 'false');
       } else {
         filtersContent.classList.add('expanded');
         filtersToggle.classList.add('active');
+        // Update ARIA attribute
+        filtersToggle.setAttribute('aria-expanded', 'true');
+      }
+    });
+    
+    // Keyboard navigation support
+    filtersToggle.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this.click();
       }
     });
   }
@@ -405,6 +417,7 @@ function initializeSearchSuggestions() {
   const searchBar = document.getElementById('search-bar');
   
   suggestionTags.forEach(tag => {
+    // Click handler
     tag.addEventListener('click', function() {
       const searchTerm = this.getAttribute('data-search');
       if (searchBar && searchTerm) {
@@ -413,6 +426,23 @@ function initializeSearchSuggestions() {
         // Trigger search
         performSearch();
       }
+    });
+    
+    // Keyboard navigation support
+    tag.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this.click();
+      }
+    });
+    
+    // Enhanced visual feedback for keyboard focus
+    tag.addEventListener('focus', function() {
+      this.style.transform = 'translateY(-2px)';
+    });
+    
+    tag.addEventListener('blur', function() {
+      this.style.transform = '';
     });
   });
 }

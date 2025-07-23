@@ -134,6 +134,18 @@
   font-weight: 400;
   outline: none;
   font-family: 'Poppins', sans-serif;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced focus state for search bar */
+#search-bar:focus {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+#search-bar:focus::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+  transform: translateX(2px);
+  transition: all 0.3s ease;
 }
 
 #search-bar::placeholder {
@@ -165,12 +177,34 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 16px rgba(138, 43, 226, 0.3);
   margin-right: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.voice-search-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.voice-search-btn:hover::before {
+  left: 100%;
 }
 
 .voice-search-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(138, 43, 226, 0.4);
   background: linear-gradient(135deg, rgba(138, 43, 226, 1) 0%, rgba(255, 20, 147, 1) 100%);
+}
+
+.voice-search-btn:focus {
+  outline: 2px solid rgba(138, 43, 226, 0.6);
+  outline-offset: 2px;
 }
 
 .voice-search-btn:active {
@@ -197,6 +231,26 @@
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
+  position: relative;
+  overflow: hidden;
+  /* Enhanced accessibility */
+  outline: none;
+  tabindex: 0;
+}
+
+.suggestion-tag::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.6s;
+}
+
+.suggestion-tag:hover::before {
+  left: 100%;
 }
 
 .suggestion-tag:hover {
@@ -204,6 +258,19 @@
   border-color: rgba(138, 43, 226, 0.4);
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(138, 43, 226, 0.2);
+  color: white;
+}
+
+.suggestion-tag:focus {
+  outline: 2px solid rgba(138, 43, 226, 0.6);
+  outline-offset: 2px;
+  background: rgba(138, 43, 226, 0.15);
+  border-color: rgba(138, 43, 226, 0.3);
+}
+
+.suggestion-tag:active {
+  transform: translateY(0);
+  background: rgba(138, 43, 226, 0.3);
 }
 
 /* Panel de filtros */
@@ -243,15 +310,39 @@
   cursor: pointer;
   padding: 12px 20px;
   border-radius: 12px;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.filters-toggle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.filters-toggle:hover::before {
+  left: 100%;
 }
 
 .filters-toggle:hover {
   background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.filters-toggle:focus {
+  outline: 2px solid rgba(138, 43, 226, 0.6);
+  outline-offset: 2px;
 }
 
 .filters-toggle .arrow {
-  transition: transform 0.3s ease;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .filters-toggle.active .arrow {
@@ -281,12 +372,39 @@
   user-select: none;
   font-size: 14px;
   color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.filter-chip::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.filter-chip:hover::before {
+  left: 100%;
 }
 
 .filter-chip:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.25);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.filter-chip:focus {
+  outline: 2px solid rgba(138, 43, 226, 0.6);
+  outline-offset: 2px;
+}
+
+.filter-chip:active {
+  transform: translateY(0);
 }
 
 /* Chip de favoritos */
@@ -388,12 +506,35 @@
   flex: 1;
   justify-content: center;
   min-width: 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+.option-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.option-btn:hover::before {
+  left: 100%;
 }
 
 .option-btn:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.25);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.option-btn:focus {
+  outline: 2px solid rgba(138, 43, 226, 0.6);
+  outline-offset: 2px;
 }
 
 .type-options input[type="radio"]:checked + .option-btn {
@@ -401,6 +542,7 @@
   border-color: rgba(138, 43, 226, 0.5);
   color: white;
   box-shadow: 0 4px 16px rgba(138, 43, 226, 0.2);
+  transform: translateY(-1px);
 }
 
 /* Wrapper para selects personalizados */
@@ -428,17 +570,21 @@
   background-repeat: no-repeat;
   background-position: right 16px center;
   background-size: 16px;
+  position: relative;
 }
 
 .custom-select:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .custom-select:focus {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(138, 43, 226, 0.5);
-  box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.1);
+  box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.15);
+  transform: translateY(-1px);
 }
 
 /* Opciones del select */
@@ -687,7 +833,12 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.8); /* Fondo semitransparente */
+  background: linear-gradient(135deg, 
+    rgba(25, 25, 40, 0.95) 0%, 
+    rgba(15, 15, 25, 0.95) 50%, 
+    rgba(5, 5, 15, 0.95) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   z-index: 9999;
   display: none; /* Oculto por defecto */
   justify-content: center;
@@ -695,6 +846,24 @@
   color: white;
   font-size: 20px;
   text-align: center;
+}
+
+#loading-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 30% 20%, rgba(138, 43, 226, 0.1) 0%, transparent 50%),
+              radial-gradient(circle at 70% 80%, rgba(255, 20, 147, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
 }
 
 
@@ -3194,4 +3363,79 @@ h1 {
 .demo-torrent .torrent-button:hover {
   border-color: #ff8a65;
   background: rgba(255, 107, 53, 0.15);
+}
+
+/* ===== ENHANCED UI IMPROVEMENTS ===== */
+
+/* Enhanced mobile touch targets and spacing */
+@media (max-width: 768px) {
+  /* Improve touch targets for buttons */
+  .voice-search-btn {
+    padding: 16px 18px;
+    min-width: 48px;
+    min-height: 48px;
+  }
+  
+  .suggestion-tag {
+    padding: 12px 18px;
+    font-size: 15px;
+    min-height: 44px;
+  }
+  
+  .filter-chip {
+    padding: 12px 18px;
+    min-height: 44px;
+  }
+  
+  .option-btn {
+    padding: 16px 20px;
+    min-height: 48px;
+  }
+  
+  .filters-toggle {
+    padding: 16px 24px;
+    min-height: 48px;
+  }
+  
+  /* Better search bar for mobile */
+  #search-bar {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 20px 60px 20px 55px;
+  }
+  
+  /* Enhanced spacing for mobile */
+  .search-hero {
+    padding: 30px 20px;
+  }
+  
+  .filters-panel {
+    margin: 0 10px;
+  }
+  
+  .filters-content.expanded {
+    padding: 20px 15px;
+  }
+}
+
+/* Pulse animation for loading states */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Enhanced focus ring for better accessibility */
+*:focus {
+  outline: 2px solid rgba(138, 43, 226, 0.6);
+  outline-offset: 2px;
+}
+
+/* Hide focus ring for mouse users */
+.js-focus-visible *:focus:not(.focus-visible) {
+  outline: none;
+}
+
+/* Show focus ring for keyboard users */
+.js-focus-visible *:focus.focus-visible {
+  outline: 2px solid rgba(138, 43, 226, 0.6);
+  outline-offset: 2px;
 }
