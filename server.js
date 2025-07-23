@@ -22,6 +22,8 @@ const PORT = process.env.PORT || 3001;
 const API_KEY = process.env.API_KEY; // Cargar la API key desde el .env
 const VIMEO_ACCESS_TOKEN = process.env.VIMEO_ACCESS_TOKEN;
 const OPENSUBTITLES_API_KEY = process.env.OPENSUBTITLES_API_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
 // Helper function to filter adult content based on adult filter setting
 function filterAdultContent(results, adultFilter) {
@@ -39,10 +41,12 @@ function filterAdultContent(results, adultFilter) {
   return results;
 }
 
-// Debug: Verificar si la API_KEY se está cargando correctamente
+// Debug: Verificar si las keys se están cargando correctamente
 console.log('🔑 API_KEY cargada:', API_KEY ? 'SÍ (longitud: ' + API_KEY.length + ')' : 'NO');
 console.log('🔑 VIMEO_ACCESS_TOKEN cargado:', VIMEO_ACCESS_TOKEN ? 'SÍ' : 'NO');
 console.log('🔑 OPENSUBTITLES_API_KEY cargado:', OPENSUBTITLES_API_KEY ? 'SÍ' : 'NO');
+console.log('🔑 SUPABASE_URL cargada:', SUPABASE_URL ? 'SÍ' : 'NO');
+console.log('🔑 SUPABASE_ANON_KEY cargada:', SUPABASE_ANON_KEY ? 'SÍ (longitud: ' + SUPABASE_ANON_KEY.length + ')' : 'NO');
 
 // Crear cliente de WebTorrent
 const client = new WebTorrent();
@@ -325,6 +329,15 @@ app.use(express.static('public'));
 app.get('/lib/supabase.js', (req, res) => {
   const supabasePath = path.join(__dirname, 'node_modules', '@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js');
   res.sendFile(supabasePath);
+});
+
+// Servir configuración de Supabase para el frontend
+app.get('/api/supabase-config', (req, res) => {
+  res.json({
+    url: SUPABASE_URL || null,
+    anonKey: SUPABASE_ANON_KEY || null,
+    configured: !!(SUPABASE_URL && SUPABASE_ANON_KEY)
+  });
 });
 
 // Servir archivos de subtítulos

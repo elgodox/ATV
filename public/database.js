@@ -9,7 +9,7 @@ export async function getFavorites() {
   
   try {
     const user = getCurrentUser();
-    const { data, error } = await supabase
+    const { data, error } = await supabase.client
       .from('favorites')
       .select('*')
       .eq('user_id', user.id);
@@ -33,7 +33,7 @@ export async function addFavorite(movieId, type) {
   
   try {
     const user = getCurrentUser();
-    const { data, error } = await supabase
+    const { data, error } = await supabase.client
       .from('favorites')
       .insert([
         {
@@ -62,7 +62,7 @@ export async function removeFavorite(movieId, type) {
   
   try {
     const user = getCurrentUser();
-    const { error } = await supabase
+    const { error } = await supabase.client
       .from('favorites')
       .delete()
       .eq('user_id', user.id)
@@ -87,7 +87,7 @@ export async function isFavorite(movieId, type) {
   
   try {
     const user = getCurrentUser();
-    const { data, error } = await supabase
+    const { data, error } = await supabase.client
       .from('favorites')
       .select('id')
       .eq('user_id', user.id)
@@ -115,7 +115,7 @@ export async function getWatchedItems() {
   
   try {
     const user = getCurrentUser();
-    const { data, error } = await supabase
+    const { data, error } = await supabase.client
       .from('watched_items')
       .select('*')
       .eq('user_id', user.id);
@@ -139,7 +139,7 @@ export async function addWatchedItem(movieId, type) {
   
   try {
     const user = getCurrentUser();
-    const { data, error } = await supabase
+    const { data, error } = await supabase.client
       .from('watched_items')
       .insert([
         {
@@ -168,7 +168,7 @@ export async function removeWatchedItem(movieId, type) {
   
   try {
     const user = getCurrentUser();
-    const { error } = await supabase
+    const { error } = await supabase.client
       .from('watched_items')
       .delete()
       .eq('user_id', user.id)
@@ -193,7 +193,7 @@ export async function isWatched(movieId, type) {
   
   try {
     const user = getCurrentUser();
-    const { data, error } = await supabase
+    const { data, error } = await supabase.client
       .from('watched_items')
       .select('id')
       .eq('user_id', user.id)
