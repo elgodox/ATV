@@ -2424,7 +2424,7 @@ h1 {
   padding: 12px 16px;
   border: 2px solid #444;
   border-radius: 8px;
-  background: linear-gradient(135deg, #333 0%, #2a2a2a 100%);
+  background: #2a2a2a;
   color: #fff;
   font-size: 0.95em;
   cursor: pointer;
@@ -2434,12 +2434,31 @@ h1 {
 
 .modern-select:hover {
   border-color: #555;
+  background: #333;
 }
 
 .modern-select:focus {
   outline: none;
   border-color: #4caf50;
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+/* Opciones del select de subtítulos - Estilo simple y funcional */
+.modern-select option {
+  background-color: #1a1a1a;
+  color: #ffffff;
+  padding: 12px 16px;
+  border: none;
+  font-size: 0.95em;
+}
+
+.modern-select option:hover {
+  background-color: #333;
+}
+
+.modern-select option:checked {
+  background-color: #4caf50;
+  color: white;
 }
 
 .search-controls {
