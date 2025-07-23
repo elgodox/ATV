@@ -1,3 +1,25 @@
+// Import Supabase functions
+import { 
+  initializeAuth, 
+  signIn, 
+  signUp, 
+  signOut, 
+  getCurrentUser, 
+  isAuthenticated,
+  onAuthStateChange 
+} from './supabase-config.js';
+
+import { 
+  getFavorites,
+  addFavorite,
+  removeFavorite,
+  isFavorite as checkIsFavorite,
+  getWatchedItems,
+  addWatchedItem,
+  removeWatchedItem,
+  isWatched as checkIsWatched
+} from './database.js';
+
 let currentPage = 1;
 let totalResults = 0;
 let isLoading = false;
@@ -536,10 +558,56 @@ function performSearch() {
   }
 }
 
-document.getElementById('connect-metamask').addEventListener('click', connectMetaMask);
-
-// Debug: verificar que los elementos principales existan
+// Authentication Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
+  // Initialize authentication
+  initializeAuth().then(isLoggedIn => {
+    updateAuthUI(isLoggedIn);
+  });
+
+  // Set up auth state change listener
+  onAuthStateChange((event, session) => {
+    updateAuthUI(!!session);
+  });
+
+  // Login button
+  document.getElementById('login-btn').addEventListener('click', showLoginModal);
+  
+  // Register button  
+  document.getElementById('register-btn').addEventListener('click', showRegisterModal);
+  
+  // Logout button
+  document.getElementById('logout-btn').addEventListener('click', handleLogout);
+  
+  // Modal close
+  document.getElementById('auth-modal-close').addEventListener('click', hideAuthModal);
+  
+  // Switch between login and register
+  document.getElementById('show-register').addEventListener('click', (e) => {
+    e.preventDefault();
+    showRegisterForm();
+  });
+  
+  document.getElementById('show-login').addEventListener('click', (e) => {
+    e.preventDefault();
+    showLoginForm();
+  });
+  
+  // Form submissions
+  document.getElementById('login-form-element').addEventListener('submit', handleLogin);
+  document.getElementById('register-form-element').addEventListener('submit', handleRegister);
+  
+  // Close modal when clicking outside
+  document.getElementById('auth-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'auth-modal') {
+      hideAuthModal();
+    }
+  });
+
+  // Initialize other components
+  updateGenreSelect();  // Cargar los géneros iniciales (por ejemplo, películas)
+
+  // Debug: verificar que los elementos principales existan
   setTimeout(() => {
     console.log('=== DEBUG: Verificando elementos ===');
     const requiredElements = [
@@ -699,31 +767,46 @@ async function getTitles(page = 1) {
   
   // Verificar si el filtro de favoritos está activo
   if (showingFavorites) {
-    const favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
-
-    // Filter favorites by the current type (movie or tv), or all if no type selected
-    let filteredFavorites = favorites;
-    if (type && type !== '') {
-      filteredFavorites = favorites.filter(fav => fav.type === type);
+    if (!isAuthenticated()) {
+      elements.movieGrid.innerHTML = '<p>Debes iniciar sesión para ver tus favoritos.</p>';
+      showSearchLoading(false);
+      isLoading = false;
+      return;
     }
 
-    if (filteredFavorites.length === 0) {
-        elements.movieGrid.innerHTML = '<p>No tienes favoritos en esta categoría.</p>';
-        showSearchLoading(false);
-        isLoading = false;
-        return;
-    }
+    try {
+      const favorites = await getFavorites();
 
-    // Obtener los detalles de cada película/serie en la lista de favoritos
-    data = { results: [] };
+      // Filter favorites by the current type (movie or tv), or all if no type selected
+      let filteredFavorites = favorites;
+      if (type && type !== '') {
+        filteredFavorites = favorites.filter(fav => fav.type === type);
+      }
 
-    for (let favorite of filteredFavorites) {
-        const response = await fetch(`/api/titles/details?id=${favorite.id}&type=${favorite.type}&language=en`);
-        const movie = await response.json();
-        if (movie && movie.poster_path) { // Only include results with images
-            movie.content_type = favorite.type; // Asegurar que el tipo esté disponible
-            data.results.push(movie);
-        }
+      if (filteredFavorites.length === 0) {
+          elements.movieGrid.innerHTML = '<p>No tienes favoritos en esta categoría.</p>';
+          showSearchLoading(false);
+          isLoading = false;
+          return;
+      }
+
+      // Obtener los detalles de cada película/serie en la lista de favoritos
+      data = { results: [] };
+
+      for (let favorite of filteredFavorites) {
+          const response = await fetch(`/api/titles/details?id=${favorite.movie_id}&type=${favorite.type}&language=en`);
+          const movie = await response.json();
+          if (movie && movie.poster_path) { // Only include results with images
+              movie.content_type = favorite.type; // Asegurar que el tipo esté disponible
+              data.results.push(movie);
+          }
+      }
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+      elements.movieGrid.innerHTML = '<p>Error al cargar favoritos.</p>';
+      showSearchLoading(false);
+      isLoading = false;
+      return;
     }
   } else if (searchQuery && searchQuery.length > 0) {
     // Si hay búsqueda, usar la nueva API que busca en ambos tipos
@@ -869,69 +952,110 @@ async function getTitles(page = 1) {
     <div class="card-icons">
       <i id="heart-icon-${title.id}" 
          class="fas fa-heart" 
-         style="cursor: pointer; color: ${isFavorite(title.id, contentType) ? 'red' : 'black'};" 
+         style="cursor: pointer; color: black;" 
          onclick="toggleFavorite(${title.id}, '${contentType}', event)"></i>
       <i id="eye-icon-${title.id}" 
          class="fas fa-eye" 
-         style="cursor: pointer; color: ${isWatched(title.id, contentType) ? 'blue' : 'black'};" 
+         style="cursor: pointer; color: black;" 
          onclick="toggleWatched(${title.id}, '${contentType}', event)"></i>
     </div>
   `;
   
-
-    if (isWatched(title.id, contentType)) {
-      movieCard.classList.add('watched');
-    } else {
-      movieCard.classList.remove('watched');
-    }
-
+    // Add the card to the DOM first
     movieCard.addEventListener('click', () => {
       showDetails(title.id, contentType, movieCard);
     });
 
     elements.movieGrid.appendChild(movieCard);
+    
+    // Then update the favorite and watched status asynchronously
+    updateCardStatus(title.id, contentType);
   });
+
+// Function to update card status (favorites and watched) asynchronously
+async function updateCardStatus(movieId, contentType) {
+  if (!isAuthenticated()) {
+    return;
+  }
+  
+  try {
+    // Check favorite status
+    const isFav = await checkIsFavorite(movieId, contentType);
+    const heartIcon = document.getElementById(`heart-icon-${movieId}`);
+    if (heartIcon) {
+      heartIcon.style.color = isFav ? 'red' : 'black';
+    }
+    
+    // Check watched status
+    const isWatchedStatus = await checkIsWatched(movieId, contentType);
+    const eyeIcon = document.getElementById(`eye-icon-${movieId}`);
+    const movieCard = document.getElementById(`movie-card-${movieId}`);
+    
+    if (eyeIcon) {
+      eyeIcon.style.color = isWatchedStatus ? 'blue' : 'black';
+    }
+    
+    if (movieCard) {
+      if (isWatchedStatus) {
+        movieCard.classList.add('watched');
+      } else {
+        movieCard.classList.remove('watched');
+      }
+    }
+  } catch (error) {
+    console.error('Error updating card status:', error);
+  }
+}
 
   isLoading = false; // Marcamos como terminado
 }
 
 
-function toggleWatched(movieId, type, event) {
+async function toggleWatched(movieId, type, event) {
   event.stopPropagation(); // Evita que se abra el modal al hacer clic en el ícono
 
-  if (!selectedAccount) {
-    alert("Primero debes conectar MetaMask");
+  if (!isAuthenticated()) {
+    showNotification("Primero debes iniciar sesión", 'warning');
     return;
   }
 
-  let watched = JSON.parse(localStorage.getItem(selectedAccount + '-watched')) || [];
-  const watchedIndex = watched.findIndex(item => item.id === movieId && item.type === type);
-  
-  const movieCard = document.querySelector(`#movie-card-${movieId}`);
-
-  if (watchedIndex !== -1) {
-    // Si ya está en la lista de vistos, quitarlo
-    watched.splice(watchedIndex, 1);
-    document.getElementById(`eye-icon-${movieId}`).style.color = 'black'; // Cambia el color del ícono de "visto"
-    movieCard.classList.remove('watched'); // Quitar la clase que oscurece la tarjeta
-  } else {
-    // Si no está en la lista, agregarlo
-    watched.push({ id: movieId, type: type });
-    document.getElementById(`eye-icon-${movieId}`).style.color = 'blue'; // Cambia el color del ícono de "visto"
-    movieCard.classList.add('watched'); // Oscurecer la tarjeta
+  try {
+    const isWatchedStatus = await checkIsWatched(movieId, type);
+    const movieCard = document.querySelector(`#movie-card-${movieId}`);
+    
+    if (isWatchedStatus) {
+      // Si ya está en la lista de vistos, quitarlo
+      await removeWatchedItem(movieId, type);
+      document.getElementById(`eye-icon-${movieId}`).style.color = 'black';
+      movieCard.classList.remove('watched');
+      showNotification('Eliminado de vistos', 'info');
+    } else {
+      // Si no está en la lista, agregarlo
+      await addWatchedItem(movieId, type);
+      document.getElementById(`eye-icon-${movieId}`).style.color = 'blue';
+      movieCard.classList.add('watched');
+      showNotification('Marcado como visto', 'success');
+    }
+  } catch (error) {
+    console.error('Error toggling watched status:', error);
+    showNotification('Error al gestionar estado de visto', 'error');
   }
-
-  // Guardar el estado actualizado en el localStorage
-  localStorage.setItem(selectedAccount + '-watched', JSON.stringify(watched));
-
- // updateMovieGrid();
+}
 }
 
 
 
-function isWatched(movieId, type) {
-  let watched = JSON.parse(localStorage.getItem(selectedAccount + '-watched')) || [];
-  return watched.some(item => item.id === movieId && item.type === type);
+async function isWatched(movieId, type) {
+  if (!isAuthenticated()) {
+    return false;
+  }
+  
+  try {
+    return await checkIsWatched(movieId, type);
+  } catch (error) {
+    console.error('Error checking watched status:', error);
+    return false;
+  }
 }
 
 function updateMovieGrid() {
@@ -964,9 +1088,17 @@ window.addEventListener('scroll', () => {
 });
 
 // Verifica si la película está en favoritos
-function isFavorite(movieId, type) {
-  let favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
-  return favorites.some(fav => fav.id === movieId && fav.type === type);
+async function isFavorite(movieId, type) {
+  if (!isAuthenticated()) {
+    return false;
+  }
+  
+  try {
+    return await checkIsFavorite(movieId, type);
+  } catch (error) {
+    console.error('Error checking favorite:', error);
+    return false;
+  }
 }
 // Función para obtener los detalles completos de una serie de TV
 async function fetchTVDetails(tvId) {
@@ -2667,32 +2799,156 @@ btcButton.addEventListener('click', function () {
   }, 2000); // Cambia el texto por 2 segundos
 });
 
-// Función para conectar a MetaMask y mostrar el filtro de favoritos si está conectado
-async function connectMetaMask() {
-  if (window.ethereum) {
-      try {
-          // Solicita la conexión a MetaMask
-          await window.ethereum.request({ method: 'eth_requestAccounts' });
-          const accounts = await ethereum.request({ method: 'eth_accounts' });
-          selectedAccount = accounts[0]; // Guarda la cuenta conectada
-          console.log("Conectado a MetaMask:", selectedAccount);
-
-          // Deshabilitar el botón de MetaMask y cambiar su apariencia
-          const metamaskButton = document.getElementById('connect-metamask');
-          metamaskButton.disabled = true;
-          metamaskButton.textContent = "MetaMask Conectado";
-
-          // Mostrar el filtro de favoritos
-          document.getElementById('favorite-filter-group').style.display = 'flex';
-
-          // Cargar los favoritos si el filtro está activado
-          loadTitles();
-      } catch (error) {
-          console.error("Error al conectar MetaMask", error);
-      }
+// Authentication Functions
+function updateAuthUI(isLoggedIn) {
+  const authButtons = document.getElementById('auth-buttons');
+  const userInfo = document.getElementById('user-info');
+  const userEmail = document.getElementById('user-email');
+  
+  if (isLoggedIn) {
+    const user = getCurrentUser();
+    authButtons.classList.add('hidden');
+    userInfo.classList.remove('hidden');
+    if (user && user.email) {
+      userEmail.textContent = user.email;
+    }
+    
+    // Show favorites filter
+    const favoritesFilterGroup = document.getElementById('favorite-filter-group');
+    if (favoritesFilterGroup) {
+      favoritesFilterGroup.style.display = 'flex';
+    }
+    
+    // Load user data
+    loadUserData();
   } else {
-      alert('MetaMask no está instalado');
+    authButtons.classList.remove('hidden');
+    userInfo.classList.add('hidden');
+    
+    // Hide favorites filter
+    const favoritesFilterGroup = document.getElementById('favorite-filter-group');
+    if (favoritesFilterGroup) {
+      favoritesFilterGroup.style.display = 'none';
+    }
   }
+}
+
+function showLoginModal() {
+  showLoginForm();
+  document.getElementById('auth-modal').classList.remove('hidden');
+}
+
+function showRegisterModal() {
+  showRegisterForm();
+  document.getElementById('auth-modal').classList.remove('hidden');
+}
+
+function hideAuthModal() {
+  document.getElementById('auth-modal').classList.add('hidden');
+}
+
+function showLoginForm() {
+  document.getElementById('login-form').classList.remove('hidden');
+  document.getElementById('register-form').classList.add('hidden');
+}
+
+function showRegisterForm() {
+  document.getElementById('login-form').classList.add('hidden');
+  document.getElementById('register-form').classList.remove('hidden');
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  
+  if (!email || !password) {
+    showNotification('Por favor completa todos los campos', 'error');
+    return;
+  }
+  
+  try {
+    const result = await signIn(email, password);
+    
+    if (result.success) {
+      showNotification('Sesión iniciada correctamente', 'success');
+      hideAuthModal();
+      updateAuthUI(true);
+    } else {
+      showNotification(result.error || 'Error al iniciar sesión', 'error');
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    showNotification('Error al iniciar sesión', 'error');
+  }
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  
+  const email = document.getElementById('register-email').value;
+  const password = document.getElementById('register-password').value;
+  const confirmPassword = document.getElementById('register-confirm-password').value;
+  
+  if (!email || !password || !confirmPassword) {
+    showNotification('Por favor completa todos los campos', 'error');
+    return;
+  }
+  
+  if (password !== confirmPassword) {
+    showNotification('Las contraseñas no coinciden', 'error');
+    return;
+  }
+  
+  if (password.length < 6) {
+    showNotification('La contraseña debe tener al menos 6 caracteres', 'error');
+    return;
+  }
+  
+  try {
+    const result = await signUp(email, password);
+    
+    if (result.success) {
+      showNotification('Cuenta creada correctamente. Revisa tu email para confirmar tu cuenta.', 'success');
+      hideAuthModal();
+    } else {
+      showNotification(result.error || 'Error al crear la cuenta', 'error');
+    }
+  } catch (error) {
+    console.error('Register error:', error);
+    showNotification('Error al crear la cuenta', 'error');
+  }
+}
+
+async function handleLogout() {
+  try {
+    const result = await signOut();
+    
+    if (result.success) {
+      showNotification('Sesión cerrada correctamente', 'success');
+      updateAuthUI(false);
+      
+      // Clear favorites filter if active
+      const favoritesCheckbox = document.getElementById('favorites-checkbox');
+      if (favoritesCheckbox && favoritesCheckbox.checked) {
+        favoritesCheckbox.checked = false;
+        showingFavorites = false;
+        updateFavoritesChip();
+        getTitles();
+      }
+    } else {
+      showNotification('Error al cerrar sesión', 'error');
+    }
+  } catch (error) {
+    console.error('Logout error:', error);
+    showNotification('Error al cerrar sesión', 'error');
+  }
+}
+
+async function loadUserData() {
+  // This function will be called when user logs in to load their data
+  console.log('Loading user data...');
 }
 
 
@@ -2710,51 +2966,56 @@ async function getPlatforms(movieId) {
 
 
 // Alternar favoritos
-function toggleFavorite(movieId, type, event) {
+async function toggleFavorite(movieId, type, event) {
   // Evitar que el clic en el corazón se propague y abra el modal
   event.stopPropagation();
 
-  if (!selectedAccount) {
-      alert("Primero debes conectar MetaMask");
+  if (!isAuthenticated()) {
+      showNotification("Primero debes iniciar sesión", 'warning');
       return;
   }
 
-  let favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
-
-  // Check if the favorite with the specific type is already in the list
-  const favoriteIndex = favorites.findIndex(fav => fav.id === movieId && fav.type === type);
-
-  // Agregar o quitar de favoritos
-  if (favoriteIndex !== -1) {
+  try {
+    const isFav = await checkIsFavorite(movieId, type);
+    
+    if (isFav) {
       // Remove favorite
-      favorites.splice(favoriteIndex, 1);
-      document.getElementById(`heart-icon-${movieId}`).style.color = 'black'; // Cambiar a negro si se quita de favoritos
-  } else {
-      // Add new favorite with type
-      favorites.push({ id: movieId, type: type });
-      document.getElementById(`heart-icon-${movieId}`).style.color = 'red'; // Cambiar a rojo si se agrega a favoritos
+      await removeFavorite(movieId, type);
+      document.getElementById(`heart-icon-${movieId}`).style.color = 'black';
+      showNotification('Eliminado de favoritos', 'info');
+    } else {
+      // Add favorite
+      await addFavorite(movieId, type);
+      document.getElementById(`heart-icon-${movieId}`).style.color = 'red';
+      showNotification('Agregado a favoritos', 'success');
+    }
+  } catch (error) {
+    console.error('Error toggling favorite:', error);
+    showNotification('Error al gestionar favoritos', 'error');
   }
-
-  // Guardar favoritos en localStorage
-  localStorage.setItem(selectedAccount, JSON.stringify(favorites));
-
-  // Actualizar la lista de favoritos (opcional)
-  loadFavorites();
 }
 
 
 
-// Función para cargar los favoritos desde localStorage
-function loadFavorites() {
-  const favorites = JSON.parse(localStorage.getItem(selectedAccount)) || [];
-
-  // Iterar sobre todas las películas y actualizar el color del corazón
-  favorites.forEach(movieId => {
-      const heartIcon = document.getElementById(`heart-icon-${movieId}`);
+// Función para cargar los favoritos desde Supabase
+async function loadFavorites() {
+  if (!isAuthenticated()) {
+    return;
+  }
+  
+  try {
+    const favorites = await getFavorites();
+    
+    // Iterar sobre todas las películas y actualizar el color del corazón
+    favorites.forEach(favorite => {
+      const heartIcon = document.getElementById(`heart-icon-${favorite.movie_id}`);
       if (heartIcon) {
-          heartIcon.style.color = 'red'; // Cambiar a rojo si está en favoritos
+        heartIcon.style.color = 'red'; // Cambiar a rojo si está en favoritos
       }
-  });
+    });
+  } catch (error) {
+    console.error('Error loading favorites:', error);
+  }
 }
 
 // Función para activar/desactivar el filtro de favoritos
@@ -2769,20 +3030,8 @@ function toggleFavoritesFilter() {
 fetchGenres();
 fetchProviders("movie"); // Cargar proveedores iniciales de películas (por defecto)
 
-window.onload = async function () {
-  if (window.ethereum) {
-    const accounts = await ethereum.request({ method: 'eth_accounts' });
-    if (accounts.length > 0) {
-        selectedAccount = accounts[0];
-        const metamaskButton = document.getElementById('connect-metamask');
-        metamaskButton.disabled = true;
-        metamaskButton.textContent = "MetaMask Conectado";
-        document.getElementById('favorite-filter-group').style.display = 'flex';
-
-    }
-}
-  updateGenreSelect();  // Cargar los géneros iniciales (por ejemplo, películas)
-};
+// Remove the old MetaMask window.onload function as it's now handled in DOMContentLoaded
+// The auth initialization is now handled in the DOMContentLoaded event listener above
 
 // Agregar función para mostrar opciones de ver online o descargar
 window.showTorrentOptions = function(magnetLink, movieTitle) {

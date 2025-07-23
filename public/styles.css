@@ -1,41 +1,169 @@
-/* Estilos para el botón de MetaMask */
-#top-bar .button.metamask-btn {
-  background-color: transparent; /* Fondo transparente */
-  border: 2px solid #f6851b;  /* Borde color naranja de MetaMask */
+/* Authentication Styles */
+.auth-section {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+#top-bar .button.auth-btn {
+  background-color: transparent;
+  border: 2px solid #007bff;
   display: inline-flex;
   align-items: center;
   padding: 5px 10px;
   border-radius: 15px;
-  color: #f6851b; /* Color del texto */
+  color: #007bff;
   text-decoration: none;
   font-size: 0.8em;
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  cursor: pointer;
 }
 
-#top-bar .button.metamask-btn:hover {
-  background-color: #f6851b; /* Fondo naranja al pasar el cursor */
-  color: white; /* Cambia el texto a blanco al pasar el cursor */
-  border-color: #e4761b; /* Cambia el borde a un naranja más oscuro */
-}
-
-#top-bar .button.metamask-btn img {
-  width: 20px;
-  height: 20px;
-  margin-right: 5px;
-}
-
-#top-bar .button.metamask-btn:disabled {
-  background-color: #f6851b; /* Fondo naranja al estar deshabilitado */
-  color: white; /* Texto en blanco */
-  cursor: not-allowed; /* Cambiar cursor a no permitido */
-  border-color: #f6851b;
-  opacity: 0.6; /* Hacerlo un poco más transparente */
-}
-
-#top-bar .button.metamask-btn:disabled:hover {
-  background-color: #f6851b; /* Mantener el color en hover */
+#top-bar .button.auth-btn:hover {
+  background-color: #007bff;
   color: white;
-  border-color: #f6851b;
+  border-color: #0056b3;
+}
+
+#top-bar .button.logout-btn {
+  background-color: transparent;
+  border: 2px solid #dc3545;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 15px;
+  color: #dc3545;
+  text-decoration: none;
+  font-size: 0.8em;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  cursor: pointer;
+}
+
+#top-bar .button.logout-btn:hover {
+  background-color: #dc3545;
+  color: white;
+  border-color: #c82333;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-email {
+  color: #fff;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Auth Modal Styles */
+.modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.auth-modal-content {
+  background-color: #fefefe;
+  padding: 30px;
+  border: none;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 400px;
+  position: relative;
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  position: absolute;
+  right: 15px;
+  top: 10px;
+  cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+}
+
+.auth-form h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: #333;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.auth-submit-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.auth-submit-btn:hover {
+  background-color: #0056b3;
+}
+
+.auth-switch {
+  text-align: center;
+  margin-top: 15px;
+  color: #666;
+}
+
+.auth-switch a {
+  color: #007bff;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.auth-switch a:hover {
+  text-decoration: underline;
 }
 
 
