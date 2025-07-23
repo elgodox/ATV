@@ -3061,10 +3061,29 @@ async function searchOnlineSubtitles(language) {
     const movieTitle = originalTitle || 'Unknown Movie';
     const imdbId = currentImdbId || null;
     
+    // Check if we have season/episode selectors (for TV series)
+    const seasonSelector = document.getElementById('season-selector');
+    const episodeSelector = document.getElementById('episode-selector');
+    let season = null;
+    let episode = null;
+    
+    if (seasonSelector && seasonSelector.value) {
+      season = seasonSelector.value;
+      if (episodeSelector && episodeSelector.value) {
+        episode = episodeSelector.value;
+      }
+    }
+    
     // Construir la URL con los parámetros necesarios
     let searchUrl = `/api/subtitles/search?movieTitle=${encodeURIComponent(movieTitle)}&language=${language}`;
     if (imdbId) {
       searchUrl += `&imdbId=${encodeURIComponent(imdbId)}`;
+    }
+    if (season !== null) {
+      searchUrl += `&season=${encodeURIComponent(season)}`;
+      if (episode !== null) {
+        searchUrl += `&episode=${encodeURIComponent(episode)}`;
+      }
     }
     
     const response = await fetch(searchUrl);

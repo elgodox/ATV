@@ -2586,7 +2586,7 @@ app.get('/api/torrent/progress/:infoHash', (req, res) => {
 
 // API para buscar subtítulos en línea (OpenSubtitles compatible)
 app.get('/api/subtitles/search', async (req, res) => {
-  const { imdbId, movieTitle, language = 'es' } = req.query;
+  const { imdbId, movieTitle, language = 'es', season, episode } = req.query;
   
   try {
     // Verificar que tenemos al menos el título de la película
@@ -2594,14 +2594,14 @@ app.get('/api/subtitles/search', async (req, res) => {
       return res.status(400).json({ message: 'movieTitle is required' });
     }
     
-    console.log(`Searching subtitles for: ${movieTitle} (imdbId: ${imdbId || 'N/A'}) in ${language}`);
+    console.log(`Searching subtitles for: ${movieTitle} (imdbId: ${imdbId || 'N/A'}) in ${language}${season ? ` S${season}` : ''}${episode ? `E${episode}` : ''}`);
     
     let subtitles = [];
     
     // Si tenemos la API key de OpenSubtitles, usar la API real
     if (OPENSUBTITLES_API_KEY) {
       try {
-        subtitles = await searchOpenSubtitles(movieTitle, imdbId, language);
+        subtitles = await searchOpenSubtitles(movieTitle, imdbId, language, season, episode);
         console.log(`Found ${subtitles.length} real subtitles from OpenSubtitles`);
       } catch (error) {
         console.error('Error with OpenSubtitles API:', error);
@@ -2622,7 +2622,7 @@ app.get('/api/subtitles/search', async (req, res) => {
 });
 
 // Función para buscar subtítulos en OpenSubtitles
-async function searchOpenSubtitles(movieTitle, imdbId, language) {
+async function searchOpenSubtitles(movieTitle, imdbId, language, season = null, episode = null) {
   const subtitles = [];
   
   try {
@@ -2640,6 +2640,14 @@ async function searchOpenSubtitles(movieTitle, imdbId, language) {
       // Si no, buscar por título
       searchParams += `&query=${encodeURIComponent(movieTitle)}`;
       console.log(`Searching by title: ${movieTitle}`);
+    }
+    
+    // Add season/episode parameters if provided
+    if (season !== null) {
+      searchParams += `&season_number=${season}`;
+      if (episode !== null) {
+        searchParams += `&episode_number=${episode}`;
+      }
     }
     
     // Buscar subtítulos directamente (sin login para API key)
@@ -2667,6 +2675,7 @@ async function searchOpenSubtitles(movieTitle, imdbId, language) {
     
     // Procesar resultados
     if (searchData.data && Array.isArray(searchData.data)) {
+      let filteredCount = 0;
       searchData.data.forEach((subtitle, index) => {
         try {
           if (subtitle.attributes && subtitle.attributes.files && subtitle.attributes.files.length > 0) {
@@ -2680,6 +2689,16 @@ async function searchOpenSubtitles(movieTitle, imdbId, language) {
               fileName: file.file_name,
               url: attributes.url
             });
+            
+            // Apply relevance filtering
+            const seasonNum = season !== null ? parseInt(season) : null;
+            const episodeNum = episode !== null ? parseInt(episode) : null;
+            
+            if (!isSubtitleRelevant(subtitle, movieTitle, seasonNum, episodeNum)) {
+              console.log(`Filtering out irrelevant subtitle: ${file.file_name}`);
+              filteredCount++;
+              return; // Skip this subtitle
+            }
             
             // Incluir el file_id en la URL para usarlo directamente
             // Usar una URL directa sin pasar por el proxy
@@ -2701,6 +2720,8 @@ async function searchOpenSubtitles(movieTitle, imdbId, language) {
           console.error(`Error processing subtitle item ${index}:`, itemError);
         }
       });
+      
+      console.log(`Filtered out ${filteredCount} irrelevant subtitles`);
     }
     
     console.log(`Successfully processed ${subtitles.length} subtitles`);
@@ -2729,6 +2750,79 @@ function getLanguageName(langCode) {
   };
   
   return languageNames[langCode] || langCode.toUpperCase();
+}
+
+// Function to check if a subtitle is relevant to the requested content
+function isSubtitleRelevant(subtitle, requestedTitle, season = null, episode = null) {
+  if (!subtitle || !subtitle.attributes || !subtitle.attributes.files || subtitle.attributes.files.length === 0) {
+    return false;
+  }
+
+  const file = subtitle.attributes.files[0];
+  const fileName = file.file_name || '';
+  const movieName = subtitle.attributes.feature_details?.movie_name || '';
+  const seriesName = subtitle.attributes.feature_details?.title || '';
+  
+  // Normalize strings for comparison (lowercase, remove special chars)
+  const normalizeString = (str) => {
+    return str.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const normalizedRequest = normalizeString(requestedTitle);
+  const normalizedFileName = normalizeString(fileName);
+  const normalizedMovieName = normalizeString(movieName);
+  const normalizedSeriesName = normalizeString(seriesName);
+
+  // Check if any of the subtitle metadata contains words from the requested title
+  const requestWords = normalizedRequest.split(' ').filter(word => word.length > 2);
+  
+  // Function to calculate word match score
+  const calculateMatchScore = (text, requestWords) => {
+    const textWords = text.split(' ');
+    let matchedWords = 0;
+    
+    requestWords.forEach(requestWord => {
+      if (textWords.some(textWord => 
+        textWord.includes(requestWord) || requestWord.includes(textWord)
+      )) {
+        matchedWords++;
+      }
+    });
+    
+    return requestWords.length > 0 ? matchedWords / requestWords.length : 0;
+  };
+
+  // Calculate match scores for different fields
+  const fileNameScore = calculateMatchScore(normalizedFileName, requestWords);
+  const movieNameScore = calculateMatchScore(normalizedMovieName, requestWords);
+  const seriesNameScore = calculateMatchScore(normalizedSeriesName, requestWords);
+  
+  // Best match score among all fields
+  const bestScore = Math.max(fileNameScore, movieNameScore, seriesNameScore);
+  
+  // For TV series, also check season/episode if provided
+  if (season !== null) {
+    const seasonPattern = new RegExp(`s0?${season}(?![0-9])|season\\s*0?${season}(?![0-9])`, 'i');
+    const hasSeasonMatch = seasonPattern.test(fileName);
+    
+    if (episode !== null) {
+      const episodePattern = new RegExp(`e0?${episode}(?![0-9])|episode\\s*0?${episode}(?![0-9])`, 'i');
+      const hasEpisodeMatch = episodePattern.test(fileName);
+      
+      // For TV shows with specific season/episode, require both season and episode match
+      // plus at least 30% title match
+      return hasSeasonMatch && hasEpisodeMatch && bestScore >= 0.3;
+    } else {
+      // For season-only requests, require season match plus at least 30% title match
+      return hasSeasonMatch && bestScore >= 0.3;
+    }
+  }
+  
+  // For movies or general searches, require at least 50% word match
+  return bestScore >= 0.5;
 }
 
 // Function to convert SRT format to WebVTT format for browser compatibility
