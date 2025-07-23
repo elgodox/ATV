@@ -2083,15 +2083,9 @@ async function searchTVTorrentsById(showId, seasonNumber, episodeNumber) {
             seriesName = seriesDetails.name;
             console.log(`🌍 Using name (Latin chars): ${seriesName}`);
           } else {
-            // Como último recurso, buscar en la lista de nombres conocidos
-            seriesName = getKnownSeriesName(showId);
-            if (seriesName) {
-              console.log(`🎯 Using known series name: ${seriesName}`);
-            } else {
-              // Si no tenemos una traducción conocida, usar el nombre original pero advertir
-              seriesName = seriesDetails.original_name || seriesDetails.name;
-              console.log(`⚠️  Using non-Latin name as fallback: ${seriesName}`);
-            }
+            // Si no tenemos un nombre en caracteres latinos, usar el que tenemos
+            seriesName = seriesDetails.original_name || seriesDetails.name;
+            console.log(`⚠️  Using non-Latin name as fallback: ${seriesName}`);
           }
         }
         
@@ -2105,10 +2099,10 @@ async function searchTVTorrentsById(showId, seasonNumber, episodeNumber) {
       console.log('⚠️  No TMDb API key available');
     }
     
-    // Si no se pudo obtener el nombre de la serie, usar nombres conocidos por ID
+    // Si no se pudo obtener el nombre de la serie, usar fallback genérico
     if (!seriesName) {
-      seriesName = getKnownSeriesName(showId) || `TV Show ${showId}`;
-      console.log(`🎯 Using fallback name: ${seriesName}`);
+      seriesName = `TV Show ${showId}`;
+      console.log(`🎯 Using generic fallback name: ${seriesName}`);
     }
     
     // Buscar torrents usando el nombre de la serie
@@ -2116,57 +2110,9 @@ async function searchTVTorrentsById(showId, seasonNumber, episodeNumber) {
     
   } catch (error) {
     console.error('❌ Error searching TV torrents by ID:', error);
-    const fallbackName = getKnownSeriesName(showId) || `TV Show ${showId}`;
+    const fallbackName = `TV Show ${showId}`;
     return generateMockTorrents(fallbackName, 'tv', seasonNumber, episodeNumber);
   }
-}
-
-// Función auxiliar para nombres de series conocidas (para cuando no hay API key)
-function getKnownSeriesName(showId) {
-  const knownSeries = {
-    1399: 'Game of Thrones',
-    60625: 'Rick and Morty',
-    1668: 'Friends',
-    2316: 'The Office',
-    46648: 'Stranger Things',
-    85271: 'WandaVision',
-    71712: 'The Good Place',
-    82856: 'The Mandalorian',
-    94605: 'Arcane',
-    63174: 'The Boys',
-    95557: 'Squid Game',
-    90462: 'Chernobyl',
-    66732: 'The Witcher',
-    88329: 'The Umbrella Academy',
-    87739: 'The Queen\'s Gambit',
-    85221: 'Ozark',
-    1429: 'Attack on Titan',
-    1901: 'Breaking Bad',
-    60059: 'Better Call Saul',
-    37854: 'One Piece',
-    1396: 'Breaking Bad',
-    456: 'The Simpsons',
-    1418: 'The Big Bang Theory',
-    4614: 'NCIS',
-    72879: 'Wednesday',
-    84958: 'Loki',
-    88040: 'The Falcon and the Winter Soldier',
-    71446: 'Money Heist',
-    82814: 'The Crown',
-    1402: 'The Walking Dead',
-    456: 'The Simpsons',
-    1622: 'Supernatural',
-    73640: 'Brooklyn Nine-Nine',
-    2707: 'Sherlock',
-    1412: 'Arrow',
-    60735: 'The Flash',
-    38472: 'The Blacklist',
-    1403: 'Marvel\'s Agents of S.H.I.E.L.D.',
-    18165: 'Grey\'s Anatomy',
-    4026: 'Law & Order: Special Victims Unit'
-  };
-  
-  return knownSeries[showId] || null;
 }
 
 // Función auxiliar para obtener detalles del episodio desde TMDb
