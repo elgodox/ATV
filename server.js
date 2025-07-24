@@ -8,11 +8,24 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { createRequire } from 'module';
+import { createClient } from '@supabase/supabase-js';
 
 const require = createRequire(import.meta.url);
 const TorrentSearchApi = require('torrent-search-api');
 
 dotenv.config();
+
+// Initialize Supabase client for server-side operations
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+let supabase = null;
+
+if (supabaseUrl && supabaseServiceKey) {
+  supabase = createClient(supabaseUrl, supabaseServiceKey);
+  console.log('✅ Supabase client initialized for watch progress tracking');
+} else {
+  console.warn('⚠️ Supabase not configured - watch progress features will be disabled');
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -2049,6 +2062,286 @@ app.get('/api/torrent/stats/:infoHash', (req, res) => {
   }
 });
 
+
+// ==========================================
+// WATCH PROGRESS API ENDPOINTS
+// ==========================================
+
+// Helper function to validate user authentication
+async function validateUser(req, res) {
+  if (!supabase) {
+    return res.status(503).json({ error: 'Database not configured' });
+  }
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authorization header required' });
+  }
+
+  const token = authHeader.substring(7);
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  
+  if (error || !user) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+
+  return user;
+}
+
+// Save or update watch progress
+app.post('/api/watch-progress', async (req, res) => {
+  try {
+    const user = await validateUser(req, res);
+    if (!user) return; // Response already sent by validateUser
+
+    const {
+      content_type,
+      tmdb_id,
+      title,
+      season_number = null,
+      episode_number = null,
+      current_time,
+      total_duration = null,
+      torrent_magnet_uri = null,
+      torrent_hash = null,
+      torrent_file_index = null,
+      torrent_file_name = null,
+      torrent_file_size = null,
+      torrent_quality = null
+    } = req.body;
+
+    // Validate required fields
+    if (!content_type || !tmdb_id || !title || current_time === undefined) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: content_type, tmdb_id, title, current_time' 
+      });
+    }
+
+    // Validate content_type
+    if (!['movie', 'tv'].includes(content_type)) {
+      return res.status(400).json({ 
+        error: 'content_type must be either "movie" or "tv"' 
+      });
+    }
+
+    // For TV shows, season and episode are required
+    if (content_type === 'tv' && (season_number === null || episode_number === null)) {
+      return res.status(400).json({ 
+        error: 'season_number and episode_number are required for TV shows' 
+      });
+    }
+
+    console.log(`💾 Saving watch progress for user ${user.id}: ${title} at ${current_time}s`);
+
+    // Use upsert to insert or update existing progress
+    const { data, error } = await supabase
+      .from('watch_progress')
+      .upsert({
+        user_id: user.id,
+        content_type,
+        tmdb_id: parseInt(tmdb_id),
+        title,
+        season_number: content_type === 'tv' ? parseInt(season_number) : null,
+        episode_number: content_type === 'tv' ? parseInt(episode_number) : null,
+        current_time: parseFloat(current_time),
+        total_duration: total_duration ? parseFloat(total_duration) : null,
+        torrent_magnet_uri,
+        torrent_hash,
+        torrent_file_index: torrent_file_index !== null ? parseInt(torrent_file_index) : null,
+        torrent_file_name,
+        torrent_file_size: torrent_file_size !== null ? parseInt(torrent_file_size) : null,
+        torrent_quality,
+        last_watched: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,content_type,tmdb_id,season_number,episode_number',
+        ignoreDuplicates: false
+      })
+      .select();
+
+    if (error) {
+      console.error('Error saving watch progress:', error);
+      return res.status(500).json({ error: 'Failed to save watch progress' });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Watch progress saved successfully',
+      data: data[0]
+    });
+
+  } catch (error) {
+    console.error('Error in save watch progress:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get watch progress for a specific item
+app.get('/api/watch-progress/:content_type/:tmdb_id', async (req, res) => {
+  try {
+    const user = await validateUser(req, res);
+    if (!user) return;
+
+    const { content_type, tmdb_id } = req.params;
+    const { season_number, episode_number } = req.query;
+
+    if (!['movie', 'tv'].includes(content_type)) {
+      return res.status(400).json({ 
+        error: 'content_type must be either "movie" or "tv"' 
+      });
+    }
+
+    let query = supabase
+      .from('watch_progress')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('content_type', content_type)
+      .eq('tmdb_id', parseInt(tmdb_id));
+
+    // For TV shows, include season and episode filters
+    if (content_type === 'tv') {
+      if (season_number) {
+        query = query.eq('season_number', parseInt(season_number));
+      }
+      if (episode_number) {
+        query = query.eq('episode_number', parseInt(episode_number));
+      }
+    }
+
+    const { data, error } = await query.single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      console.error('Error getting watch progress:', error);
+      return res.status(500).json({ error: 'Failed to get watch progress' });
+    }
+
+    if (!data) {
+      return res.status(404).json({ error: 'No watch progress found' });
+    }
+
+    res.json(data);
+
+  } catch (error) {
+    console.error('Error in get watch progress:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get all watch progress for a user (recent items)
+app.get('/api/watch-progress', async (req, res) => {
+  try {
+    const user = await validateUser(req, res);
+    if (!user) return;
+
+    const { limit = 20, content_type } = req.query;
+
+    let query = supabase
+      .from('watch_progress')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('last_watched', { ascending: false })
+      .limit(parseInt(limit));
+
+    if (content_type && ['movie', 'tv'].includes(content_type)) {
+      query = query.eq('content_type', content_type);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error getting user watch progress:', error);
+      return res.status(500).json({ error: 'Failed to get watch progress' });
+    }
+
+    res.json(data || []);
+
+  } catch (error) {
+    console.error('Error in get user watch progress:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete watch progress for a specific item
+app.delete('/api/watch-progress/:content_type/:tmdb_id', async (req, res) => {
+  try {
+    const user = await validateUser(req, res);
+    if (!user) return;
+
+    const { content_type, tmdb_id } = req.params;
+    const { season_number, episode_number } = req.query;
+
+    if (!['movie', 'tv'].includes(content_type)) {
+      return res.status(400).json({ 
+        error: 'content_type must be either "movie" or "tv"' 
+      });
+    }
+
+    let query = supabase
+      .from('watch_progress')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('content_type', content_type)
+      .eq('tmdb_id', parseInt(tmdb_id));
+
+    // For TV shows, include season and episode filters if provided
+    if (content_type === 'tv') {
+      if (season_number) {
+        query = query.eq('season_number', parseInt(season_number));
+      }
+      if (episode_number) {
+        query = query.eq('episode_number', parseInt(episode_number));
+      }
+    }
+
+    const { error } = await query;
+
+    if (error) {
+      console.error('Error deleting watch progress:', error);
+      return res.status(500).json({ error: 'Failed to delete watch progress' });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Watch progress deleted successfully' 
+    });
+
+  } catch (error) {
+    console.error('Error in delete watch progress:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get watch progress by torrent hash (for resuming torrents)
+app.get('/api/watch-progress/by-torrent/:torrent_hash', async (req, res) => {
+  try {
+    const user = await validateUser(req, res);
+    if (!user) return;
+
+    const { torrent_hash } = req.params;
+
+    const { data, error } = await supabase
+      .from('watch_progress')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('torrent_hash', torrent_hash)
+      .order('last_watched', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('Error getting watch progress by torrent hash:', error);
+      return res.status(500).json({ error: 'Failed to get watch progress' });
+    }
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: 'No watch progress found for this torrent' });
+    }
+
+    res.json(data[0]);
+
+  } catch (error) {
+    console.error('Error in get watch progress by torrent:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
