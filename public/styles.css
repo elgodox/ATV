@@ -2973,7 +2973,7 @@ h1 {
   box-sizing: border-box;
   display: flex;
   margin-top: 16px;
-  padding: 12px 0;
+  padding: 0.5rem;
 }
 
 .torrent-actions.active {
@@ -3014,8 +3014,11 @@ h1 {
 }
 
 .action-button.watch-online {
+  border-radius: 1.50%;
   border-color: rgba(33, 150, 243, 0.4);
   background: rgba(33, 150, 243, 0.1);
+  border-radius: 10px;
+  height: 1.9rem;
 }
 
 .action-button.watch-online:hover {
@@ -3027,6 +3030,8 @@ h1 {
 .action-button.download-torrent {
   border-color: rgba(76, 175, 80, 0.4);
   background: rgba(76, 175, 80, 0.1);
+  border-radius: 10px;
+  height: 1.9rem;
 }
 
 .action-button.download-torrent:hover {
@@ -3062,7 +3067,7 @@ h1 {
   .torrent-actions {
     gap: 10px;
     margin-top: 14px;
-    padding: 10px 0;
+    padding: 0.5rem;
   }
   
   .action-button {
@@ -3092,7 +3097,7 @@ h1 {
   
   .torrent-actions {
     margin-top: 15px;
-    padding: 11px 0;
+    padding: 0.5rem;
   }
   
   .torrent-actions.active {
@@ -3163,7 +3168,7 @@ h1 {
   z-index: 1;
   background: transparent;
   margin-top: 8px;
-  padding: 0 4px;
+  padding: 0.5rem;
 }
 
 /* TV Torrent Selector Styles - Updated to match site design */
