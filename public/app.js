@@ -990,11 +990,13 @@ async function getTitles(page = 1) {
 
     // Tag de tipo de contenido (simplificado)
     const contentTypeTag = contentType === 'movie' ? 'Película' : 'Serie';
+    // Icono para tipo de contenido
+    const contentTypeIcon = contentType === 'movie' ? '<i class="fas fa-film"></i>' : '<i class="fas fa-tv"></i>';
     
     movieCard.innerHTML = `
-    <div class="content-type-tag ${contentType}">${contentTypeTag}</div>
+    <!-- Integrar icono inline junto al título -->
     <img src="https://image.tmdb.org/t/p/w500${title.poster_path}" alt="${titleName}">
-    <h3>${titleName}</h3>
+    <h3 class="title-with-icon ${contentType}">${contentTypeIcon}<span class="title-text">${titleName}</span></h3>
     <p><strong>Estreno:</strong> ${releaseDate}</p>
     <p><strong>Género:</strong> ${movieGenres}</p>
     ${seasons ? `<p><strong>Temporadas:</strong> ${seasons}</p>` : ''}
