@@ -370,11 +370,19 @@
   display: none;
 }
 
-.favorites-chip input[type="checkbox"]:checked + .chip-label,
+/* El contenedor principal tiene el gradiente cuando está activo */
+.favorites-chip input[type="checkbox"]:checked,
 .favorites-chip.active {
-  background: linear-gradient(135deg, rgba(255, 20, 147, 0.2) 0%, rgba(138, 43, 226, 0.2) 100%);
+  background: linear-gradient(135deg, rgba(255, 20, 147, 0.2) 0%, rgba(138, 43, 226, 0.2) 100%) !important;
   border-color: rgba(255, 20, 147, 0.4);
-  color: #ff1493;
+  color: rgba(255, 182, 193, 0.95);
+}
+
+/* El chip-label interior es transparente cuando está activo */
+.favorites-chip input[type="checkbox"]:checked + .chip-label,
+.favorites-chip.active .chip-label {
+  background: transparent !important;
+  color: rgba(255, 182, 193, 0.95);
 }
 
 .chip-label {
@@ -382,6 +390,8 @@
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  background: transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Chip de limpiar */
