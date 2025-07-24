@@ -22,8 +22,7 @@ let spanishDescription = '';
 let originalTitle = '';
 let spanishTitle = '';
 let currentUser = null;
-let showingFavorites = false; 
-let showingContinueWatching = false;
+let showingFavorites = false;
 let stallTimeoutId = null;
 window.localSubtitleBlobUrls = [];
 // Watch progress tracking variables
@@ -441,16 +440,10 @@ function clearAllFilters() {
   
 
   const favoritesCheckbox = document.getElementById('favorites-checkbox');
-  const continueWatchingCheckbox = document.getElementById('continue-watching-checkbox');
   if (favoritesCheckbox) {
     favoritesCheckbox.checked = false;
     showingFavorites = false;
     updateFavoritesChip();
-  }
-  if (continueWatchingCheckbox) {
-    continueWatchingCheckbox.checked = false;
-    showingContinueWatching = false;
-    updateContinueWatchingChip();
   }
   
 
@@ -495,9 +488,6 @@ function hasActiveFilters() {
   
 
   if (favoritesCheckbox && favoritesCheckbox.checked) return true;
-  
-  const continueWatchingCheckbox = document.getElementById('continue-watching-checkbox');
-  if (continueWatchingCheckbox && continueWatchingCheckbox.checked) return true;
   
   return false;
 }
@@ -1047,100 +1037,6 @@ async function getTitles(page = 1) {
       isLoading = false;
       return;
     }
-  } else if (showingContinueWatching) {
-    // Show continue watching (recent progress) items
-    if (!currentUser) {
-      elements.movieGrid.innerHTML = '<p>Debes iniciar sesión para ver tu progreso de visualización.</p>';
-      showSearchLoading(false);
-      isLoading = false;
-      return;
-    }
-
-    try {
-      const token = getAuthToken();
-      if (!token) {
-        elements.movieGrid.innerHTML = '<p>Error de autenticación. Por favor, inicia sesión nuevamente.</p>';
-        showSearchLoading(false);
-        isLoading = false;
-        return;
-      }
-
-      // Fetch recent watch progress
-      let url = `/api/watch-progress?limit=20`;
-      if (type && type !== '') {
-        url += `&content_type=${type}`;
-      }
-
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al cargar el progreso de visualización');
-      }
-
-      const watchProgress = await response.json();
-
-      if (watchProgress.length === 0) {
-        elements.movieGrid.innerHTML = '<p>No has visto ningún contenido aún. ¡Comienza a ver algo!</p>';
-        showSearchLoading(false);
-        isLoading = false;
-        return;
-      }
-
-      // Convert watch progress to movie data format
-      data = { results: [] };
-      
-      for (let progress of watchProgress) {
-        try {
-          // Fetch detailed info from TMDb for each item
-          const detailsResponse = await fetch(`/api/titles/details?id=${progress.tmdb_id}&type=${progress.content_type}&language=en`);
-          let movieDetails = null;
-          
-          if (detailsResponse.ok) {
-            movieDetails = await detailsResponse.json();
-          }
-
-          const movie = {
-            id: progress.tmdb_id,
-            title: movieDetails?.title || progress.title,
-            name: movieDetails?.name || progress.title,
-            poster_path: movieDetails?.poster_path,
-            overview: movieDetails?.overview || 'Sin descripción disponible',
-            release_date: movieDetails?.release_date,
-            first_air_date: movieDetails?.first_air_date,
-            vote_average: movieDetails?.vote_average || 0,
-            content_type: progress.content_type,
-            genre_ids: movieDetails?.genre_ids || [],
-            // Add progress information
-            watch_progress: {
-              current_time: progress.current_time,
-              total_duration: progress.total_duration,
-              progress_percentage: progress.progress_percentage,
-              last_watched: progress.last_watched,
-              season_number: progress.season_number,
-              episode_number: progress.episode_number,
-              torrent_hash: progress.torrent_hash,
-              torrent_file_name: progress.torrent_file_name
-            }
-          };
-          
-          data.results.push(movie);
-        } catch (itemError) {
-          console.warn('⚠️ Error procesando elemento de progreso:', itemError);
-        }
-      }
-      
-      console.log(`🎉 Total elementos de progreso procesados: ${data.results.length}`);
-    } catch (error) {
-      console.error('Error loading watch progress:', error);
-      elements.movieGrid.innerHTML = '<p>Error al cargar el progreso de visualización.</p>';
-      showSearchLoading(false);
-      isLoading = false;
-      return;
-    }
   } else if (searchQuery && searchQuery.length > 0) {
 
     const params = new URLSearchParams({
@@ -1468,7 +1364,7 @@ function updateMovieGrid() {
 
 
 window.addEventListener('scroll', () => {
-  if (showingFavorites || showingContinueWatching) {
+  if (showingFavorites) {
 
     return;
 }
@@ -3395,6 +3291,8 @@ function updateAuthUI(user) {
 
     preloadUserFavorites();
     
+    // Load continue watching section
+    loadContinueWatchingSection();
 
     getTitles();
   } else {
@@ -3406,9 +3304,15 @@ function updateAuthUI(user) {
     if (logoutBtn) logoutBtn.style.display = 'none';
     if (userEmail) userEmail.textContent = '';
     
-
+    // Hide favorites and continue watching when logged out
     if (favoriteFilterGroup) {
       favoriteFilterGroup.style.display = 'none';
+    }
+    
+    // Hide continue watching section
+    const continueWatchingSection = document.getElementById('continue-watching-section');
+    if (continueWatchingSection) {
+      continueWatchingSection.classList.add('hidden');
     }
   }
 }
@@ -3660,45 +3564,187 @@ async function loadFavorites() {
 function toggleFavoritesFilter() {
   showingFavorites = !showingFavorites;
   
-  // If enabling favorites, disable continue watching
-  if (showingFavorites) {
-    showingContinueWatching = false;
-    updateContinueWatchingChip();
-  }
-  
   console.log(`🔄 Toggle favoritos: ${showingFavorites ? 'ACTIVADO' : 'DESACTIVADO'}`);
   updateFavoritesChip();
   updateClearButtonVisibility();
   getTitles();
 }
 
-function toggleContinueWatchingFilter() {
-  showingContinueWatching = !showingContinueWatching;
+// Continue Watching Section Functions
+async function loadContinueWatchingSection() {
+  const continueWatchingSection = document.getElementById('continue-watching-section');
+  const continueWatchingGrid = document.getElementById('continue-watching-grid');
   
-  // If enabling continue watching, disable favorites
-  if (showingContinueWatching) {
-    showingFavorites = false;
-    updateFavoritesChip();
+  if (!continueWatchingSection || !continueWatchingGrid) {
+    console.warn('Continue watching section elements not found');
+    return;
   }
-  
-  console.log(`🔄 Toggle continuar viendo: ${showingContinueWatching ? 'ACTIVADO' : 'DESACTIVADO'}`);
-  updateContinueWatchingChip();
-  updateClearButtonVisibility();
-  getTitles();
+
+  // Hide section if user is not logged in
+  if (!currentUser) {
+    continueWatchingSection.classList.add('hidden');
+    return;
+  }
+
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      continueWatchingSection.classList.add('hidden');
+      return;
+    }
+
+    // Fetch recent watch progress
+    const response = await fetch('/api/watch-progress?limit=10', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Error al cargar el progreso de visualización');
+    }
+
+    const watchProgress = await response.json();
+
+    if (watchProgress.length === 0) {
+      continueWatchingSection.classList.add('hidden');
+      return;
+    }
+
+    // Show section and populate with content
+    continueWatchingSection.classList.remove('hidden');
+    continueWatchingGrid.innerHTML = '';
+
+    for (let progress of watchProgress) {
+      try {
+        // Fetch detailed info from TMDb for each item
+        const detailsResponse = await fetch(`/api/titles/details?id=${progress.tmdb_id}&type=${progress.content_type}&language=en`);
+        let movieDetails = null;
+        
+        if (detailsResponse.ok) {
+          movieDetails = await detailsResponse.json();
+        }
+
+        const continueWatchingItem = createContinueWatchingItem(progress, movieDetails);
+        continueWatchingGrid.appendChild(continueWatchingItem);
+      } catch (itemError) {
+        console.warn('⚠️ Error procesando elemento de progreso:', itemError);
+      }
+    }
+    
+    console.log(`🎉 Continue watching section loaded with ${watchProgress.length} items`);
+  } catch (error) {
+    console.error('Error loading continue watching section:', error);
+    continueWatchingSection.classList.add('hidden');
+  }
 }
 
-function updateContinueWatchingChip() {
-  const continueWatchingChip = document.querySelector('.continue-watching-chip');
-  const continueWatchingCheckbox = document.getElementById('continue-watching-checkbox');
+function createContinueWatchingItem(progress, movieDetails) {
+  const item = document.createElement('div');
+  item.className = 'continue-watching-item';
   
-  if (continueWatchingChip && continueWatchingCheckbox) {
-    if (continueWatchingCheckbox.checked) {
-      continueWatchingChip.classList.add('active');
-    } else {
-      continueWatchingChip.classList.remove('active');
-    }
+  const posterUrl = movieDetails?.poster_path 
+    ? `https://image.tmdb.org/t/p/w500${movieDetails.poster_path}`
+    : null;
+  
+  const title = movieDetails?.title || movieDetails?.name || progress.title;
+  const progressPercentage = progress.progress_percentage || 0;
+  
+  // Format episode information for TV shows
+  let episodeInfo = '';
+  if (progress.content_type === 'tv' && progress.season_number && progress.episode_number) {
+    episodeInfo = `<div class="continue-watching-episode">T${progress.season_number} E${progress.episode_number}</div>`;
+  }
+  
+  // Format time
+  const currentTime = formatTime(progress.current_time);
+  const lastWatched = new Date(progress.last_watched).toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'short'
+  });
+
+  item.innerHTML = `
+    <div class="continue-watching-poster">
+      ${posterUrl ? `<img src="${posterUrl}" alt="${title}" loading="lazy">` : `<i class="fas fa-film fallback-icon"></i>`}
+      <div class="progress-overlay">
+        <div class="progress-bar" style="width: ${progressPercentage}%"></div>
+      </div>
+      <div class="play-overlay">
+        <i class="fas fa-play"></i>
+      </div>
+    </div>
+    <div class="continue-watching-info">
+      <div class="continue-watching-title">${title}</div>
+      <div class="continue-watching-meta">
+        ${episodeInfo}
+        <div class="continue-watching-time">${currentTime} • ${lastWatched}</div>
+      </div>
+    </div>
+  `;
+
+  // Add click handler to resume watching
+  item.addEventListener('click', () => {
+    resumeWatching(progress, movieDetails);
+  });
+
+  return item;
+}
+
+async function resumeWatching(progress, movieDetails) {
+  try {
+    // Here we'll integrate with the existing torrent playing functionality
+    // For now, let's show the movie details modal and try to resume from the saved torrent
+    
+    const movie = {
+      id: progress.tmdb_id,
+      title: movieDetails?.title || progress.title,
+      name: movieDetails?.name || progress.title,
+      poster_path: movieDetails?.poster_path,
+      overview: movieDetails?.overview || 'Sin descripción disponible',
+      release_date: movieDetails?.release_date,
+      first_air_date: movieDetails?.first_air_date,
+      vote_average: movieDetails?.vote_average || 0,
+      content_type: progress.content_type,
+      genre_ids: movieDetails?.genre_ids || []
+    };
+
+    // Set current watch data for resume functionality
+    currentWatchData = {
+      content_type: progress.content_type,
+      tmdb_id: progress.tmdb_id,
+      title: progress.title,
+      season_number: progress.season_number,
+      episode_number: progress.episode_number,
+      torrent_magnet_uri: progress.torrent_magnet_uri,
+      torrent_hash: progress.torrent_hash,
+      torrent_file_index: progress.torrent_file_index,
+      torrent_file_name: progress.torrent_file_name,
+      torrent_file_size: progress.torrent_file_size,
+      torrent_quality: progress.torrent_quality
+    };
+
+    // Show movie details to allow user to select torrent or resume from saved one
+    showMovieDetails(movie.id, movie.content_type, movie);
+    
+    console.log(`▶️ Resuming: ${progress.title} from ${formatTime(progress.current_time)}`);
+  } catch (error) {
+    console.error('Error resuming watch:', error);
+    showNotification('Error al reanudar la reproducción', 'error');
   }
 }
+
+function formatTime(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  } else {
+    return `${minutes}m`;
+  }
+}
+
+
 
 
 

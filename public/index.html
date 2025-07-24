@@ -87,14 +87,7 @@
             </label>
           </div>
           
-          <!-- Toggle de continuar viendo -->
-          <div class="filter-chip continue-watching-chip">
-            <input type="checkbox" id="continue-watching-checkbox" onchange="toggleContinueWatchingFilter()">
-            <label for="continue-watching-checkbox" class="chip-label">
-              <i class="fas fa-play"></i>
-              <span>Continuar viendo</span>
-            </label>
-          </div>
+
           
           <!-- Botón de limpiar filtros -->
           <button id="clear-filters-btn" class="filter-chip clear-chip" title="Limpiar todos los filtros">
@@ -209,6 +202,21 @@
             </div>
           </details>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Continue Watching Section (Netflix-style) -->
+  <div id="continue-watching-section" class="continue-watching-section hidden">
+    <div class="section-header">
+      <h2 class="section-title">
+        <i class="fas fa-play-circle"></i>
+        Continuar viendo
+      </h2>
+    </div>
+    <div class="continue-watching-content">
+      <div id="continue-watching-grid" class="continue-watching-grid">
+        <!-- Continue watching items will be populated here -->
       </div>
     </div>
   </div>
