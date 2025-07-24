@@ -54,28 +54,17 @@
 
   <!-- Nueva sección de búsqueda y filtros rediseñada -->
   <div class="search-section">
-    <!-- Hero de búsqueda principal -->
-    <div class="search-hero">
-      <div class="search-container">
-        <div class="search-input-wrapper">
-          <i class="fas fa-search search-icon"></i>
-          <input type="text" id="search-bar" placeholder="¿Qué quieres ver hoy?" autocomplete="off" aria-label="Buscar películas y series">
-          <div id="search-loading" class="search-loading hidden" aria-hidden="true">
-            <i class="fas fa-spinner fa-spin"></i>
-          </div>
-          <button class="voice-search-btn" title="Búsqueda por voz" aria-label="Activar búsqueda por voz">
-            <i class="fas fa-microphone"></i>
-          </button>
+    <!-- Hero de búsqueda principal removido, solo barra de búsqueda -->
+    <div class="search-container">
+      <div class="search-input-wrapper">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" id="search-bar" placeholder="¿Qué quieres ver hoy?" autocomplete="off" aria-label="Buscar películas y series">
+        <div id="search-loading" class="search-loading hidden" aria-hidden="true">
+          <i class="fas fa-spinner fa-spin"></i>
         </div>
-        
-        <!-- Sugerencias de búsqueda rápida -->
-        <div class="search-suggestions" role="group" aria-label="Búsquedas sugeridas">
-          <div class="suggestion-tag" data-search="acción" role="button" tabindex="0" aria-label="Buscar películas de acción">🎬 Acción</div>
-          <div class="suggestion-tag" data-search="comedia" role="button" tabindex="0" aria-label="Buscar películas de comedia">😂 Comedia</div>
-          <div class="suggestion-tag" data-search="terror" role="button" tabindex="0" aria-label="Buscar películas de terror">👻 Terror</div>
-          <div class="suggestion-tag" data-search="anime" role="button" tabindex="0" aria-label="Buscar contenido de anime">🎌 Anime</div>
-          <div class="suggestion-tag" data-search="Netflix" role="button" tabindex="0" aria-label="Buscar contenido de Netflix">📺 Netflix</div>
-        </div>
+        <button class="voice-search-btn" title="Búsqueda por voz" aria-label="Activar búsqueda por voz">
+          <i class="fas fa-microphone"></i>
+        </button>
       </div>
     </div>
 
