@@ -25,31 +25,52 @@ let currentUser = null;
 let showingFavorites = false; 
 let showingContinueWatching = false;
 let stallTimeoutId = null;
+let statsInterval = null;
 window.localSubtitleBlobUrls = [];
 // Watch progress tracking variables
 let watchProgressInterval = null;
 let currentWatchData = null;
+let currentContentData = null; // Store current movie/show data for streaming
 let lastSavedTime = 0;
 const SAVE_INTERVAL = 10; // Save progress every 10 seconds
 
 // Function to get authentication token
-function getAuthToken() {
-  const user = currentUser;
-  if (!user || !user.access_token) {
+async function getAuthToken() {
+  try {
+    if (!auth) {
+      console.log('Auth no disponible');
+      return null;
+    }
+    const token = await auth.getAccessToken();
+    return token;
+  } catch (error) {
+    console.error('Error obteniendo token de acceso:', error);
     return null;
   }
-  return user.access_token;
 }
 
 // Function to save watch progress
 async function saveWatchProgress(currentTime, totalDuration = null) {
-  if (!currentWatchData || !currentUser) {
-    console.log('No watch data or user available for progress tracking');
+  if (!currentWatchData) {
+    console.log('⚠️ No se puede guardar progreso: información de contenido no disponible');
+    return;
+  }
+  
+  if (!currentUser) {
+    console.log('⚠️ No se puede guardar progreso: usuario no autenticado');
     return;
   }
 
+  // Validate TV show has season and episode info
+  if (currentWatchData.content_type === 'tv') {
+    if (currentWatchData.season_number === null || currentWatchData.episode_number === null) {
+      console.log('⚠️ No se puede guardar progreso de serie: información de temporada/episodio faltante');
+      return;
+    }
+  }
+
   try {
-    const token = getAuthToken();
+    const token = await getAuthToken();
     if (!token) {
       console.warn('No auth token available for saving progress');
       return;
@@ -61,7 +82,7 @@ async function saveWatchProgress(currentTime, totalDuration = null) {
       title: currentWatchData.title,
       season_number: currentWatchData.season_number,
       episode_number: currentWatchData.episode_number,
-      current_time: currentTime,
+      playback_position: currentTime,
       total_duration: totalDuration,
       torrent_magnet_uri: currentWatchData.torrent_magnet_uri,
       torrent_hash: currentWatchData.torrent_hash,
@@ -99,7 +120,7 @@ async function loadWatchProgress(content_type, tmdb_id, season_number = null, ep
   }
 
   try {
-    const token = getAuthToken();
+    const token = await getAuthToken();
     if (!token) {
       return null;
     }
@@ -126,7 +147,7 @@ async function loadWatchProgress(content_type, tmdb_id, season_number = null, ep
 
     if (response.ok) {
       const progressData = await response.json();
-      console.log(`📖 Loaded progress: ${progressData.current_time}s for ${progressData.title}`);
+      console.log(`📖 Loaded progress: ${progressData.playback_position}s for ${progressData.title}`);
       return progressData;
     } else if (response.status === 404) {
       // No existing progress found
@@ -144,6 +165,12 @@ async function loadWatchProgress(content_type, tmdb_id, season_number = null, ep
 
 // Function to start watch progress tracking
 function startWatchProgressTracking() {
+  // Only start tracking if we have valid watch data and user
+  if (!currentWatchData || !currentUser) {
+    console.log('⚠️ No se puede iniciar rastreo de progreso: datos insuficientes');
+    return;
+  }
+  
   if (watchProgressInterval) {
     clearInterval(watchProgressInterval);
   }
@@ -1057,7 +1084,7 @@ async function getTitles(page = 1) {
     }
 
     try {
-      const token = getAuthToken();
+      const token = await getAuthToken();
       if (!token) {
         elements.movieGrid.innerHTML = '<p>Error de autenticación. Por favor, inicia sesión nuevamente.</p>';
         showSearchLoading(false);
@@ -1116,7 +1143,7 @@ async function getTitles(page = 1) {
             genre_ids: movieDetails?.genre_ids || [],
             // Add progress information
             watch_progress: {
-              current_time: progress.current_time,
+              playback_position: progress.playback_position,
               total_duration: progress.total_duration,
               progress_percentage: progress.progress_percentage,
               last_watched: progress.last_watched,
@@ -1275,10 +1302,30 @@ async function getTitles(page = 1) {
 
     const contentTypeIcon = contentType === 'movie' ? '<i class="fas fa-film"></i>' : '<i class="fas fa-tv"></i>';
     
+    // Build progress indicator for continue watching items
+    let progressInfo = '';
+    if (title.watch_progress) {
+      const progressPercent = title.watch_progress.progress_percentage || 0;
+      const resumeTime = formatTime(title.watch_progress.playback_position);
+      const episodeInfo = title.watch_progress.season_number && title.watch_progress.episode_number 
+        ? ` (T${title.watch_progress.season_number}E${title.watch_progress.episode_number})`
+        : '';
+      
+      progressInfo = `
+        <div class="progress-info" style="background: linear-gradient(135deg, #4CAF50, #45a049); color: white; padding: 8px; border-radius: 4px; margin: 8px 0; text-align: center;">
+          <i class="fas fa-play-circle"></i> Continuar desde ${resumeTime}${episodeInfo}
+          <div class="progress-bar" style="background: rgba(255,255,255,0.3); height: 4px; border-radius: 2px; margin-top: 4px;">
+            <div class="progress-fill" style="background: white; height: 100%; width: ${Math.min(progressPercent, 100)}%; border-radius: 2px; transition: width 0.3s ease;"></div>
+          </div>
+        </div>
+      `;
+    }
+    
     movieCard.innerHTML = `
     <!-- Integrar icono inline junto al título -->
     <img src="https://image.tmdb.org/t/p/w500${title.poster_path}" alt="${titleName}">
     <h3 class="title-with-icon ${contentType}">${contentTypeIcon}<span class="title-text">${titleName}</span></h3>
+    ${progressInfo}
     <p><strong>Estreno:</strong> ${releaseDate}</p>
     <p><strong>Género:</strong> ${movieGenres}</p>
     ${seasons ? `<p><strong>Temporadas:</strong> ${seasons}</p>` : ''}
@@ -1307,7 +1354,14 @@ async function getTitles(page = 1) {
     }
 
     movieCard.addEventListener('click', () => {
-      showDetails(title.id, contentType, movieCard);
+      // Check if this is a "continue watching" item with progress data
+      if (showingContinueWatching && title.watch_progress) {
+        // Resume playback directly using the torrent hash (automatic mode)
+        resumeFromProgress(title, true);
+      } else {
+        // Regular behavior: show details modal
+        showDetails(title.id, contentType, movieCard);
+      }
     });
 
     elements.movieGrid.appendChild(movieCard);
@@ -1317,6 +1371,248 @@ async function getTitles(page = 1) {
   updateFavoriteColors(data.results, defaultContentType);
 
   isLoading = false;
+}
+
+// Function to resume playback from saved progress
+async function resumeFromProgress(movie, autoResume = false) {
+  try {
+    console.log('🔄 Resumiendo reproducción desde progreso guardado:', movie);
+    
+    // Set up current content data for progress tracking
+    currentContentData = {
+      id: movie.id,
+      title: movie.title || movie.name,
+      content_type: movie.content_type,
+      season_number: movie.watch_progress.season_number,
+      episode_number: movie.watch_progress.episode_number
+    };
+    
+    // Check if we have torrent hash to resume exact torrent
+    if (movie.watch_progress.torrent_hash) {
+      console.log(`🎬 Resumiendo torrent: ${movie.watch_progress.torrent_hash}`);
+      
+      // Try to find the exact torrent and resume
+      const resumeTime = formatTime(movie.watch_progress.playback_position);
+      
+      // Skip confirmation if autoResume is true (from continue watching section)
+      const shouldResume = autoResume || confirm(
+        `¿Quieres continuar "${movie.title || movie.name}" desde donde lo dejaste? (${resumeTime})`
+      );
+      
+      if (shouldResume) {
+        // First, try to resume the exact torrent if it's still available
+        try {
+          // Check if the torrent is still active on the server
+          const torrentStatusResponse = await fetch(`/api/torrent/status/${movie.watch_progress.torrent_hash}`);
+          
+          if (torrentStatusResponse.ok) {
+            // Torrent is still active, we can resume directly
+            console.log('✅ Torrent encontrado activo, resumiendo directamente');
+            
+            const torrentInfo = {
+              infoHash: movie.watch_progress.torrent_hash,
+              name: movie.watch_progress.torrent_file_name || movie.title,
+              files: [{ name: movie.watch_progress.torrent_file_name }],
+              videoFiles: [{ 
+                index: 0, 
+                name: movie.watch_progress.torrent_file_name,
+                size: movie.watch_progress.torrent_file_size
+              }]
+            };
+            
+            // Set up watch data with saved progress
+            setupWatchData(
+              movie.content_type,
+              movie.id,
+              movie.title || movie.name,
+              movie.watch_progress.season_number,
+              movie.watch_progress.episode_number,
+              torrentInfo,
+              0
+            );
+            
+            // Set global torrent info and start playback
+            currentTorrentInfo = torrentInfo;
+            playVideoFileWithStats(0);
+            
+            // Set the video time to saved position once it loads with multiple fallbacks
+            const videoPlayer = document.getElementById('video-player');
+            const targetTime = movie.watch_progress.playback_position;
+            
+            if (videoPlayer) {
+              const setVideoTime = () => {
+                if (videoPlayer.readyState >= 2) { // HAVE_CURRENT_DATA or higher
+                  videoPlayer.currentTime = targetTime;
+                  console.log(`✅ Video tiempo establecido a: ${formatTime(targetTime)}`);
+                  if (autoResume) {
+                    showNotification(`▶️ Continuando automáticamente desde ${resumeTime}`, 'success', 3000);
+                  } else {
+                    showNotification(`Resumiendo desde ${resumeTime}`, 'info', 3000);
+                  }
+                  return true;
+                }
+                return false;
+              };
+              
+              // Try to set time immediately if video is already loaded
+              if (!setVideoTime()) {
+                // If not loaded, wait for appropriate events
+                const events = ['loadeddata', 'canplay', 'loadedmetadata'];
+                let eventHandled = false;
+                
+                events.forEach(eventName => {
+                  videoPlayer.addEventListener(eventName, () => {
+                    if (!eventHandled && setVideoTime()) {
+                      eventHandled = true;
+                    }
+                  }, { once: true });
+                });
+                
+                // Fallback timeout
+                setTimeout(() => {
+                  if (!eventHandled) {
+                    setVideoTime();
+                  }
+                }, 2000);
+              }
+            }
+          } else {
+            // Torrent not active, need to restart it or show details
+            throw new Error('Torrent no disponible en el servidor');
+          }
+        } catch (torrentError) {
+          console.warn('⚠️ No se pudo reanudar torrent exacto:', torrentError);
+          if (autoResume) {
+            showNotification('🔍 Torrent original no disponible. Buscando alternativas...', 'warning', 4000);
+          } else {
+            showNotification('El torrent original no está disponible. Abriendo opciones de torrents.', 'warning', 4000);
+          }
+          showDetails(movie.id, movie.content_type, document.querySelector(`#movie-card-${movie.id}`));
+        }
+      }
+    } else {
+      // No torrent hash available, open details modal to select torrent
+      if (autoResume) {
+        showNotification('🔍 Buscando torrents para continuar reproducción...', 'info', 3000);
+      } else {
+        showNotification('No se encontró información de torrent. Abriendo detalles para seleccionar torrent.', 'info', 3000);
+      }
+      showDetails(movie.id, movie.content_type, document.querySelector(`#movie-card-${movie.id}`));
+    }
+    
+  } catch (error) {
+    console.error('Error resumiendo reproducción:', error);
+    if (autoResume) {
+      showNotification('❌ Error al continuar automáticamente. Abriendo opciones.', 'error', 3000);
+    } else {
+      showNotification('Error al reanudar reproducción. Abriendo detalles.', 'error', 3000);
+    }
+    showDetails(movie.id, movie.content_type, document.querySelector(`#movie-card-${movie.id}`));
+  }
+}
+
+// Function to show a nice resume modal instead of ugly confirm()
+function showResumeModal(resumeTime, playbackPosition, videoPlayer) {
+  // Create modal HTML
+  const modalHTML = `
+    <div id="resume-modal" class="modal-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+      <div class="modal-content" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); padding: 30px; border-radius: 15px; max-width: 500px; width: 90%; text-align: center; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);">
+        <h3 style="color: white; margin-bottom: 20px; font-size: 1.5em;">
+          <i class="fas fa-play-circle" style="color: #4CAF50; margin-right: 10px;"></i>
+          Continuar Reproducción
+        </h3>
+        <p style="color: #e0e0e0; margin-bottom: 25px; font-size: 1.1em;">
+          ¿Quieres continuar desde donde lo dejaste?
+        </p>
+        <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 25px;">
+          <div style="color: #4CAF50; font-size: 1.3em; font-weight: bold;">
+            <i class="fas fa-clock" style="margin-right: 8px;"></i>
+            ${resumeTime}
+          </div>
+        </div>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+          <button id="resume-yes" style="background: #4CAF50; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-size: 1em; cursor: pointer; transition: all 0.3s ease;">
+            <i class="fas fa-play" style="margin-right: 8px;"></i>
+            Sí, continuar
+          </button>
+          <button id="resume-no" style="background: #f44336; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-size: 1em; cursor: pointer; transition: all 0.3s ease;">
+            <i class="fas fa-step-backward" style="margin-right: 8px;"></i>
+            No, desde el inicio
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Add modal to body
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  
+  const modal = document.getElementById('resume-modal');
+  const yesBtn = document.getElementById('resume-yes');
+  const noBtn = document.getElementById('resume-no');
+  
+  // Add hover effects
+  yesBtn.addEventListener('mouseenter', () => yesBtn.style.transform = 'scale(1.05)');
+  yesBtn.addEventListener('mouseleave', () => yesBtn.style.transform = 'scale(1)');
+  noBtn.addEventListener('mouseenter', () => noBtn.style.transform = 'scale(1.05)');
+  noBtn.addEventListener('mouseleave', () => noBtn.style.transform = 'scale(1)');
+  
+  // Handle yes button
+  yesBtn.addEventListener('click', () => {
+    modal.remove();
+    
+    const setVideoTime = () => {
+      if (videoPlayer.readyState >= 2) {
+        videoPlayer.currentTime = playbackPosition;
+        showNotification(`▶️ Continuando desde ${resumeTime}`, 'success', 3000);
+        return true;
+      }
+      return false;
+    };
+    
+    // Try to set time immediately if video is already loaded
+    if (!setVideoTime()) {
+      // If not loaded, wait for appropriate events
+      const events = ['loadeddata', 'canplay', 'loadedmetadata'];
+      let eventHandled = false;
+      
+      events.forEach(eventName => {
+        videoPlayer.addEventListener(eventName, () => {
+          if (!eventHandled && setVideoTime()) {
+            eventHandled = true;
+          }
+        }, { once: true });
+      });
+      
+      // Fallback timeout
+      setTimeout(() => {
+        if (!eventHandled) {
+          setVideoTime();
+        }
+      }, 2000);
+    }
+    
+    // Start progress tracking
+    startWatchProgressTracking();
+  });
+  
+  // Handle no button
+  noBtn.addEventListener('click', () => {
+    modal.remove();
+    showNotification('▶️ Reproduciendo desde el inicio', 'info', 2000);
+    // Start progress tracking without setting time
+    startWatchProgressTracking();
+  });
+  
+  // Handle ESC key
+  document.addEventListener('keydown', function escHandler(e) {
+    if (e.key === 'Escape') {
+      modal.remove();
+      document.removeEventListener('keydown', escHandler);
+      // Default to not resuming
+      startWatchProgressTracking();
+    }
+  });
 }
 
 
@@ -1999,6 +2295,16 @@ async function showDetails(id, type, movieCard) {
     originalDescription = dataOriginal.overview || "No description available in English.";
     spanishDescription = dataSpanish.overview || "No hay descripción disponible en español.";
 
+    // Store current content data for streaming progress tracking
+    currentContentData = {
+      id: parseInt(id),
+      title: originalTitle,
+      content_type: type,
+      season_number: null, // Will be set later if TV show episode is selected
+      episode_number: null  // Will be set later if TV show episode is selected
+    };
+    console.log('📝 Stored content data for tracking:', currentContentData);
+
 
     elements.modalTitle.innerHTML = `
   <div class="modal-header-content">
@@ -2470,7 +2776,7 @@ async function searchTVTorrents(tvTitle, season, episode, resultsContainer) {
     const torrents = await response.json();
     
     if (torrents.length > 0) {
-      displayTVTorrents(torrents, resultsContainer, tvTitle);
+      displayTVTorrents(torrents, resultsContainer, tvTitle, season, episode);
     } else {
       resultsContainer.innerHTML = '<div class="no-torrents-message">No se encontraron torrents para este episodio.</div>';
     }
@@ -2487,7 +2793,7 @@ async function searchTVTorrents(tvTitle, season, episode, resultsContainer) {
 }
 
 
-function displayTVTorrents(torrents, container, tvTitle) {
+function displayTVTorrents(torrents, container, tvTitle, season, episode) {
 
   const hasDemo = torrents.some(torrent => torrent.isDemo);
   
@@ -2532,7 +2838,7 @@ function displayTVTorrents(torrents, container, tvTitle) {
           📁 ${torrentTitle}
         </div>
         <div class="torrent-actions" style="display: none;">
-          <button class="action-button watch-online" onclick="event.stopPropagation(); watchOnlineWithStats('${escapedMagnetLink}', '${escapedTorrentTitle}')">
+          <button class="action-button watch-online" onclick="event.stopPropagation(); watchTVEpisodeOnline('${escapedMagnetLink}', '${escapedTorrentTitle}', ${season}, ${episode || 'null'})">
             <span class="action-icon">▶</span>
             <span class="action-text">Ver Online</span>
           </button>
@@ -3071,6 +3377,10 @@ async function closeModal() {
   elements.modal.classList.add('hidden');
   elements.modal.style.display = "none";
   elements.modalTrailer.innerHTML = "";
+
+  // Clear current content data
+  currentContentData = null;
+  console.log('🧹 Cleared content data on modal close');
 
   if (stallTimeoutId) {
     clearTimeout(stallTimeoutId);
@@ -3856,6 +4166,19 @@ async function watchOnline(magnetURI, movieTitle) {
   }
 }
 
+// Function to watch TV episode with season and episode information
+async function watchTVEpisodeOnline(magnetURI, episodeTitle, seasonNumber, episodeNumber) {
+  // Update current content data with season and episode information
+  if (currentContentData && currentContentData.content_type === 'tv') {
+    currentContentData.season_number = seasonNumber;
+    currentContentData.episode_number = episodeNumber;
+    console.log('📺 Updated TV episode data for tracking:', currentContentData);
+  }
+  
+  // Call the regular watch function
+  await watchOnlineWithStats(magnetURI, episodeTitle);
+}
+
 
 async function watchOnlineWithStats(magnetURI, movieTitle) {
 
@@ -4153,27 +4476,18 @@ function playVideoFileWithStats(fileIndex) {
       currentWatchData.season_number,
       currentWatchData.episode_number
     ).then(progressData => {
-      if (progressData && progressData.current_time > 30) {
-        // Ask user if they want to resume from saved position
-        const resumeTime = formatTime(progressData.current_time);
-        const shouldResume = confirm(
-          `¿Quieres continuar desde donde lo dejaste? (${resumeTime})`
-        );
-        
-        if (shouldResume) {
-          videoPlayer.addEventListener('loadeddata', () => {
-            videoPlayer.currentTime = progressData.current_time;
-            showNotification(`Resumiendo desde ${resumeTime}`, 'info', 3000);
-          }, { once: true });
-        }
+      if (progressData && progressData.playback_position > 30) {
+        // Ask user if they want to resume from saved position with a nice modal
+        const resumeTime = formatTime(progressData.playback_position);
+        showResumeModal(resumeTime, progressData.playback_position, videoPlayer);
+      } else {
+        // Start progress tracking immediately if no saved progress
+        startWatchProgressTracking();
       }
-      
-      // Start progress tracking after handling resume
-      startWatchProgressTracking();
     });
   } else {
-    // Start progress tracking even without movie data
-    startWatchProgressTracking();
+    // Only show notification, don't start progress tracking without valid watch data
+    console.log('⚠️ No se puede rastrear progreso: información de contenido no disponible');
   }
 
   showNotification('Iniciando reproducción con seguimiento de progreso', 'info', 3000);
@@ -4181,7 +4495,12 @@ function playVideoFileWithStats(fileIndex) {
 
 // Helper function to get current movie/show data from modal
 function getCurrentMovieData() {
-  // Try to extract data from the current modal
+  // First, try to use stored content data
+  if (currentContentData) {
+    return currentContentData;
+  }
+  
+  // Fallback: Try to extract data from the current modal
   const modal = document.getElementById('movie-modal');
   if (!modal || modal.style.display === 'none') {
     return null;
@@ -4202,7 +4521,7 @@ function getCurrentMovieData() {
       episode_number: modalContent.dataset.episodeNumber ? parseInt(modalContent.dataset.episodeNumber) : null
     };
   }
-
+  
   return null;
 }
 
@@ -5061,6 +5380,8 @@ window.addEventListener('beforeunload', () => {
   }
 });
 
+// Global function for TV episode watching with season/episode info
+window.watchTVEpisodeOnline = watchTVEpisodeOnline;
 
 window.toggleTorrentActions = function(button) {
   const torrentItem = button.closest('.torrent-item');

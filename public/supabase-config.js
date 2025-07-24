@@ -121,6 +121,22 @@ window.supabaseAuth = {
     }
   },
 
+  async getAccessToken() {
+    try {
+      if (!supabaseClient) await initializeSupabase();
+      
+      const { data: { session }, error } = await supabaseClient.auth.getSession();
+      if (error) {
+        console.error('Error obteniendo sesión:', error);
+        return null;
+      }
+      return session?.access_token || null;
+    } catch (error) {
+      console.error('Error obteniendo token de acceso:', error);
+      return null;
+    }
+  },
+
 
   async onAuthStateChange(callback) {
     if (!supabaseClient) await initializeSupabase();

@@ -17,12 +17,12 @@ dotenv.config();
 
 // Initialize Supabase client for server-side operations
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 let supabase = null;
 
-if (supabaseUrl && supabaseServiceKey && supabaseUrl !== 'demo_url' && supabaseServiceKey !== 'demo_key') {
+if (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'demo_url' && supabaseAnonKey !== 'demo_key') {
   try {
-    supabase = createClient(supabaseUrl, supabaseServiceKey);
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
     console.log('✅ Supabase client initialized for watch progress tracking');
   } catch (error) {
     console.warn('⚠️ Failed to initialize Supabase client:', error.message);
@@ -2108,7 +2108,7 @@ app.post('/api/watch-progress', async (req, res) => {
       title,
       season_number = null,
       episode_number = null,
-      current_time,
+      playback_position,
       total_duration = null,
       torrent_magnet_uri = null,
       torrent_hash = null,
@@ -2119,9 +2119,9 @@ app.post('/api/watch-progress', async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!content_type || !tmdb_id || !title || current_time === undefined) {
+    if (!content_type || !tmdb_id || !title || playback_position === undefined) {
       return res.status(400).json({ 
-        error: 'Missing required fields: content_type, tmdb_id, title, current_time' 
+        error: 'Missing required fields: content_type, tmdb_id, title, playback_position' 
       });
     }
 
@@ -2139,10 +2139,20 @@ app.post('/api/watch-progress', async (req, res) => {
       });
     }
 
-    console.log(`💾 Saving watch progress for user ${user.id}: ${title} at ${current_time}s`);
+    console.log(`💾 Saving watch progress for user ${user.id}: ${title} at ${playback_position}s`);
+
+    // Create a Supabase client with the user's token to respect RLS policies
+    const token = req.headers.authorization.substring(7);
+    const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    });
 
     // Use upsert to insert or update existing progress
-    const { data, error } = await supabase
+    const { data, error } = await supabaseWithAuth
       .from('watch_progress')
       .upsert({
         user_id: user.id,
@@ -2151,7 +2161,7 @@ app.post('/api/watch-progress', async (req, res) => {
         title,
         season_number: content_type === 'tv' ? parseInt(season_number) : null,
         episode_number: content_type === 'tv' ? parseInt(episode_number) : null,
-        current_time: parseFloat(current_time),
+        playback_position: parseFloat(playback_position),
         total_duration: total_duration ? parseFloat(total_duration) : null,
         torrent_magnet_uri,
         torrent_hash,
@@ -2198,7 +2208,17 @@ app.get('/api/watch-progress/:content_type/:tmdb_id', async (req, res) => {
       });
     }
 
-    let query = supabase
+    // Create a Supabase client with the user's token to respect RLS policies
+    const token = req.headers.authorization.substring(7);
+    const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    });
+
+    let query = supabaseWithAuth
       .from('watch_progress')
       .select('*')
       .eq('user_id', user.id)
@@ -2242,7 +2262,17 @@ app.get('/api/watch-progress', async (req, res) => {
 
     const { limit = 20, content_type } = req.query;
 
-    let query = supabase
+    // Create a Supabase client with the user's token to respect RLS policies
+    const token = req.headers.authorization.substring(7);
+    const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    });
+
+    let query = supabaseWithAuth
       .from('watch_progress')
       .select('*')
       .eq('user_id', user.id)
@@ -2283,7 +2313,17 @@ app.delete('/api/watch-progress/:content_type/:tmdb_id', async (req, res) => {
       });
     }
 
-    let query = supabase
+    // Create a Supabase client with the user's token to respect RLS policies
+    const token = req.headers.authorization.substring(7);
+    const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    });
+
+    let query = supabaseWithAuth
       .from('watch_progress')
       .delete()
       .eq('user_id', user.id)
@@ -2326,7 +2366,17 @@ app.get('/api/watch-progress/by-torrent/:torrent_hash', async (req, res) => {
 
     const { torrent_hash } = req.params;
 
-    const { data, error } = await supabase
+    // Create a Supabase client with the user's token to respect RLS policies
+    const token = req.headers.authorization.substring(7);
+    const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    });
+
+    const { data, error } = await supabaseWithAuth
       .from('watch_progress')
       .select('*')
       .eq('user_id', user.id)
@@ -2969,6 +3019,37 @@ app.get('/api/torrent/progress/:infoHash', (req, res) => {
   };
   
   res.json(progressInfo);
+});
+
+// Check if a torrent is available/active on the server
+app.get('/api/torrent/status/:infoHash', (req, res) => {
+  const { infoHash } = req.params;
+  
+  const torrent = findTorrentByHash(infoHash);
+  
+  if (!torrent) {
+    return res.status(404).json({ 
+      message: 'Torrent not found',
+      available: false 
+    });
+  }
+
+  // Check if torrent is corrupted or not ready
+  if (isTorrentCorrupted(torrent)) {
+    return res.status(503).json({ 
+      message: 'Torrent is corrupted or not ready',
+      available: false 
+    });
+  }
+  
+  // Torrent is available and ready
+  res.json({
+    available: true,
+    infoHash: torrent.infoHash,
+    name: torrent.name,
+    progress: torrent.progress,
+    ready: torrent.ready || torrent.progress > 0
+  });
 });
 
 
