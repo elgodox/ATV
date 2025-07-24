@@ -22,12 +22,191 @@ let spanishDescription = '';
 let originalTitle = '';
 let spanishTitle = '';
 let currentUser = null;
-let showingFavorites = false; 
+let showingFavorites = false;
 let stallTimeoutId = null;
-window.localSubtitleBlobUrls = [];
-let currentTorrentInfo = null;
-let currentVideoPlayer = null;
 let statsInterval = null;
+window.localSubtitleBlobUrls = [];
+// Watch progress tracking variables
+let watchProgressInterval = null;
+let currentWatchData = null;
+let lastSavedTime = 0;
+const SAVE_INTERVAL = 10; // Save progress every 10 seconds
+
+// Function to get authentication token
+function getAuthToken() {
+  const user = currentUser;
+  if (!user || !user.access_token) {
+    return null;
+  }
+  return user.access_token;
+}
+
+// Function to save watch progress
+async function saveWatchProgress(currentTime, totalDuration = null) {
+  if (!currentWatchData || !currentUser) {
+    console.log('No watch data or user available for progress tracking');
+    return;
+  }
+
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      console.warn('No auth token available for saving progress');
+      return;
+    }
+
+    const progressData = {
+      content_type: currentWatchData.content_type,
+      tmdb_id: currentWatchData.tmdb_id,
+      title: currentWatchData.title,
+      season_number: currentWatchData.season_number,
+      episode_number: currentWatchData.episode_number,
+      current_time: currentTime,
+      total_duration: totalDuration,
+      torrent_magnet_uri: currentWatchData.torrent_magnet_uri,
+      torrent_hash: currentWatchData.torrent_hash,
+      torrent_file_index: currentWatchData.torrent_file_index,
+      torrent_file_name: currentWatchData.torrent_file_name,
+      torrent_file_size: currentWatchData.torrent_file_size,
+      torrent_quality: currentWatchData.torrent_quality
+    };
+
+    const response = await fetch('/api/watch-progress', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(progressData)
+    });
+
+    if (response.ok) {
+      lastSavedTime = currentTime;
+      console.log(`💾 Progress saved: ${currentTime}s for ${currentWatchData.title}`);
+    } else {
+      console.error('Failed to save watch progress:', await response.text());
+    }
+
+  } catch (error) {
+    console.error('Error saving watch progress:', error);
+  }
+}
+
+// Function to load existing watch progress
+async function loadWatchProgress(content_type, tmdb_id, season_number = null, episode_number = null) {
+  if (!currentUser) {
+    return null;
+  }
+
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      return null;
+    }
+
+    let url = `/api/watch-progress/${content_type}/${tmdb_id}`;
+    const params = new URLSearchParams();
+    
+    if (season_number !== null) {
+      params.append('season_number', season_number);
+    }
+    if (episode_number !== null) {
+      params.append('episode_number', episode_number);
+    }
+    
+    if (params.toString()) {
+      url += '?' + params.toString();
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (response.ok) {
+      const progressData = await response.json();
+      console.log(`📖 Loaded progress: ${progressData.current_time}s for ${progressData.title}`);
+      return progressData;
+    } else if (response.status === 404) {
+      // No existing progress found
+      return null;
+    } else {
+      console.error('Failed to load watch progress:', await response.text());
+      return null;
+    }
+
+  } catch (error) {
+    console.error('Error loading watch progress:', error);
+    return null;
+  }
+}
+
+// Function to start watch progress tracking
+function startWatchProgressTracking() {
+  if (watchProgressInterval) {
+    clearInterval(watchProgressInterval);
+  }
+
+  watchProgressInterval = setInterval(() => {
+    const videoPlayer = currentVideoPlayer;
+    if (videoPlayer && !videoPlayer.paused && !videoPlayer.ended) {
+      const currentTime = videoPlayer.currentTime;
+      const totalDuration = videoPlayer.duration;
+      
+      // Save progress every SAVE_INTERVAL seconds or when near the end
+      if (currentTime - lastSavedTime >= SAVE_INTERVAL || 
+          (totalDuration && currentTime >= totalDuration - 30)) {
+        saveWatchProgress(currentTime, totalDuration);
+      }
+    }
+  }, 5000); // Check every 5 seconds
+}
+
+// Function to stop watch progress tracking
+function stopWatchProgressTracking() {
+  if (watchProgressInterval) {
+    clearInterval(watchProgressInterval);
+    watchProgressInterval = null;
+  }
+  
+  // Save final progress when stopping
+  const videoPlayer = currentVideoPlayer;
+  if (videoPlayer && currentWatchData) {
+    const currentTime = videoPlayer.currentTime;
+    const totalDuration = videoPlayer.duration;
+    saveWatchProgress(currentTime, totalDuration);
+  }
+}
+
+// Function to set up current watch data for progress tracking
+function setupWatchData(content_type, tmdb_id, title, season_number = null, episode_number = null, torrentInfo = null, fileIndex = null) {
+  currentWatchData = {
+    content_type,
+    tmdb_id,
+    title,
+    season_number,
+    episode_number,
+    torrent_magnet_uri: torrentInfo?.magnetURI || null,
+    torrent_hash: torrentInfo?.infoHash || null,
+    torrent_file_index: fileIndex,
+    torrent_file_name: torrentInfo?.videoFiles?.[fileIndex]?.name || null,
+    torrent_file_size: torrentInfo?.videoFiles?.[fileIndex]?.length || null,
+    torrent_quality: extractQualityFromTorrentName(torrentInfo?.name) || null
+  };
+}
+
+// Helper function to extract quality from torrent name
+function extractQualityFromTorrentName(name) {
+  if (!name) return null;
+  
+  const nameUpper = name.toUpperCase();
+  if (nameUpper.includes('2160P') || nameUpper.includes('4K')) return '4K';
+  if (nameUpper.includes('1080P')) return '1080p';
+  if (nameUpper.includes('720P')) return '720p';
+  if (nameUpper.includes('480P')) return '480p';
+  return 'Unknown';
+}
 
 
 let pendingTorrentRequests = new Map();
@@ -3113,6 +3292,8 @@ function updateAuthUI(user) {
 
     preloadUserFavorites();
     
+    // Load continue watching section
+    loadContinueWatchingSection();
 
     getTitles();
   } else {
@@ -3124,9 +3305,15 @@ function updateAuthUI(user) {
     if (logoutBtn) logoutBtn.style.display = 'none';
     if (userEmail) userEmail.textContent = '';
     
-
+    // Hide favorites and continue watching when logged out
     if (favoriteFilterGroup) {
       favoriteFilterGroup.style.display = 'none';
+    }
+    
+    // Hide continue watching section
+    const continueWatchingSection = document.getElementById('continue-watching-section');
+    if (continueWatchingSection) {
+      continueWatchingSection.classList.add('hidden');
     }
   }
 }
@@ -3377,11 +3564,188 @@ async function loadFavorites() {
 
 function toggleFavoritesFilter() {
   showingFavorites = !showingFavorites;
+  
   console.log(`🔄 Toggle favoritos: ${showingFavorites ? 'ACTIVADO' : 'DESACTIVADO'}`);
   updateFavoritesChip();
   updateClearButtonVisibility();
   getTitles();
 }
+
+// Continue Watching Section Functions
+async function loadContinueWatchingSection() {
+  const continueWatchingSection = document.getElementById('continue-watching-section');
+  const continueWatchingGrid = document.getElementById('continue-watching-grid');
+  
+  if (!continueWatchingSection || !continueWatchingGrid) {
+    console.warn('Continue watching section elements not found');
+    return;
+  }
+
+  // Hide section if user is not logged in
+  if (!currentUser) {
+    continueWatchingSection.classList.add('hidden');
+    return;
+  }
+
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      continueWatchingSection.classList.add('hidden');
+      return;
+    }
+
+    // Fetch recent watch progress
+    const response = await fetch('/api/watch-progress?limit=10', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Error al cargar el progreso de visualización');
+    }
+
+    const watchProgress = await response.json();
+
+    if (watchProgress.length === 0) {
+      continueWatchingSection.classList.add('hidden');
+      return;
+    }
+
+    // Show section and populate with content
+    continueWatchingSection.classList.remove('hidden');
+    continueWatchingGrid.innerHTML = '';
+
+    for (let progress of watchProgress) {
+      try {
+        // Fetch detailed info from TMDb for each item
+        const detailsResponse = await fetch(`/api/titles/details?id=${progress.tmdb_id}&type=${progress.content_type}&language=en`);
+        let movieDetails = null;
+        
+        if (detailsResponse.ok) {
+          movieDetails = await detailsResponse.json();
+        }
+
+        const continueWatchingItem = createContinueWatchingItem(progress, movieDetails);
+        continueWatchingGrid.appendChild(continueWatchingItem);
+      } catch (itemError) {
+        console.warn('⚠️ Error procesando elemento de progreso:', itemError);
+      }
+    }
+    
+    console.log(`🎉 Continue watching section loaded with ${watchProgress.length} items`);
+  } catch (error) {
+    console.error('Error loading continue watching section:', error);
+    continueWatchingSection.classList.add('hidden');
+  }
+}
+
+function createContinueWatchingItem(progress, movieDetails) {
+  const item = document.createElement('div');
+  item.className = 'continue-watching-item';
+  
+  const posterUrl = movieDetails?.poster_path 
+    ? `https://image.tmdb.org/t/p/w500${movieDetails.poster_path}`
+    : null;
+  
+  const title = movieDetails?.title || movieDetails?.name || progress.title;
+  const progressPercentage = progress.progress_percentage || 0;
+  
+  // Format episode information for TV shows
+  let episodeInfo = '';
+  if (progress.content_type === 'tv' && progress.season_number && progress.episode_number) {
+    episodeInfo = `<div class="continue-watching-episode">T${progress.season_number} E${progress.episode_number}</div>`;
+  }
+  
+  // Format time
+  const currentTime = formatTime(progress.current_time);
+  const lastWatched = new Date(progress.last_watched).toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'short'
+  });
+
+  item.innerHTML = `
+    <div class="continue-watching-poster">
+      ${posterUrl ? `<img src="${posterUrl}" alt="${title}" loading="lazy">` : `<i class="fas fa-film fallback-icon"></i>`}
+      <div class="progress-overlay">
+        <div class="progress-bar" style="width: ${progressPercentage}%"></div>
+      </div>
+      <div class="play-overlay">
+        <i class="fas fa-play"></i>
+      </div>
+    </div>
+    <div class="continue-watching-info">
+      <div class="continue-watching-title">${title}</div>
+      <div class="continue-watching-meta">
+        ${episodeInfo}
+        <div class="continue-watching-time">${currentTime} • ${lastWatched}</div>
+      </div>
+    </div>
+  `;
+
+  // Add click handler to resume watching
+  item.addEventListener('click', () => {
+    resumeWatching(progress, movieDetails);
+  });
+
+  return item;
+}
+
+async function resumeWatching(progress, movieDetails) {
+  try {
+    // Here we'll integrate with the existing torrent playing functionality
+    // For now, let's show the movie details modal and try to resume from the saved torrent
+    
+    const movie = {
+      id: progress.tmdb_id,
+      title: movieDetails?.title || progress.title,
+      name: movieDetails?.name || progress.title,
+      poster_path: movieDetails?.poster_path,
+      overview: movieDetails?.overview || 'Sin descripción disponible',
+      release_date: movieDetails?.release_date,
+      first_air_date: movieDetails?.first_air_date,
+      vote_average: movieDetails?.vote_average || 0,
+      content_type: progress.content_type,
+      genre_ids: movieDetails?.genre_ids || []
+    };
+
+    // Set current watch data for resume functionality
+    currentWatchData = {
+      content_type: progress.content_type,
+      tmdb_id: progress.tmdb_id,
+      title: progress.title,
+      season_number: progress.season_number,
+      episode_number: progress.episode_number,
+      torrent_magnet_uri: progress.torrent_magnet_uri,
+      torrent_hash: progress.torrent_hash,
+      torrent_file_index: progress.torrent_file_index,
+      torrent_file_name: progress.torrent_file_name,
+      torrent_file_size: progress.torrent_file_size,
+      torrent_quality: progress.torrent_quality
+    };
+
+    // Show movie details to allow user to select torrent or resume from saved one
+    showMovieDetails(movie.id, movie.content_type, movie);
+    
+    console.log(`▶️ Resuming: ${progress.title} from ${formatTime(progress.current_time)}`);
+  } catch (error) {
+    console.error('Error resuming watch:', error);
+    showNotification('Error al reanudar la reproducción', 'error');
+  }
+}
+
+function formatTime(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  } else {
+    return `${minutes}m`;
+  }
+}
+
+
 
 
 
@@ -3797,6 +4161,10 @@ function playVideoFileWithStats(fileIndex) {
       clearInterval(statsInterval);
       statsInterval = null;
     }
+    
+    // Stop watch progress tracking
+    stopWatchProgressTracking();
+    
     if (originalCloseFunction) originalCloseFunction();
     window.closeVideoModal = originalCloseFunction;
   };
@@ -3810,10 +4178,79 @@ function playVideoFileWithStats(fileIndex) {
 
   setupSubtitleControls();
 
-
   setupVideoPlayerEvents();
 
-  showNotification('Iniciando reproducción con estadísticas en tiempo real', 'info', 3000);
+  // Set up watch progress tracking
+  const currentMovie = getCurrentMovieData();
+  if (currentMovie) {
+    setupWatchData(
+      currentMovie.content_type || 'movie',
+      currentMovie.id,
+      currentMovie.title || currentMovie.name,
+      currentMovie.season_number || null,
+      currentMovie.episode_number || null,
+      currentTorrentInfo,
+      fileIndex
+    );
+
+    // Load existing progress and set video time if available
+    loadWatchProgress(
+      currentWatchData.content_type,
+      currentWatchData.tmdb_id,
+      currentWatchData.season_number,
+      currentWatchData.episode_number
+    ).then(progressData => {
+      if (progressData && progressData.current_time > 30) {
+        // Ask user if they want to resume from saved position
+        const resumeTime = formatTime(progressData.current_time);
+        const shouldResume = confirm(
+          `¿Quieres continuar desde donde lo dejaste? (${resumeTime})`
+        );
+        
+        if (shouldResume) {
+          videoPlayer.addEventListener('loadeddata', () => {
+            videoPlayer.currentTime = progressData.current_time;
+            showNotification(`Resumiendo desde ${resumeTime}`, 'info', 3000);
+          }, { once: true });
+        }
+      }
+      
+      // Start progress tracking after handling resume
+      startWatchProgressTracking();
+    });
+  } else {
+    // Start progress tracking even without movie data
+    startWatchProgressTracking();
+  }
+
+  showNotification('Iniciando reproducción con seguimiento de progreso', 'info', 3000);
+}
+
+// Helper function to get current movie/show data from modal
+function getCurrentMovieData() {
+  // Try to extract data from the current modal
+  const modal = document.getElementById('movie-modal');
+  if (!modal || modal.style.display === 'none') {
+    return null;
+  }
+
+  // Check if we have stored movie data in global variables or data attributes
+  const modalContent = modal.querySelector('.modal-content');
+  if (modalContent) {
+    const titleElement = modalContent.querySelector('h2, .movie-title');
+    const tmdbId = modalContent.dataset.tmdbId || modalContent.dataset.movieId;
+    const contentType = modalContent.dataset.contentType || modalContent.dataset.type || 'movie';
+    
+    return {
+      id: tmdbId ? parseInt(tmdbId) : null,
+      title: titleElement ? titleElement.textContent.trim() : 'Unknown',
+      content_type: contentType,
+      season_number: modalContent.dataset.seasonNumber ? parseInt(modalContent.dataset.seasonNumber) : null,
+      episode_number: modalContent.dataset.episodeNumber ? parseInt(modalContent.dataset.episodeNumber) : null
+    };
+  }
+
+  return null;
 }
 
 

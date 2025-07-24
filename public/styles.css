@@ -3768,3 +3768,221 @@ h1 {
   outline: 2px solid rgba(138, 43, 226, 0.6);
   outline-offset: 2px;
 }
+
+/* ===== CONTINUE WATCHING SECTION (Netflix-style) ===== */
+.continue-watching-section {
+  margin: 24px;
+  margin-bottom: 40px;
+  padding: 0;
+}
+
+.continue-watching-section.hidden {
+  display: none;
+}
+
+.continue-watching-section .section-header {
+  margin-bottom: 20px;
+}
+
+.continue-watching-section .section-title {
+  color: white;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.continue-watching-section .section-title i {
+  color: rgba(138, 43, 226, 0.8);
+  font-size: 22px;
+}
+
+.continue-watching-content {
+  position: relative;
+}
+
+.continue-watching-grid {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 0 16px 0;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(138, 43, 226, 0.5) rgba(255, 255, 255, 0.1);
+}
+
+.continue-watching-grid::-webkit-scrollbar {
+  height: 6px;
+}
+
+.continue-watching-grid::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.continue-watching-grid::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.6) 0%, rgba(255, 20, 147, 0.6) 100%);
+  border-radius: 3px;
+}
+
+.continue-watching-grid::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.8) 0%, rgba(255, 20, 147, 0.8) 100%);
+}
+
+.continue-watching-item {
+  flex-shrink: 0;
+  width: 200px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+}
+
+.continue-watching-item:hover {
+  transform: translateY(-4px) scale(1.02);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(138, 43, 226, 0.3);
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(138, 43, 226, 0.2);
+}
+
+.continue-watching-poster {
+  width: 100%;
+  height: 280px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.continue-watching-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.continue-watching-item:hover .continue-watching-poster img {
+  transform: scale(1.05);
+}
+
+.continue-watching-poster .fallback-icon {
+  font-size: 48px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.progress-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.9) 0%, rgba(255, 20, 147, 0.9) 100%);
+  transition: width 0.3s ease;
+}
+
+.continue-watching-info {
+  padding: 16px;
+}
+
+.continue-watching-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  margin: 0 0 8px 0;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.continue-watching-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.continue-watching-episode {
+  font-weight: 500;
+  color: rgba(138, 43, 226, 0.8);
+}
+
+.continue-watching-time {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.play-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.continue-watching-item:hover .play-overlay {
+  opacity: 1;
+}
+
+.play-overlay i {
+  color: white;
+  font-size: 24px;
+  margin-left: 3px; /* Align play icon properly */
+}
+
+/* Responsive design for continue watching */
+@media (max-width: 768px) {
+  .continue-watching-section {
+    margin: 16px;
+    margin-bottom: 32px;
+  }
+  
+  .continue-watching-section .section-title {
+    font-size: 20px;
+  }
+  
+  .continue-watching-item {
+    width: 160px;
+  }
+  
+  .continue-watching-poster {
+    height: 220px;
+  }
+  
+  .continue-watching-info {
+    padding: 12px;
+  }
+  
+  .continue-watching-title {
+    font-size: 13px;
+  }
+}

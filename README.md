@@ -1,8 +1,8 @@
 # Movie and TV Series Search Website
 
 This project is a web application that allows users to search, filter, and view information about movies and TV series. The data is retrieved through an API that provides titles, genres, streaming platforms, and other relevant details.
-![image](https://github.com/user-attachments/assets/c5beac3d-caca-49bb-b384-a07349952527)
 
+![image](https://github.com/user-attachments/assets/c5beac3d-caca-49bb-b384-a07349952527)
 
 ## Features
 
@@ -12,6 +12,35 @@ This project is a web application that allows users to search, filter, and view 
 - **Pagination**: Navigate between results using next/previous buttons.
 - **Modal Window**: Clicking on a movie/series shows more details, including a trailer (if available).
 - **Multilingual Support**: Descriptions are available in both English and Spanish, with an option to toggle between languages.
+- **User Authentication**: Supabase-powered authentication system for user accounts.
+- **Favorites**: Save movies and TV shows to your personal favorites list.
+- **Watch Progress Tracking**: Automatically saves your viewing progress in the database.
+- **Resume Functionality**: Continue watching from where you left off, including torrent information for seamless resuming.
+- **Continue Watching**: View recently watched content with progress indicators.
+
+## New: Watch Progress Tracking
+
+The application now includes comprehensive watch progress tracking functionality:
+
+### Features:
+- **Automatic Progress Saving**: Your viewing progress is automatically saved every 10 seconds while watching content
+- **Resume from Last Position**: When you reopen a video, you'll be asked if you want to continue from where you left off
+- **Torrent Information Storage**: The system saves which torrent file and quality you were using, allowing you to resume with the exact same file
+- **Continue Watching Filter**: A new filter option shows your recently watched content with progress indicators
+- **Cross-Session Persistence**: Your progress is saved in the database and persists across different devices and sessions
+
+### Database Schema:
+The system uses a `watch_progress` table that stores:
+- Content identification (TMDb ID, title, season/episode for TV shows)
+- Progress information (current time, total duration, percentage)
+- Torrent details (magnet URI, hash, file index, quality)
+- Viewing metadata (last watched date, user ID)
+
+### API Endpoints:
+- `POST /api/watch-progress` - Save or update viewing progress
+- `GET /api/watch-progress/:content_type/:tmdb_id` - Get progress for specific content
+- `GET /api/watch-progress` - Get recent viewing progress
+- `DELETE /api/watch-progress/:content_type/:tmdb_id` - Remove progress entry
 
 ## Technologies Used
 
