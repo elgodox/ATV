@@ -271,6 +271,9 @@ function clearAllFilters() {
   // Ocultar información de resultados
   hideSearchResultsInfo();
   
+  // Actualizar visibilidad del botón limpiar
+  updateClearButtonVisibility();
+  
   // Recargar contenido inicial
   currentPage = 1;
   getTitles(currentPage);
@@ -278,6 +281,48 @@ function clearAllFilters() {
   // Mostrar notificación (if available)
   if (typeof showNotification === 'function') {
     showNotification('Filtros limpiados correctamente', 'success', 2000);
+  }
+}
+
+// Función para verificar si hay filtros aplicados
+function hasActiveFilters() {
+  const searchBar = document.getElementById('search-bar');
+  const typeSelect = document.getElementById('type');
+  const genreSelect = document.getElementById('genre');
+  const platformSelect = document.getElementById('platform');
+  const adultFilterToggle = document.getElementById('adult-filter');
+  const sortSelect = document.getElementById('sort');
+  const favoritesCheckbox = document.getElementById('favorites-checkbox');
+  
+  // Verificar si hay texto en la búsqueda
+  if (searchBar && searchBar.value.trim() !== '') return true;
+  
+  // Verificar filtros de selección
+  if (typeSelect && typeSelect.value !== '') return true;
+  if (genreSelect && genreSelect.value !== '') return true;
+  if (platformSelect && platformSelect.value !== '') return true;
+  
+  // Verificar filtro de adultos (activo si no es 'false')
+  if (adultFilterToggle && adultFilterToggle.getAttribute('data-state') !== 'false') return true;
+  
+  // Verificar ordenamiento (activo si no es el valor por defecto)
+  if (sortSelect && sortSelect.value !== 'popularity.desc') return true;
+  
+  // Verificar filtro de favoritos
+  if (favoritesCheckbox && favoritesCheckbox.checked) return true;
+  
+  return false;
+}
+
+// Función para actualizar la visibilidad del botón limpiar
+function updateClearButtonVisibility() {
+  const clearFiltersBtn = document.getElementById('clear-filters-btn');
+  if (clearFiltersBtn) {
+    if (hasActiveFilters()) {
+      clearFiltersBtn.classList.add('show');
+    } else {
+      clearFiltersBtn.classList.remove('show');
+    }
   }
 }
 
@@ -358,6 +403,9 @@ document.addEventListener('DOMContentLoaded', function() {
   if (adultFilterToggle) {
     updateAdultFilterDisplay(adultFilterToggle);
   }
+  
+  // Establecer estado inicial del botón limpiar
+  updateClearButtonVisibility();
   
   // Cargar contenido inicial
   getTitles(1);
@@ -2861,6 +2909,9 @@ document.getElementById("search-bar").addEventListener("input", (e) => {
   
   const searchQuery = e.target.value.trim();
   
+  // Actualizar visibilidad del botón limpiar inmediatamente
+  updateClearButtonVisibility();
+  
   // Si la búsqueda está vacía, restaurar estado inicial inmediatamente
   if (searchQuery === '') {
     hideSearchResultsInfo();
@@ -2880,6 +2931,7 @@ document.getElementById("search-bar").addEventListener("input", (e) => {
 function applyFilters() {
   currentPage = 1;  // Reiniciar a la primera página
   elements.movieGrid.innerHTML = '';  // Limpiar el contenedor de resultados
+  updateClearButtonVisibility(); // Actualizar visibilidad del botón limpiar
   getTitles(currentPage);  // Volver a cargar los títulos según los nuevos filtros
 }
 
@@ -3050,15 +3102,21 @@ function updateAuthUI(user) {
   currentUser = user;
   
   const authButtons = document.getElementById('auth-buttons');
+  const loginBtn = document.getElementById('login-btn');
+  const registerBtn = document.getElementById('register-btn');
   const userInfo = document.getElementById('user-info');
+  const logoutBtn = document.getElementById('logout-btn');
   const userEmail = document.getElementById('user-email');
   const favoriteFilterGroup = document.getElementById('favorite-filter-group');
   
   if (user) {
-    // Usuario logueado
-    authButtons.classList.add('hidden');
-    userInfo.classList.remove('hidden');
-    userEmail.textContent = user.email;
+    // Usuario logueado - ocultar botones de login y registro, mostrar botón salir
+    if (loginBtn) loginBtn.style.display = 'none';
+    if (registerBtn) registerBtn.style.display = 'none';
+    if (authButtons) authButtons.classList.add('hidden');
+    if (userInfo) userInfo.classList.remove('hidden');
+    if (logoutBtn) logoutBtn.style.display = 'inline-flex';
+    if (userEmail) userEmail.textContent = user.email;
     
     // Mostrar filtro de favoritos si existe
     if (favoriteFilterGroup) {
@@ -3071,10 +3129,13 @@ function updateAuthUI(user) {
     // Cargar títulos si el filtro está activado
     getTitles();
   } else {
-    // Usuario no logueado
-    authButtons.classList.remove('hidden');
-    userInfo.classList.add('hidden');
-    userEmail.textContent = '';
+    // Usuario no logueado - mostrar botones de login y registro, ocultar botón salir
+    if (loginBtn) loginBtn.style.display = 'inline-flex';
+    if (registerBtn) registerBtn.style.display = 'inline-flex';
+    if (authButtons) authButtons.classList.remove('hidden');
+    if (userInfo) userInfo.classList.add('hidden');
+    if (logoutBtn) logoutBtn.style.display = 'none';
+    if (userEmail) userEmail.textContent = '';
     
     // Ocultar filtro de favoritos
     if (favoriteFilterGroup) {
@@ -3331,6 +3392,7 @@ function toggleFavoritesFilter() {
   showingFavorites = !showingFavorites;
   console.log(`🔄 Toggle favoritos: ${showingFavorites ? 'ACTIVADO' : 'DESACTIVADO'}`);
   updateFavoritesChip(); // Actualizar estado visual del chip
+  updateClearButtonVisibility(); // Actualizar visibilidad del botón limpiar
   getTitles();
 }
 

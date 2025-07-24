@@ -399,11 +399,17 @@
   background: rgba(255, 69, 69, 0.1);
   border-color: rgba(255, 69, 69, 0.3);
   color: #ff4545;
+  display: none; /* Oculto por defecto */
 }
 
 .clear-chip:hover {
   background: rgba(255, 69, 69, 0.2);
   border-color: rgba(255, 69, 69, 0.5);
+}
+
+/* Mostrar botón limpiar cuando hay filtros */
+.clear-chip.show {
+  display: flex;
 }
 
 /* Contenido de filtros */
