@@ -20,9 +20,14 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 let supabase = null;
 
-if (supabaseUrl && supabaseServiceKey) {
-  supabase = createClient(supabaseUrl, supabaseServiceKey);
-  console.log('✅ Supabase client initialized for watch progress tracking');
+if (supabaseUrl && supabaseServiceKey && supabaseUrl !== 'demo_url' && supabaseServiceKey !== 'demo_key') {
+  try {
+    supabase = createClient(supabaseUrl, supabaseServiceKey);
+    console.log('✅ Supabase client initialized for watch progress tracking');
+  } catch (error) {
+    console.warn('⚠️ Failed to initialize Supabase client:', error.message);
+    console.warn('⚠️ Watch progress features will be disabled');
+  }
 } else {
   console.warn('⚠️ Supabase not configured - watch progress features will be disabled');
 }
@@ -2070,19 +2075,22 @@ app.get('/api/torrent/stats/:infoHash', (req, res) => {
 // Helper function to validate user authentication
 async function validateUser(req, res) {
   if (!supabase) {
-    return res.status(503).json({ error: 'Database not configured' });
+    res.status(503).json({ error: 'Database not configured' });
+    return null;
   }
 
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Authorization header required' });
+    res.status(401).json({ error: 'Authorization header required' });
+    return null;
   }
 
   const token = authHeader.substring(7);
   const { data: { user }, error } = await supabase.auth.getUser(token);
   
   if (error || !user) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+    res.status(401).json({ error: 'Invalid or expired token' });
+    return null;
   }
 
   return user;
