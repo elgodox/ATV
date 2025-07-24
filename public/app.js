@@ -731,51 +731,79 @@ async function getTitles(page = 1) {
   
   // Verificar si el filtro de favoritos está activo
   if (showingFavorites) {
+    console.log('🔍 Cargando favoritos...');
+    
     if (!currentUser) {
+      console.log('❌ No hay usuario autenticado');
       elements.movieGrid.innerHTML = '<p>Debes iniciar sesión para ver tus favoritos.</p>';
       return;
     }
 
     try {
+      console.log('📡 Obteniendo favoritos de la base de datos...');
       const favoritesResult = await favorites.getFavorites(currentUser.id);
       
+      console.log('📊 Resultado de favoritos:', favoritesResult);
+      
       if (!favoritesResult.success) {
-        elements.movieGrid.innerHTML = '<p>Error al cargar favoritos.</p>';
+        console.log('❌ Error al obtener favoritos:', favoritesResult.error);
+        elements.movieGrid.innerHTML = '<p>Error al cargar favoritos: ' + (favoritesResult.error || 'Error desconocido') + '</p>';
         return;
       }
 
       let userFavorites = favoritesResult.data || [];
+      console.log(`✅ Favoritos obtenidos: ${userFavorites.length} elementos`);
 
       // Filter favorites by the current type (movie or tv), or all if no type selected
       if (type && type !== '') {
+        console.log(`🔽 Filtrando por tipo: ${type}`);
+        const beforeFilter = userFavorites.length;
         userFavorites = userFavorites.filter(fav => fav.movie_data.type === type);
+        console.log(`📊 Después del filtro: ${userFavorites.length}/${beforeFilter}`);
       }
 
       if (userFavorites.length === 0) {
+        console.log('📭 No hay favoritos en esta categoría');
         elements.movieGrid.innerHTML = '<p>No tienes favoritos en esta categoría.</p>';
         showSearchLoading(false);
         isLoading = false;
         return;
       }
 
-      // Obtener los detalles de cada película/serie en la lista de favoritos
+      console.log('🎬 Mostrando favoritos:', userFavorites.map(f => f.movie_title));
+
+      // Usar directamente los datos guardados de favoritos en lugar de hacer llamadas adicionales
       data = { results: [] };
 
       for (let favorite of userFavorites) {
         const movieData = favorite.movie_data;
+        console.log('🎯 Procesando favorito:', movieData);
+        
         if (movieData && movieData.id) {
-          try {
-            const response = await fetch(`/api/titles/details?id=${movieData.id}&type=${movieData.type}&language=en`);
-            const movie = await response.json();
-            if (movie && movie.poster_path) { // Only include results with images
-              movie.content_type = movieData.type; // Asegurar que el tipo esté disponible
-              data.results.push(movie);
-            }
-          } catch (error) {
-            console.error('Error loading favorite movie details:', error);
-          }
+          // Usar directamente los datos guardados
+          const movie = {
+            id: movieData.id,
+            title: movieData.title || favorite.movie_title,
+            name: movieData.name || favorite.movie_title, // Para series TV
+            poster_path: movieData.image || movieData.poster_path,
+            overview: movieData.overview || 'Sin descripción disponible',
+            release_date: movieData.release_date,
+            first_air_date: movieData.first_air_date,
+            vote_average: movieData.vote_average || 0,
+            content_type: movieData.type,
+            genre_ids: movieData.genre_ids || [],
+            // Agregar campos adicionales si existen
+            ...movieData
+          };
+          
+          console.log('✅ Película procesada:', movie.title || movie.name);
+          data.results.push(movie);
+        } else {
+          console.warn('⚠️ Favorito sin datos válidos:', favorite);
         }
       }
+      
+      console.log(`🎉 Total favoritos procesados: ${data.results.length}`);
     } catch (error) {
       console.error('Error loading favorites:', error);
       elements.movieGrid.innerHTML = '<p>Error al cargar favoritos.</p>';
@@ -843,6 +871,9 @@ async function getTitles(page = 1) {
 
   totalResults = data.total_results;
 
+  // Determinar el tipo de contenido por defecto
+  const defaultContentType = type || 'movie';
+
   // Obtener los géneros y mapearlos por su ID
   const genreData = await fetchData('genres');
   const genreMap = {};
@@ -857,7 +888,7 @@ async function getTitles(page = 1) {
     movieCard.classList.add('movie-card');
     
     // Determinar el tipo de contenido
-    const contentType = title.content_type || type || 'movie';
+    const contentType = title.content_type || defaultContentType;
     movieCard.classList.add(`content-${contentType}`);
     movieCard.setAttribute('data-type', contentType);
     movieCard.setAttribute('data-id', title.id);
@@ -927,7 +958,7 @@ async function getTitles(page = 1) {
     <div class="card-icons">
       <i id="heart-icon-${title.id}" 
          class="fas fa-heart" 
-         style="cursor: pointer; color: ${isFavorite(title.id, contentType) ? 'red' : 'black'};" 
+         style="cursor: pointer; color: black;" 
          onclick="toggleFavorite(${title.id}, '${contentType}', event)"></i>
       <i id="eye-icon-${title.id}" 
          class="fas fa-eye" 
@@ -950,8 +981,113 @@ async function getTitles(page = 1) {
     elements.movieGrid.appendChild(movieCard);
   });
 
+  // Actualizar colores de favoritos después de agregar todas las tarjetas
+  updateFavoriteColors(data.results, defaultContentType);
+
   isLoading = false; // Marcamos como terminado
 }
+
+// Función para actualizar los colores de los corazones basado en el estado real de favoritos
+async function updateFavoriteColors(titles, contentType) {
+  if (!currentUser) return;
+  
+  // Si estamos mostrando favoritos, todos deberían estar en rojo
+  if (showingFavorites) {
+    console.log('� Modo favoritos: marcando todos como favoritos');
+    for (const title of titles) {
+      const heartIcon = document.getElementById(`heart-icon-${title.id}`);
+      if (heartIcon) {
+        heartIcon.style.color = 'red';
+      }
+    }
+    return;
+  }
+  
+  // Verificación real de favoritos para modo normal
+  console.log('� Verificando estado real de favoritos para cada título...');
+  
+  for (const title of titles) {
+    try {
+      // Obtener el título correcto
+      const movieTitle = title.title || title.name;
+      const titleType = title.content_type || contentType || 'movie';
+      
+      // Verificar si es favorito
+      const isFav = await isFavorite(title.id, titleType);
+      const heartIcon = document.getElementById(`heart-icon-${title.id}`);
+      
+      if (heartIcon) {
+        heartIcon.style.color = isFav ? 'red' : 'black';
+        console.log(`${isFav ? '❤️' : '🖤'} ${movieTitle}: ${isFav ? 'FAVORITO' : 'no favorito'}`);
+      }
+    } catch (error) {
+      console.warn(`⚠️ Error verificando favorito para ${title.title || title.name}:`, error);
+      // En caso de error, dejar como no favorito (negro)
+      const heartIcon = document.getElementById(`heart-icon-${title.id}`);
+      if (heartIcon) {
+        heartIcon.style.color = 'black';
+      }
+    }
+  }
+  
+  console.log('✅ Verificación de favoritos completada');
+}
+
+// NUEVA FUNCIÓN OPTIMIZADA: reemplaza a updateFavoriteColors anterior
+async function updateFavoriteColors_OPTIMIZED(titles, contentType) {
+  if (!currentUser) return;
+  
+  // Si estamos mostrando favoritos, todos deberían estar en rojo
+  if (showingFavorites) {
+    console.log('❤️ Modo favoritos: marcando todos como favoritos');
+    for (const title of titles) {
+      const heartIcon = document.getElementById(`heart-icon-${title.id}`);
+      if (heartIcon) {
+        heartIcon.style.color = 'red';
+      }
+    }
+    return;
+  }
+  
+  try {
+    console.log('🔍 Obteniendo todos los favoritos del usuario de una vez...');
+    
+    // Obtener todos los favoritos del usuario de una sola vez
+    const userFavorites = await favorites.getAllUserFavorites(currentUser.id);
+    console.log('📋 Favoritos obtenidos:', userFavorites);
+    
+    // Crear un Set para búsqueda rápida por título
+    const favoritesTitles = new Set(userFavorites.map(fav => fav.movie_title));
+    
+    // Actualizar cada ícono según el estado
+    for (const title of titles) {
+      const movieTitle = title.title || title.name;
+      const heartIcon = document.getElementById(`heart-icon-${title.id}`);
+      
+      if (heartIcon) {
+        const isFavorite = favoritesTitles.has(movieTitle);
+        heartIcon.style.color = isFavorite ? 'red' : 'black';
+        console.log(`${isFavorite ? '❤️' : '🖤'} ${movieTitle}: ${isFavorite ? 'FAVORITO' : 'no favorito'}`);
+      }
+    }
+    
+    console.log('✅ Verificación de favoritos completada (optimizada)');
+    
+  } catch (error) {
+    console.error('❌ Error obteniendo favoritos:', error);
+    
+    // Fallback: marcar todos como no favoritos
+    for (const title of titles) {
+      const heartIcon = document.getElementById(`heart-icon-${title.id}`);
+      if (heartIcon) {
+        heartIcon.style.color = 'black';
+      }
+    }
+  }
+}
+
+// Redirigir la función original a la optimizada
+updateFavoriteColors = updateFavoriteColors_OPTIMIZED;
 
 
 function toggleWatched(movieId, type, event) {
@@ -1030,27 +1166,47 @@ async function isFavorite(movieId, type) {
   if (!currentUser) return false;
   
   try {
-    // Buscar en los datos del DOM primero (más rápido)
+    // Intentar obtener el título de múltiples formas
+    let movieTitle = null;
+    
+    // Método 1: Buscar por data-id
     const movieCard = document.querySelector(`[data-id="${movieId}"]`);
     if (movieCard) {
-      const heartIcon = document.getElementById(`heart-icon-${movieId}`);
-      if (heartIcon && heartIcon.style.color === 'red') {
-        return true;
+      const titleElement = movieCard.querySelector('h3');
+      if (titleElement) {
+        movieTitle = titleElement.textContent.trim();
       }
     }
     
-    // Si no está en el DOM, consultar Supabase
-    const movieTitle = movieCard?.querySelector('h3')?.textContent;
-    if (movieTitle) {
-      return await favorites.isFavorite(currentUser.id, movieTitle);
+    // Método 2: Si no se encontró, buscar por el ID del ícono del corazón
+    if (!movieTitle) {
+      const heartIcon = document.getElementById(`heart-icon-${movieId}`);
+      if (heartIcon) {
+        const parentCard = heartIcon.closest('.movie-card');
+        if (parentCard) {
+          const titleElement = parentCard.querySelector('h3');
+          if (titleElement) {
+            movieTitle = titleElement.textContent.trim();
+          }
+        }
+      }
     }
     
-    return false;
+    if (!movieTitle) {
+      console.warn('❌ No se pudo obtener el título de la película:', movieId);
+      return false;
+    }
+    
+    // Consultar directamente Supabase
+    const result = await favorites.isFavorite(currentUser.id, movieTitle);
+    console.log(`🔍 Verificando favorito "${movieTitle}" (ID: ${movieId}):`, result);
+    return result;
   } catch (error) {
-    console.error('Error checking favorite status:', error);
-    return false;
+    console.error('❌ Error checking favorite status:', error);
+    return false; // En caso de error, asumir que NO es favorito
   }
 }
+
 // Función para obtener los detalles completos de una serie de TV
 async function fetchTVDetails(tvId) {
   try {
@@ -2909,8 +3065,8 @@ function updateAuthUI(user) {
       favoriteFilterGroup.style.display = 'flex';
     }
     
-    // Cargar favoritos si el filtro está activado
-    loadTitles();
+    // Cargar títulos si el filtro está activado
+    getTitles();
   } else {
     // Usuario no logueado
     authButtons.classList.remove('hidden');
@@ -3000,7 +3156,13 @@ async function toggleFavorite(movieId, type, event) {
         document.getElementById(`heart-icon-${movieId}`).style.color = 'black';
         showNotification('Eliminado de favoritos', 'success');
       } else {
-        showNotification('Error al eliminar favorito', 'error');
+        console.error('Error removiendo favorito:', result.error);
+        if (result.error && result.error.includes('autenticado')) {
+          showNotification('Sesión expirada. Por favor, inicia sesión nuevamente', 'warning');
+          updateAuthUI(null); // Limpiar estado de usuario
+        } else {
+          showNotification('Error al eliminar favorito: ' + (result.error || 'Error desconocido'), 'error');
+        }
       }
     } else {
       // Agregar a favoritos
@@ -3009,7 +3171,13 @@ async function toggleFavorite(movieId, type, event) {
         document.getElementById(`heart-icon-${movieId}`).style.color = 'red';
         showNotification('Agregado a favoritos', 'success');
       } else {
-        showNotification('Error al agregar favorito', 'error');
+        console.error('Error agregando favorito:', result.error);
+        if (result.error && result.error.includes('autenticado')) {
+          showNotification('Sesión expirada. Por favor, inicia sesión nuevamente', 'warning');
+          updateAuthUI(null); // Limpiar estado de usuario
+        } else {
+          showNotification('Error al agregar favorito: ' + (result.error || 'Error desconocido'), 'error');
+        }
       }
     }
 
@@ -3049,6 +3217,7 @@ async function loadFavorites() {
 // Función para activar/desactivar el filtro de favoritos
 function toggleFavoritesFilter() {
   showingFavorites = !showingFavorites;
+  console.log(`🔄 Toggle favoritos: ${showingFavorites ? 'ACTIVADO' : 'DESACTIVADO'}`);
   updateFavoritesChip(); // Actualizar estado visual del chip
   getTitles();
 }
