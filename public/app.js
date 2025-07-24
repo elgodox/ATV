@@ -1,16 +1,16 @@
-// Variables globales para auth y favorites
+
 let auth, favorites;
 
-// Cargar configuración de Supabase de manera asíncrona
+
 async function initSupabase() {
   try {
     const supabaseModule = await window.loadSupabaseConfig();
     auth = supabaseModule.auth;
     favorites = supabaseModule.favorites;
-    // ...
+
   } catch (error) {
-    // ...
-    // Continuar sin Supabase (modo offline/demo)
+
+
   }
 }
 
@@ -21,18 +21,18 @@ let originalDescription = '';
 let spanishDescription = '';
 let originalTitle = '';
 let spanishTitle = '';
-let currentUser = null; // Reemplaza selectedAccount
+let currentUser = null;
 let showingFavorites = false; 
 let stallTimeoutId = null;
-window.localSubtitleBlobUrls = []; // Initialize for storing local subtitle blob URLs
+window.localSubtitleBlobUrls = [];
 let currentTorrentInfo = null;
 let currentVideoPlayer = null;
-let statsInterval = null; // Variable global para el interval de estadísticas
+let statsInterval = null;
 
-// Variables para controlar solicitudes concurrentes
+
 let pendingTorrentRequests = new Map();
 
-// Función auxiliar para formatear bytes a tamaños legibles
+
 function formatBytes(bytes, decimals = 2) {
   if (bytes === 0) return '0 Bytes';
   
@@ -45,26 +45,26 @@ function formatBytes(bytes, decimals = 2) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-// Notification System
+
 function showNotification(message, type = 'info', duration = 4000) {
   const notification = document.getElementById('notification');
   const messageElement = document.getElementById('notification-message');
   const container = document.getElementById('notification-container');
   
-  // Set message and type
+
   messageElement.textContent = message;
   notification.className = `notification ${type}`;
   
-  // Show notification
+
   notification.classList.remove('hidden');
   setTimeout(() => notification.classList.add('show'), 10);
   
-  // Auto hide after duration
+
   const hideTimeout = setTimeout(() => {
     hideNotification();
   }, duration);
   
-  // Setup close button
+
   document.getElementById('notification-close').onclick = () => {
     clearTimeout(hideTimeout);
     hideNotification();
@@ -79,11 +79,11 @@ function hideNotification() {
   }, 300);
 }
 
-// Test function for debugging and verification
+
 function testVideoStreamingFeatures() {
-  // ...
+
   
-  // Test notification system
+
   showNotification('Testing notification system', 'info', 2000);
   
   setTimeout(() => {
@@ -98,7 +98,7 @@ function testVideoStreamingFeatures() {
     showNotification('Error notification test', 'error', 2000);
   }, 7500);
   
-  // Test subtitle controls
+
   const subtitleElements = [
     'torrent-subtitle-select',
     'language-select',
@@ -113,15 +113,15 @@ function testVideoStreamingFeatures() {
   const missingElements = subtitleElements.filter(id => !document.getElementById(id));
   
   if (missingElements.length > 0) {
-    // ...
+
     showNotification(`Missing subtitle elements: ${missingElements.join(', ')}`, 'warning');
   } else {
-    // ...
+
     showNotification('All subtitle controls are available', 'success');
   }
 }
 
-// Elementos del DOM
+
 const elements = {
   movieGrid: document.getElementById("movie-grid"),
   currentPage: document.getElementById("current-page"),
@@ -136,7 +136,7 @@ const elements = {
 
 };
 
-// Función para mostrar/ocultar indicador de carga en búsqueda
+
 function showSearchLoading(show) {
   const loadingIndicator = document.getElementById('search-loading');
   if (loadingIndicator) {
@@ -148,7 +148,7 @@ function showSearchLoading(show) {
   }
 }
 
-// Función para mostrar información de resultados de búsqueda
+
 function showSearchResultsInfo(data) {
   const resultsInfo = document.getElementById('search-results-info');
   const resultsCount = document.getElementById('results-count');
@@ -159,10 +159,10 @@ function showSearchResultsInfo(data) {
     const movieResults = data.movie_results || 0;
     const tvResults = data.tv_results || 0;
     
-    // Build results text with filtering indicators
+
     let resultsText = `${totalResults} resultado${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
     
-    // Add filtering indicators
+
     if (data.is_filtered && data.active_filters) {
       const filterIndicators = [];
       
@@ -184,7 +184,7 @@ function showSearchResultsInfo(data) {
         filterIndicators.push(`🎭 ${typeText}`);
       }
       
-      // Filtro de contenido adulto oculto de los resultados por privacidad
+
       /*
       if (data.active_filters.adultFilter) {
         const adultFilterToggle = document.getElementById('adult-filter');
@@ -222,7 +222,7 @@ function showSearchResultsInfo(data) {
   }
 }
 
-// Función para ocultar información de resultados
+
 function hideSearchResultsInfo() {
   const resultsInfo = document.getElementById('search-results-info');
   if (resultsInfo) {
@@ -230,15 +230,15 @@ function hideSearchResultsInfo() {
   }
 }
 
-// Función para limpiar todos los filtros
+
 function clearAllFilters() {
-  // Limpiar campo de búsqueda
+
   const searchBar = document.getElementById('search-bar');
   if (searchBar) {
     searchBar.value = '';
   }
   
-  // Resetear filtros a valores por defecto
+
   const typeSelect = document.getElementById('type');
   const genreSelect = document.getElementById('genre');
   const platformSelect = document.getElementById('platform');
@@ -254,13 +254,13 @@ function clearAllFilters() {
   }
   if (sortSelect) sortSelect.value = 'popularity.desc';
   
-  // Limpiar radio buttons de tipo
+
   const typeRadios = document.querySelectorAll('input[name="type"]');
   typeRadios.forEach(radio => {
     radio.checked = radio.value === '';
   });
   
-  // Desactivar filtro de favoritos
+
   const favoritesCheckbox = document.getElementById('favorites-checkbox');
   if (favoritesCheckbox) {
     favoritesCheckbox.checked = false;
@@ -268,23 +268,23 @@ function clearAllFilters() {
     updateFavoritesChip();
   }
   
-  // Ocultar información de resultados
+
   hideSearchResultsInfo();
   
-  // Actualizar visibilidad del botón limpiar
+
   updateClearButtonVisibility();
   
-  // Recargar contenido inicial
+
   currentPage = 1;
   getTitles(currentPage);
   
-  // Mostrar notificación (if available)
+
   if (typeof showNotification === 'function') {
     showNotification('Filtros limpiados correctamente', 'success', 2000);
   }
 }
 
-// Función para verificar si hay filtros aplicados
+
 function hasActiveFilters() {
   const searchBar = document.getElementById('search-bar');
   const typeSelect = document.getElementById('type');
@@ -294,27 +294,27 @@ function hasActiveFilters() {
   const sortSelect = document.getElementById('sort');
   const favoritesCheckbox = document.getElementById('favorites-checkbox');
   
-  // Verificar si hay texto en la búsqueda
+
   if (searchBar && searchBar.value.trim() !== '') return true;
   
-  // Verificar filtros de selección
+
   if (typeSelect && typeSelect.value !== '') return true;
   if (genreSelect && genreSelect.value !== '') return true;
   if (platformSelect && platformSelect.value !== '') return true;
   
-  // Verificar filtro de adultos (activo si no es 'false')
+
   if (adultFilterToggle && adultFilterToggle.getAttribute('data-state') !== 'false') return true;
   
-  // Verificar ordenamiento (activo si no es el valor por defecto)
+
   if (sortSelect && sortSelect.value !== 'popularity.desc') return true;
   
-  // Verificar filtro de favoritos
+
   if (favoritesCheckbox && favoritesCheckbox.checked) return true;
   
   return false;
 }
 
-// Función para actualizar la visibilidad del botón limpiar
+
 function updateClearButtonVisibility() {
   const clearFiltersBtn = document.getElementById('clear-filters-btn');
   if (clearFiltersBtn) {
@@ -326,7 +326,7 @@ function updateClearButtonVisibility() {
   }
 }
 
-// Adult filter toggle functionality
+
 function updateAdultFilterDisplay(toggle) {
   const state = toggle.getAttribute('data-state');
   const icon = toggle.querySelector('.toggle-icon');
@@ -354,10 +354,10 @@ function cycleAdultFilter() {
   
   let nextState;
   switch (currentState) {
-    case 'false': nextState = ''; break;      // exclude -> include all
-    case '': nextState = 'only'; break;       // include all -> only adult
-    case 'only': nextState = 'false'; break; // only adult -> exclude
-    default: nextState = 'false'; break;     // fallback to exclude
+    case 'false': nextState = ''; break;
+    case '': nextState = 'only'; break;
+    case 'only': nextState = 'false'; break;
+    default: nextState = 'false'; break;
   }
   
   toggle.setAttribute('data-state', nextState);
@@ -365,18 +365,18 @@ function cycleAdultFilter() {
   applyFilters();
 }
 
-// Comentamos estos event listeners para moverlos al DOMContentLoaded
-// document.getElementById("type").addEventListener("change", applyFilters);
-// document.getElementById("genre").addEventListener("change", applyFilters);
-// document.getElementById("platform").addEventListener("change", applyFilters);
-// document.getElementById("adult-filter").addEventListener("click", cycleAdultFilter);
-// document.getElementById("sort").addEventListener("change", applyFilters);
 
-// Nuevas funcionalidades para la interfaz rediseñada
+
+
+
+
+
+
+
 document.addEventListener('DOMContentLoaded', function() {
   initializeNewInterface();
   
-  // Registrar todos los event listeners de filtros
+
   const typeSelect = document.getElementById("type");
   const genreSelect = document.getElementById("genre");
   const platformSelect = document.getElementById("platform");
@@ -392,48 +392,48 @@ document.addEventListener('DOMContentLoaded', function() {
   if (sortSelect) sortSelect.addEventListener("change", applyFilters);
   if (adultFilter) adultFilter.addEventListener("click", cycleAdultFilter);
   
-  // Event listener para el botón de limpiar filtros
+
   const clearFiltersBtn = document.getElementById('clear-filters-btn');
   if (clearFiltersBtn) {
     clearFiltersBtn.addEventListener('click', clearAllFilters);
   }
   
-  // Initialize adult filter toggle
+
   const adultFilterToggle = document.getElementById('adult-filter');
   if (adultFilterToggle) {
     updateAdultFilterDisplay(adultFilterToggle);
   }
   
-  // Establecer estado inicial del botón limpiar
+
   updateClearButtonVisibility();
   
-  // Cargar contenido inicial
+
   getTitles(1);
 });
 
 function initializeNewInterface() {
-  // Inicializar toggle de filtros
+
   initializeFiltersToggle();
   
-  // Inicializar sugerencias de búsqueda
+
   initializeSearchSuggestions();
   
-  // Inicializar filtros de tipo de contenido (radio buttons)
+
   initializeTypeFilters();
   
-  // Inicializar búsqueda por voz (opcional)
+
   initializeVoiceSearch();
   
-  // Inicializar configuración avanzada
+
   initializeAdvancedSettings();
 }
 
-// Configuración avanzada (contenido adulto)
+
 function initializeAdvancedSettings() {
   const advancedSettings = document.querySelector('.adult-content-settings');
   
   if (advancedSettings) {
-    // Añadir animación suave al abrir/cerrar
+
     advancedSettings.addEventListener('toggle', function() {
       if (this.open) {
         this.querySelector('.settings-content').style.animation = 'slideDown 0.3s ease-out';
@@ -442,7 +442,7 @@ function initializeAdvancedSettings() {
   }
 }
 
-// Toggle para mostrar/ocultar filtros expandidos
+
 function initializeFiltersToggle() {
   const filtersToggle = document.getElementById('filters-toggle');
   const filtersContent = document.getElementById('filters-content');
@@ -454,17 +454,17 @@ function initializeFiltersToggle() {
       if (isExpanded) {
         filtersContent.classList.remove('expanded');
         filtersToggle.classList.remove('active');
-        // Update ARIA attribute
+
         filtersToggle.setAttribute('aria-expanded', 'false');
       } else {
         filtersContent.classList.add('expanded');
         filtersToggle.classList.add('active');
-        // Update ARIA attribute
+
         filtersToggle.setAttribute('aria-expanded', 'true');
       }
     });
     
-    // Keyboard navigation support
+
     filtersToggle.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
@@ -474,24 +474,24 @@ function initializeFiltersToggle() {
   }
 }
 
-// Sugerencias de búsqueda rápida
+
 function initializeSearchSuggestions() {
   const suggestionTags = document.querySelectorAll('.suggestion-tag');
   const searchBar = document.getElementById('search-bar');
   
   suggestionTags.forEach(tag => {
-    // Click handler
+
     tag.addEventListener('click', function() {
       const searchTerm = this.getAttribute('data-search');
       if (searchBar && searchTerm) {
         searchBar.value = searchTerm;
         searchBar.focus();
-        // Trigger search
+
         performSearch();
       }
     });
     
-    // Keyboard navigation support
+
     tag.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
@@ -499,7 +499,7 @@ function initializeSearchSuggestions() {
       }
     });
     
-    // Enhanced visual feedback for keyboard focus
+
     tag.addEventListener('focus', function() {
       this.style.transform = 'translateY(-2px)';
     });
@@ -510,26 +510,26 @@ function initializeSearchSuggestions() {
   });
 }
 
-// Filtros de tipo de contenido con radio buttons
+
 function initializeTypeFilters() {
   const typeRadios = document.querySelectorAll('input[name="type"]');
   
   typeRadios.forEach(radio => {
     radio.addEventListener('change', function() {
       if (this.checked) {
-        // Actualizar el select oculto para mantener compatibilidad
+
         const typeSelect = document.getElementById('type');
         if (typeSelect) {
           typeSelect.value = this.value;
           applyFilters();
-          updateGenreSelect(); // Actualizar géneros según el tipo
+          updateGenreSelect();
         }
       }
     });
   });
 }
 
-// Búsqueda por voz (funcionalidad básica)
+
 function initializeVoiceSearch() {
   const voiceBtn = document.querySelector('.voice-search-btn');
   
@@ -565,12 +565,12 @@ function initializeVoiceSearch() {
       showNotification('Error en el reconocimiento de voz', 'error');
     };
   } else if (voiceBtn) {
-    // Ocultar el botón si no hay soporte
+
     voiceBtn.style.display = 'none';
   }
 }
 
-// Función para sincronizar radio buttons con select cuando se cambia externamente
+
 function syncTypeFilters(selectedValue) {
   const typeRadios = document.querySelectorAll('input[name="type"]');
   typeRadios.forEach(radio => {
@@ -578,7 +578,7 @@ function syncTypeFilters(selectedValue) {
   });
 }
 
-// Función para actualizar el estado visual del chip de favoritos
+
 function updateFavoritesChip() {
   const favoritesChip = document.querySelector('.favorites-chip');
   const favoritesCheckbox = document.getElementById('favorites-checkbox');
@@ -592,7 +592,7 @@ function updateFavoritesChip() {
   }
 }
 
-// Función helper para realizar búsqueda
+
 function performSearch() {
   const searchBar = document.getElementById('search-bar');
   if (searchBar && searchBar.value.trim()) {
@@ -600,28 +600,28 @@ function performSearch() {
   }
 }
 
-// Configurar event listeners de autenticación
+
 document.getElementById('login-btn').addEventListener('click', showLoginModal);
 document.getElementById('register-btn').addEventListener('click', showRegisterModal);
 document.getElementById('logout-btn').addEventListener('click', handleLogout);
 
-// Event listeners del modal
+
 document.getElementById('close-modal').addEventListener('click', hideAuthModal);
 document.getElementById('switch-to-register').addEventListener('click', switchToRegister);
 document.getElementById('login-form').addEventListener('submit', handleLogin);
 document.getElementById('register-form').addEventListener('submit', handleRegister);
 
-// Cerrar modal al hacer clic fuera
+
 document.getElementById('auth-modal').addEventListener('click', (e) => {
   if (e.target.id === 'auth-modal') {
     hideAuthModal();
   }
 });
 
-// Debug: verificar que los elementos principales existan
+
 document.addEventListener('DOMContentLoaded', function() {
   setTimeout(() => {
-    // ...
+
     const requiredElements = [
       'search-bar',
       'filters-toggle', 
@@ -636,49 +636,49 @@ document.addEventListener('DOMContentLoaded', function() {
     
     requiredElements.forEach(id => {
       const element = document.getElementById(id);
-      // ...
+
     });
     
-    // ...
-    // ...
+
+
   }, 1000);
 });
 
 
-// Función para obtener todos los proveedores
+
 async function fetchProviders(type) {
   try {
     const response = await fetch(`/api/providers?type=${type}`);
     const data = await response.json();
 
-    // Limpiar el selector de plataformas antes de llenarlo
-    elements.platformSelect.innerHTML = '<option value="">Todas</option>'; // Limpiar antes de cargar nuevos datos
+
+    elements.platformSelect.innerHTML = '<option value="">Todas</option>';
 
     if (data.results.length > 0) {
       data.results.forEach((provider) => {
         const option = document.createElement("option");
-        option.value = provider.provider_id; // Usamos el ID del proveedor para filtrar
-        option.textContent = provider.provider_name; // Nombre del proveedor
+        option.value = provider.provider_id;
+        option.textContent = provider.provider_name;
         elements.platformSelect.appendChild(option);
       });
     }
   } catch (error) {
-    // ...
+
   }
 }
 
 
-// Función genérica para hacer solicitudes a la API
+
 async function fetchData(endpoint, params = '') {
   try {
     const response = await fetch(`/api/${endpoint}?${params}`);
     return await response.json();
   } catch (error) {
-    // ...
+
   }
 }
 
-// Obtener géneros y actualizar el menú de géneros
+
 async function fetchGenres() {
   const data = await fetchData('genres');
   if (data.genres && data.genres.length > 0) {
@@ -692,7 +692,7 @@ async function fetchGenres() {
   }
 }
 
-// Obtener géneros desde el servidor según el tipo de contenido
+
 async function getGenres(type) {
   try {
     const response = await fetch(`/api/genres/${type}`);
@@ -701,27 +701,27 @@ async function getGenres(type) {
     }
     const data = await response.json();
     
-    // Verificar que sea un array (puede ser un objeto de error si no hay API key)
+
     if (Array.isArray(data)) {
       return data;
     } else if (data && Array.isArray(data.genres)) {
       return data.genres;
     } else {
-      // ...
+
       return [];
     }
   } catch (error) {
-    // ...
+
     return [];
   }
 }
 
-// Actualizar el select de géneros según el tipo de contenido (movie o tv)
+
 async function updateGenreSelect() {
-  // Obtener el tipo desde el select oculto o desde los radio buttons
+
   let type = document.getElementById('type').value;
   
-  // Si no hay valor en el select, obtenerlo de los radio buttons
+
   if (!type) {
     const selectedRadio = document.querySelector('input[name="type"]:checked');
     if (selectedRadio) {
@@ -729,13 +729,13 @@ async function updateGenreSelect() {
     }
   }
   
-  const genres = await getGenres(type);  // Obtener los géneros desde el servidor
+  const genres = await getGenres(type);
   const genreSelect = document.getElementById('genre');
 
-  // Limpiar el select de géneros
+
   genreSelect.innerHTML = '<option value="">Todos los géneros</option>';
 
-  // Añadir los géneros al select
+
   genres.forEach(genre => {
     const option = document.createElement('option');
     option.value = genre.id;
@@ -746,21 +746,21 @@ async function updateGenreSelect() {
 
 
 
-// Función para obtener títulos y mostrarlos
+
 async function getTitles(page = 1) {
   if (isLoading) return;
   isLoading = true;
 
-  // Mostrar indicador de carga
+
   showSearchLoading(true);
 
-  // Obtener el tipo desde el select o desde los radio buttons
+
   let type = document.getElementById('type').value;
   if (!type) {
     const selectedRadio = document.querySelector('input[name="type"]:checked');
     if (selectedRadio) {
       type = selectedRadio.value;
-      // Sincronizar con el select oculto
+
       document.getElementById('type').value = type;
     }
   }
@@ -772,42 +772,42 @@ async function getTitles(page = 1) {
   const searchQuery = document.getElementById('search-bar') ? document.getElementById('search-bar').value.trim() : '';
 
   if (page === 1) {
-    elements.movieGrid.innerHTML = ''; // Limpiar el grid al cambiar de página
+    elements.movieGrid.innerHTML = '';
   }
 
   let data;
   
-  // Verificar si el filtro de favoritos está activo
+
   if (showingFavorites) {
-    // ...
+
     
     if (!currentUser) {
-      // ...
+
       elements.movieGrid.innerHTML = '<p>Debes iniciar sesión para ver tus favoritos.</p>';
       return;
     }
 
     try {
-      // ...
+
       const favoritesResult = await favorites.getFavorites(currentUser.id);
       
-      // ...
+
       
       if (!favoritesResult.success) {
-        // ...
+
         elements.movieGrid.innerHTML = '<p>Error al cargar favoritos: ' + (favoritesResult.error || 'Error desconocido') + '</p>';
         return;
       }
 
       let userFavorites = favoritesResult.data || [];
-      // ...
 
-      // Filter favorites by the current type (movie or tv), or all if no type selected
+
+
       if (type && type !== '') {
-        // ...
+
         const beforeFilter = userFavorites.length;
         userFavorites = userFavorites.filter(fav => fav.movie_data.type === type);
-        // ...
+
       }
 
       if (userFavorites.length === 0) {
@@ -820,7 +820,7 @@ async function getTitles(page = 1) {
 
       console.log('🎬 Mostrando favoritos:', userFavorites.map(f => f.movie_title));
 
-      // Usar directamente los datos guardados de favoritos en lugar de hacer llamadas adicionales
+
       data = { results: [] };
 
       for (let favorite of userFavorites) {
@@ -828,11 +828,11 @@ async function getTitles(page = 1) {
         console.log('🎯 Procesando favorito:', movieData);
         
         if (movieData && movieData.id) {
-          // Usar directamente los datos guardados
+
           const movie = {
             id: movieData.id,
             title: movieData.title || favorite.movie_title,
-            name: movieData.name || favorite.movie_title, // Para series TV
+            name: movieData.name || favorite.movie_title,
             poster_path: movieData.image || movieData.poster_path,
             overview: movieData.overview || 'Sin descripción disponible',
             release_date: movieData.release_date,
@@ -840,7 +840,7 @@ async function getTitles(page = 1) {
             vote_average: movieData.vote_average || 0,
             content_type: movieData.type,
             genre_ids: movieData.genre_ids || [],
-            // Agregar campos adicionales si existen
+
             ...movieData
           };
           
@@ -860,10 +860,10 @@ async function getTitles(page = 1) {
       return;
     }
   } else if (searchQuery && searchQuery.length > 0) {
-    // Si hay búsqueda, usar la nueva API que busca en ambos tipos
+
     const params = new URLSearchParams({
       searchQuery,
-      type, // Pass type filter to search API
+      type,
       genre,
       platform,
       adultFilter,
@@ -873,8 +873,8 @@ async function getTitles(page = 1) {
 
     data = await fetchData('search-all', params);
   } else {
-    // Si no hay búsqueda, usar la API original
-    // Si no se especifica tipo, mostrar contenido por defecto (películas)
+
+
     const defaultType = type || 'movie';
     const params = new URLSearchParams({
       type: defaultType,
@@ -888,7 +888,7 @@ async function getTitles(page = 1) {
 
     data = await fetchData('titles', params);
     
-    // Agregar el tipo de contenido a los resultados
+
     if (data && data.results) {
       data.results = data.results.map(item => ({
         ...item,
@@ -897,10 +897,10 @@ async function getTitles(page = 1) {
     }
   }
 
-  // Ocultar indicador de carga
+
   showSearchLoading(false);
 
-  // Validar que tengamos resultados
+
   if (!data || !data.results || data.results.length === 0) {
     if (currentPage === 1) {
       elements.movieGrid.innerHTML = '<p>No se encontraron resultados.</p>';
@@ -910,7 +910,7 @@ async function getTitles(page = 1) {
     return;
   }
 
-  // Mostrar información de resultados si hay búsqueda
+
   if (searchQuery && searchQuery.length > 0) {
     showSearchResultsInfo(data);
   } else {
@@ -919,62 +919,62 @@ async function getTitles(page = 1) {
 
   totalResults = data.total_results;
 
-  // Determinar el tipo de contenido por defecto
+
   const defaultContentType = type || 'movie';
 
-  // Obtener los géneros y mapearlos por su ID
+
   const genreData = await fetchData('genres');
   const genreMap = {};
   genreData.genres.forEach(genre => {
     genreMap[genre.id] = genre.name;
   });
 
-  // Iterar sobre cada título
+
   data.results.forEach(async (title) => {
     const movieCard = document.createElement('div');
     movieCard.id = `movie-card-${title.id}`;
     movieCard.classList.add('movie-card');
     
-    // Determinar el tipo de contenido
+
     const contentType = title.content_type || defaultContentType;
     movieCard.classList.add(`content-${contentType}`);
     movieCard.setAttribute('data-type', contentType);
     movieCard.setAttribute('data-id', title.id);
 
-    // Obtener los géneros de la película/serie
+
     const movieGenres = title.genre_ids ? title.genre_ids.map(id => genreMap[id]).join(', ') : title.genres ? title.genres.map(genre => genre.name).join(', ') : 'N/A';
 
-    // Obtener las plataformas disponibles
+
     const providers = await fetchProvider(title.id, contentType);
     const providerNames = providers ? providers.join(', ') : 'No disponible';
 
-    // Función auxiliar para detectar caracteres no latinos
+
     const containsNonLatinChars = (str) => {
       if (!str) return false;
-      // Detectar caracteres asiáticos (coreano, japonés, chino, etc.)
+
       return /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(str);
     };
 
-    // Lógica inteligente para seleccionar el título - priorizar caracteres latinos
+
     let titleName;
     if (title.title && !containsNonLatinChars(title.title)) {
-      // Para películas, usar title si está en caracteres latinos
+
       titleName = title.title;
     } else if (title.name && !containsNonLatinChars(title.name)) {
-      // Para series, usar name si está en caracteres latinos
+
       titleName = title.name;
     } else if (title.original_title && !containsNonLatinChars(title.original_title)) {
-      // Si original_title está en caracteres latinos, usarlo
+
       titleName = title.original_title;
     } else if (title.original_name && !containsNonLatinChars(title.original_name)) {
-      // Si original_name está en caracteres latinos, usarlo
+
       titleName = title.original_name;
     } else {
-      // Como último recurso, usar cualquiera que esté disponible
+
       titleName = title.title || title.name || title.original_title || title.original_name || 'Título desconocido';
     }
 
-    // Verificar la fecha según si es película o serie de TV
+
     const releaseDate = title.release_date || title.first_air_date || 'Fecha desconocida';
 
     let seasons = '';
@@ -988,9 +988,9 @@ async function getTitles(page = 1) {
 
     const stars = renderStars(title.vote_average);
 
-    // Tag de tipo de contenido (simplificado)
+
     const contentTypeTag = contentType === 'movie' ? 'Película' : 'Serie';
-    // Icono para tipo de contenido
+
     const contentTypeIcon = contentType === 'movie' ? '<i class="fas fa-film"></i>' : '<i class="fas fa-tv"></i>';
     
     movieCard.innerHTML = `
@@ -1031,17 +1031,17 @@ async function getTitles(page = 1) {
     elements.movieGrid.appendChild(movieCard);
   });
 
-  // Actualizar colores de favoritos después de agregar todas las tarjetas
+
   updateFavoriteColors(data.results, defaultContentType);
 
-  isLoading = false; // Marcamos como terminado
+  isLoading = false;
 }
 
-// Función para actualizar los colores de los corazones basado en el estado real de favoritos
+
 async function updateFavoriteColors(titles, contentType) {
   if (!currentUser) return;
 
-  // Si estamos mostrando favoritos, todos deberían estar en rojo
+
   if (showingFavorites) {
     for (const title of titles) {
       const heartIcon = document.getElementById(`heart-icon-${title.id}`);
@@ -1052,14 +1052,14 @@ async function updateFavoriteColors(titles, contentType) {
     return;
   }
 
-  // Verificación real de favoritos para modo normal
+
   for (const title of titles) {
     try {
-      // Obtener el título correcto
+
       const movieTitle = title.title || title.name;
       const titleType = title.content_type || contentType || 'movie';
 
-      // Verificar si es favorito
+
       const isFav = await isFavorite(title.id, titleType);
       const heartIcon = document.getElementById(`heart-icon-${title.id}`);
 
@@ -1067,7 +1067,7 @@ async function updateFavoriteColors(titles, contentType) {
         heartIcon.style.color = isFav ? 'red' : 'black';
       }
     } catch (error) {
-      // En caso de error, dejar como no favorito (negro)
+
       const heartIcon = document.getElementById(`heart-icon-${title.id}`);
       if (heartIcon) {
         heartIcon.style.color = 'black';
@@ -1077,11 +1077,11 @@ async function updateFavoriteColors(titles, contentType) {
 }
 
 
-// NUEVA FUNCIÓN OPTIMIZADA: reemplaza a updateFavoriteColors anterior
+
 async function updateFavoriteColors_OPTIMIZED(titles, contentType) {
   if (!currentUser) return;
 
-  // Si estamos mostrando favoritos, todos deberían estar en rojo
+
   if (showingFavorites) {
     for (const title of titles) {
       const heartIcon = document.getElementById(`heart-icon-${title.id}`);
@@ -1093,13 +1093,13 @@ async function updateFavoriteColors_OPTIMIZED(titles, contentType) {
   }
 
   try {
-    // Obtener todos los favoritos del usuario de una sola vez
+
     const userFavorites = await favorites.getAllUserFavorites(currentUser.id);
 
-    // Crear un Set para búsqueda rápida por título
+
     const favoritesTitles = new Set(userFavorites.map(fav => fav.movie_title));
 
-    // Actualizar cada ícono según el estado
+
     for (const title of titles) {
       const movieTitle = title.title || title.name;
       const heartIcon = document.getElementById(`heart-icon-${title.id}`);
@@ -1111,7 +1111,7 @@ async function updateFavoriteColors_OPTIMIZED(titles, contentType) {
     }
 
   } catch (error) {
-    // Fallback: marcar todos como no favoritos
+
     for (const title of titles) {
       const heartIcon = document.getElementById(`heart-icon-${title.id}`);
       if (heartIcon) {
@@ -1121,12 +1121,12 @@ async function updateFavoriteColors_OPTIMIZED(titles, contentType) {
   }
 }
 
-// Redirigir la función original a la optimizada
+
 updateFavoriteColors = updateFavoriteColors_OPTIMIZED;
 
 
 function toggleWatched(movieId, type, event) {
-  event.stopPropagation(); // Evita que se abra el modal al hacer clic en el ícono
+  event.stopPropagation();
 
   if (!currentUser) {
     showNotification("Primero debes iniciar sesión", 'warning');
@@ -1140,21 +1140,21 @@ function toggleWatched(movieId, type, event) {
   const movieCard = document.querySelector(`#movie-card-${movieId}`);
 
   if (watchedIndex !== -1) {
-    // Si ya está en la lista de vistos, quitarlo
+
     watched.splice(watchedIndex, 1);
-    document.getElementById(`eye-icon-${movieId}`).style.color = 'black'; // Cambia el color del ícono de "visto"
-    movieCard.classList.remove('watched'); // Quitar la clase que oscurece la tarjeta
+    document.getElementById(`eye-icon-${movieId}`).style.color = 'black';
+    movieCard.classList.remove('watched');
   } else {
-    // Si no está en la lista, agregarlo
+
     watched.push({ id: movieId, type: type });
-    document.getElementById(`eye-icon-${movieId}`).style.color = 'blue'; // Cambia el color del ícono de "visto"
-    movieCard.classList.add('watched'); // Oscurecer la tarjeta
+    document.getElementById(`eye-icon-${movieId}`).style.color = 'blue';
+    movieCard.classList.add('watched');
   }
 
-  // Guardar el estado actualizado en el localStorage
+
   localStorage.setItem(watchedKey, JSON.stringify(watched));
 
- // updateMovieGrid();
+
 }
 
 
@@ -1184,10 +1184,10 @@ function updateMovieGrid() {
 
 
 
-// Detectar cuando estamos cerca del final de la página
+
 window.addEventListener('scroll', () => {
   if (showingFavorites) {
-    // Si el filtro de favoritos está activado, no hacer nada en el scroll
+
     return;
 }
   if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500 && !isLoading) {
@@ -1196,15 +1196,15 @@ window.addEventListener('scroll', () => {
   }
 });
 
-// Verifica si la película está en favoritos
+
 async function isFavorite(movieId, type) {
   if (!currentUser) return false;
   
   try {
-    // Intentar obtener el título de múltiples formas
+
     let movieTitle = null;
     
-    // Método 1: Buscar por data-id
+
     const movieCard = document.querySelector(`[data-id="${movieId}"]`);
     if (movieCard) {
       const titleElement = movieCard.querySelector('h3');
@@ -1213,7 +1213,7 @@ async function isFavorite(movieId, type) {
       }
     }
     
-    // Método 2: Si no se encontró, buscar por el ID del ícono del corazón
+
     if (!movieTitle) {
       const heartIcon = document.getElementById(`heart-icon-${movieId}`);
       if (heartIcon) {
@@ -1232,17 +1232,17 @@ async function isFavorite(movieId, type) {
       return false;
     }
     
-    // Consultar directamente Supabase
+
     const result = await favorites.isFavorite(currentUser.id, movieTitle);
     console.log(`🔍 Verificando favorito "${movieTitle}" (ID: ${movieId}):`, result);
     return result;
   } catch (error) {
     console.error('❌ Error checking favorite status:', error);
-    return false; // En caso de error, asumir que NO es favorito
+    return false;
   }
 }
 
-// Función para obtener los detalles completos de una serie de TV
+
 async function fetchTVDetails(tvId) {
   try {
     const response = await fetch(`/api/tv/details/${tvId}`);
@@ -1250,7 +1250,7 @@ async function fetchTVDetails(tvId) {
       throw new Error('Error al obtener los detalles de la serie de TV');
     }
     const data = await response.json();
-    return data;  // Devolver los detalles completos de la serie
+    return data;
   } catch (error) {
     console.error('Error fetching TV details:', error);
     return null;
@@ -1258,24 +1258,24 @@ async function fetchTVDetails(tvId) {
 }
 
 
-// Función mejorada para cargar trailers con múltiples fuentes y mejor relevancia
+
 async function loadEnhancedTrailer(id, type, title, dataOriginal) {
-  // Para series de TV, mostrar selector de temporadas si hay múltiples temporadas
+
   if (type === 'tv' && dataOriginal && dataOriginal.number_of_seasons > 1) {
     await displayTVSeasonTrailers(id, type, title, dataOriginal);
   } else {
-    // Para películas o series con una sola temporada, cargar trailer directamente
+
     await loadSingleTrailer(id, type, title, dataOriginal);
   }
 }
 
-// Función para cargar un solo trailer (películas o series sin selector de temporada)
+
 async function loadSingleTrailer(id, type, title, dataOriginal, season = null) {
-  // Mostrar indicador de carga
+
   elements.modalTrailer.innerHTML = '<div class="trailer-loading"><i class="fas fa-spinner fa-spin"></i> Buscando trailer...</div>';
   
   try {
-    // Extraer año de lanzamiento para búsqueda más precisa
+
     let year = null;
     if (dataOriginal) {
       if (type === 'movie') {
@@ -1285,7 +1285,7 @@ async function loadSingleTrailer(id, type, title, dataOriginal, season = null) {
       }
     }
 
-    // Usar la nueva API mejorada
+
     const params = new URLSearchParams({
       title: title,
       type: type,
@@ -1306,7 +1306,7 @@ async function loadSingleTrailer(id, type, title, dataOriginal, season = null) {
       const trailerData = await response.json();
       displayTrailer(trailerData);
     } else {
-      // Si no se encontró trailer, mostrar fallback con imágenes
+
       await displayImageFallback(dataOriginal, title, season);
     }
   } catch (error) {
@@ -1315,7 +1315,7 @@ async function loadSingleTrailer(id, type, title, dataOriginal, season = null) {
   }
 }
 
-// Función para mostrar selector de temporadas y trailers para series de TV
+
 async function displayTVSeasonTrailers(id, type, title, dataOriginal) {
   const seasons = dataOriginal.seasons || [];
   const regularSeasons = seasons.filter(season => season.season_number > 0);
@@ -1325,7 +1325,7 @@ async function displayTVSeasonTrailers(id, type, title, dataOriginal) {
     return;
   }
   
-  // Crear selector de temporadas minimalista
+
   let seasonSelector = `
     <div class="tv-trailer-selector">
       <div class="selector-header">
@@ -1335,7 +1335,7 @@ async function displayTVSeasonTrailers(id, type, title, dataOriginal) {
       <div class="season-buttons">
   `;
   
-  // Agregar botón para trailer general
+
   seasonSelector += `
     <button class="season-btn active" data-season="general" onclick="loadSeasonTrailer('${id}', '${type}', '${title}', null)">
       <i class="fas fa-film"></i>
@@ -1343,8 +1343,8 @@ async function displayTVSeasonTrailers(id, type, title, dataOriginal) {
     </button>
   `;
   
-  // Agregar botones para cada temporada (más compactos)
-  regularSeasons.slice(0, 8).forEach(season => { // Limitar a 8 temporadas para mantener compacto
+
+  regularSeasons.slice(0, 8).forEach(season => {
     seasonSelector += `
       <button class="season-btn" data-season="${season.season_number}" onclick="loadSeasonTrailer('${id}', '${type}', '${title}', ${season.season_number})">
         <i class="fas fa-play-circle"></i>
@@ -1354,7 +1354,7 @@ async function displayTVSeasonTrailers(id, type, title, dataOriginal) {
     `;
   });
   
-  // Si hay más de 8 temporadas, agregar indicador
+
   if (regularSeasons.length > 8) {
     seasonSelector += `
       <button class="season-btn" disabled style="opacity: 0.5;">
@@ -1375,26 +1375,26 @@ async function displayTVSeasonTrailers(id, type, title, dataOriginal) {
   
   elements.modalTrailer.innerHTML = seasonSelector;
   
-  // Cargar trailer general por defecto
+
   await loadSeasonTrailerContent(id, type, title, dataOriginal, null);
 }
 
-// Función para cargar trailer de temporada específica
+
 async function loadSeasonTrailerContent(id, type, title, dataOriginal, season) {
   const container = document.getElementById('selected-trailer-container');
   if (!container) return;
   
-  // Mostrar indicador de carga
+
   container.innerHTML = '<div class="trailer-loading"><i class="fas fa-spinner fa-spin"></i> Buscando trailer...</div>';
   
   try {
-    // Extraer año de lanzamiento
+
     let year = null;
     if (dataOriginal && dataOriginal.first_air_date) {
       year = new Date(dataOriginal.first_air_date).getFullYear();
     }
 
-    // Usar la nueva API mejorada
+
     const params = new URLSearchParams({
       title: title,
       type: type,
@@ -1415,7 +1415,7 @@ async function loadSeasonTrailerContent(id, type, title, dataOriginal, season) {
       const trailerData = await response.json();
       displayTrailerInContainer(trailerData, container);
     } else {
-      // Si no se encontró trailer, mostrar fallback con imágenes
+
       await displayImageFallbackInContainer(dataOriginal, title, season, container);
     }
   } catch (error) {
@@ -1424,27 +1424,27 @@ async function loadSeasonTrailerContent(id, type, title, dataOriginal, season) {
   }
 }
 
-// Función global para cargar trailer de temporada (llamada desde onClick)
+
 window.loadSeasonTrailer = async function(id, type, title, season) {
-  // Actualizar botones activos
+
   document.querySelectorAll('.season-btn').forEach(btn => btn.classList.remove('active'));
   const clickedBtn = document.querySelector(`[data-season="${season || 'general'}"]`);
   if (clickedBtn) clickedBtn.classList.add('active');
   
-  // Obtener datos originales desde variables globales o DOM
+
   const dataOriginal = window.currentDataOriginal || null;
   
   await loadSeasonTrailerContent(id, type, title, dataOriginal, season);
 }
 
-// Función para mostrar el trailer
+
 function displayTrailer(trailerData) {
   const { videoId, source, title, official, fromTMDb, season } = trailerData;
   
   let embedUrl;
   let trailerInfo = '';
   
-  // Crear URL del embed según la fuente
+
   if (source === 'youtube') {
     embedUrl = `https://www.youtube.com/embed/${videoId}`;
   } else if (source === 'vimeo') {
@@ -1456,7 +1456,7 @@ function displayTrailer(trailerData) {
     return;
   }
   
-  // Mostrar información del trailer
+
   if (official) {
     trailerInfo = '<div class="trailer-info official"><i class="fas fa-check-circle"></i> Trailer Oficial</div>';
   } else if (fromTMDb) {
@@ -1465,7 +1465,7 @@ function displayTrailer(trailerData) {
     trailerInfo = '<div class="trailer-info external"><i class="fas fa-external-link-alt"></i> Fuente Externa</div>';
   }
   
-  // Agregar información de temporada si aplica
+
   if (season) {
     trailerInfo += `<div class="season-info"><i class="fas fa-tv"></i> Temporada ${season}</div>`;
   }
@@ -1476,14 +1476,14 @@ function displayTrailer(trailerData) {
   `;
 }
 
-// Función para mostrar trailer en contenedor específico
+
 function displayTrailerInContainer(trailerData, container) {
   const { videoId, source, title, official, fromTMDb, season } = trailerData;
   
   let embedUrl;
   let trailerInfo = '';
   
-  // Crear URL del embed según la fuente
+
   if (source === 'youtube') {
     embedUrl = `https://www.youtube.com/embed/${videoId}`;
   } else if (source === 'vimeo') {
@@ -1495,7 +1495,7 @@ function displayTrailerInContainer(trailerData, container) {
     return;
   }
   
-  // Mostrar información del trailer
+
   if (official) {
     trailerInfo = '<div class="trailer-info official"><i class="fas fa-check-circle"></i> Trailer Oficial</div>';
   } else if (fromTMDb) {
@@ -1504,7 +1504,7 @@ function displayTrailerInContainer(trailerData, container) {
     trailerInfo = '<div class="trailer-info external"><i class="fas fa-external-link-alt"></i> Fuente Externa</div>';
   }
   
-  // Agregar información de temporada si aplica
+
   if (season) {
     trailerInfo += `<div class="season-info"><i class="fas fa-tv"></i> Temporada ${season}</div>`;
   }
@@ -1515,17 +1515,17 @@ function displayTrailerInContainer(trailerData, container) {
   `;
 }
 
-// Función para mostrar imágenes cuando no hay trailer disponible
+
 async function displayImageFallback(dataOriginal, title, season = null) {
   await displayImageFallbackInContainer(dataOriginal, title, season, elements.modalTrailer);
 }
 
-// Función para mostrar imágenes en contenedor específico
+
 async function displayImageFallbackInContainer(dataOriginal, title, season, container) {
   try {
     const images = [];
     
-    // Recopilar imágenes disponibles de TMDb
+
     if (dataOriginal) {
       if (dataOriginal.backdrop_path) {
         images.push(`https://image.tmdb.org/t/p/w780${dataOriginal.backdrop_path}`);
@@ -1538,7 +1538,7 @@ async function displayImageFallbackInContainer(dataOriginal, title, season, cont
     if (images.length > 0) {
       let imageCarousel = '<div class="image-carousel">';
       
-      // Mensaje personalizado para temporadas
+
       const message = season ? 
         `<i class="fas fa-info-circle"></i> No hay trailer disponible para la temporada ${season}. Aquí tienes algunas imágenes:` :
         '<i class="fas fa-info-circle"></i> No hay trailer disponible. Aquí tienes algunas imágenes:';
@@ -1586,7 +1586,7 @@ async function displayImageFallbackInContainer(dataOriginal, title, season, cont
   }
 }
 
-// Funciones para controlar el carrusel de imágenes
+
 let currentImageIndex = 0;
 
 function changeImage(direction) {
@@ -1626,11 +1626,11 @@ function currentSlide(index) {
 }
 
 
-let currentImdbId = null; // Variable global para guardar el ID de IMDb
+let currentImdbId = null;
 
-// Función para limpiar el contenido del modal
+
 function clearModalContent() {
-  // Limpiar contenido dinámico que se añade con insertAdjacentHTML
+
   const existingMovieDetails = document.querySelector('.movie-details');
   if (existingMovieDetails) {
     existingMovieDetails.remove();
@@ -1646,78 +1646,78 @@ function clearModalContent() {
     existingNoTorrentsMessage.remove();
   }
   
-  // Limpiar selectores de temporada y episodio para series de TV
+
   const existingSeasonSelect = document.querySelector('.season-episode-selector');
   if (existingSeasonSelect) {
     existingSeasonSelect.remove();
   }
   
-  // Limpiar cualquier mensaje adicional que pueda haberse añadido
+
   const existingMessages = document.querySelectorAll('.modal .additional-message');
   existingMessages.forEach(msg => msg.remove());
   
-  // Limpiar contenido de los elementos principales
+
   elements.modalTitle.innerHTML = '';
   elements.modalDescription.innerHTML = '';
   elements.modalTrailer.innerHTML = '';
 }
 
-// Función para obtener detalles y mostrar el modal
+
 async function showDetails(id, type, movieCard) {
 
   document.getElementById('loading-screen').style.display = 'flex';
   const lottiePlayer = document.querySelector('lottie-player');
-  lottiePlayer.stop();  // Detener la animación
-  lottiePlayer.play();  // Reproducir la animación desde el principio
+  lottiePlayer.stop();
+  lottiePlayer.play();
 
-  // Limpiar el contenido anterior del modal
+
   clearModalContent();
 
-  // Deshabilitar la tarjeta de la película temporalmente
-  movieCard.style.pointerEvents = 'none'; // Deshabilita clics en la tarjeta
-  movieCard.classList.add('disabled'); // Opcional: añadir una clase para aplicar estilos visuales
+
+  movieCard.style.pointerEvents = 'none';
+  movieCard.classList.add('disabled');
 
   try {
-    // Cargar los detalles en el idioma original
+
     const urlOriginal = `/api/titles/details?id=${id}&type=${type}&language=en`;
     const dataOriginal = await fetch(urlOriginal).then(response => response.json());
 
-    // Guardar el ID de IMDb
+
     currentImdbId = dataOriginal.imdb_id;
 
-    // Cargar los detalles en español
+
     const urlSpanish = `/api/titles/details?id=${id}&type=${type}&language=es`;
     const dataSpanish = await fetch(urlSpanish).then(response => response.json());
 
-    // Función auxiliar para detectar caracteres no latinos
+
     const containsNonLatinChars = (str) => {
       if (!str) return false;
-      // Detectar caracteres asiáticos (coreano, japonés, chino, etc.)
+
       return /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(str);
     };
 
-    // Lógica inteligente para seleccionar el título del modal - priorizar caracteres latinos
+
     if (dataOriginal.title && !containsNonLatinChars(dataOriginal.title)) {
-      // Para películas, usar title si está en caracteres latinos
+
       originalTitle = dataOriginal.title;
     } else if (dataOriginal.name && !containsNonLatinChars(dataOriginal.name)) {
-      // Para series, usar name si está en caracteres latinos
+
       originalTitle = dataOriginal.name;
     } else if (dataOriginal.original_title && !containsNonLatinChars(dataOriginal.original_title)) {
-      // Si original_title está en caracteres latinos, usarlo
+
       originalTitle = dataOriginal.original_title;
     } else if (dataOriginal.original_name && !containsNonLatinChars(dataOriginal.original_name)) {
-      // Si original_name está en caracteres latinos, usarlo
+
       originalTitle = dataOriginal.original_name;
     } else {
-      // Como último recurso, usar cualquiera que esté disponible
+
       originalTitle = dataOriginal.title || dataOriginal.name || dataOriginal.original_title || dataOriginal.original_name || "No Title";
     }
-    spanishTitle = dataSpanish.title || dataSpanish.name || originalTitle; // Si no hay traducción, usa el original
+    spanishTitle = dataSpanish.title || dataSpanish.name || originalTitle;
     originalDescription = dataOriginal.overview || "No description available in English.";
     spanishDescription = dataSpanish.overview || "No hay descripción disponible en español.";
 
-    // Mostrar el título con la traducción entre paréntesis y el selector de idioma
+
     elements.modalTitle.innerHTML = `
   <div class="modal-header-content">
     <span id="modal-title-text">${originalTitle} <span id="translated-title">(${spanishTitle})</span></span>
@@ -1737,17 +1737,17 @@ async function showDetails(id, type, movieCard) {
   </div>
 `;
 
-    // Mostrar la descripción en español inicialmente
+
     elements.modalDescription.innerHTML = `<p id="description-text">${spanishDescription}</p>`;
 
-    // Obtener géneros
+
     const genres = dataOriginal.genres ? dataOriginal.genres.map(genre => genre.name).join(', ') : 'Sin género';
 
-    // Obtener las plataformas disponibles
+
     const providers = await fetchProvider(id, type);
     const providerNames = providers ? providers.join(', ') : 'No disponible';
 
-    // Obtener el número de temporadas y estado si es una serie de TV
+
     let seasons = '';
     let status = '';
     if (type === 'tv') {
@@ -1755,10 +1755,10 @@ async function showDetails(id, type, movieCard) {
       status = dataOriginal.status === 'Ended' ? 'Finalizada' : 'En emisión';
     }
 
-    // Renderizar la valoración con estrellas
+
     const stars = renderStars(dataOriginal.vote_average);
 
-    // Insertar los detalles (movie-details) después de modal-description pero antes de modal-trailer
+
     const movieDetailsHTML = `
       <div class="movie-details">
         <p><strong>Género:</strong> ${genres}</p>
@@ -1769,39 +1769,39 @@ async function showDetails(id, type, movieCard) {
       </div>
     `;
     
-    // Insertar movie-details después de modal-description
+
     elements.modalDescription.insertAdjacentHTML('afterend', movieDetailsHTML);
 
-    // Buscar trailer usando la nueva API mejorada (modal-trailer va después de movie-details)
-    // Guardar datos para uso global
+
+
     window.currentDataOriginal = dataOriginal;
     await loadEnhancedTrailer(id, type, originalTitle, dataOriginal);
 
-    // Buscar torrents según el tipo de contenido (torrent-quote va al final)
+
     if (type === "movie") {
-      // Usar el mismo originalTitle que ya se calculó con lógica inteligente
+
       await fetchTorrents(originalTitle);
     } else if (type === "tv") {
-      // Para series de TV, obtener los detalles completos y buscar torrents
+
       const tvDetails = await fetchTVDetails(id);
       if (tvDetails) {
-        // Función auxiliar para detectar caracteres no latinos
+
         const containsNonLatinChars = (str) => {
           if (!str) return false;
-          // Detectar caracteres asiáticos (coreano, japonés, chino, etc.)
+
           return /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(str);
         };
         
-        // Lógica inteligente para seleccionar el nombre de la serie
+
         let tvTitle;
         if (dataOriginal.name && !containsNonLatinChars(dataOriginal.name)) {
-          // Si name existe y está en caracteres latinos, usarlo
+
           tvTitle = dataOriginal.name;
         } else if (dataOriginal.original_name && !containsNonLatinChars(dataOriginal.original_name)) {
-          // Si original_name existe y está en caracteres latinos, usarlo
+
           tvTitle = dataOriginal.original_name;
         } else {
-          // Como último recurso, usar el que esté disponible
+
           tvTitle = dataOriginal.name || dataOriginal.original_name;
         }
         
@@ -1816,7 +1816,7 @@ async function showDetails(id, type, movieCard) {
       }
     }
 
-    // Mostrar el modal
+
     elements.modal.classList.remove('hidden');
     elements.modal.style.display = 'block';
 
@@ -1824,9 +1824,9 @@ async function showDetails(id, type, movieCard) {
     console.error("Error mostrando detalles:", error);
   } finally {
     document.getElementById('loading-screen').style.display = 'none';
-    // Rehabilitar la tarjeta de la película después de mostrar los detalles
-    movieCard.style.pointerEvents = 'auto';  // Habilita nuevamente los clics
-    movieCard.classList.remove('disabled');  // Opcional: quitar la clase de deshabilitación
+
+    movieCard.style.pointerEvents = 'auto';
+    movieCard.classList.remove('disabled');
   }
 }
 
@@ -1840,18 +1840,18 @@ async function fetchProvider(movieId, type) {
 
     const data = await response.json();
 
-    // Verificar si está disponible en Argentina (AR)
-    const providersAR = data.results?.AR?.flatrate || [];  // Plataformas en Argentina
+
+    const providersAR = data.results?.AR?.flatrate || [];
 
     if (providersAR.length > 0) {
-      // Si está disponible en Argentina, devolvemos los proveedores con la etiqueta "AR"
+
       return providersAR.map(provider => `${provider.provider_name} (AR)`);
     } else {
-      // Si no está disponible en Argentina, buscamos en otras regiones
+
       const availableRegions = Object.keys(data.results);
       let otherProviders = [];
 
-      // Iteramos sobre las regiones y obtenemos los proveedores de la primera región que tenga disponibilidad
+
       for (const region of availableRegions) {
         const providers = data.results[region]?.flatrate || [];
         if (providers.length > 0) {
@@ -1860,7 +1860,7 @@ async function fetchProvider(movieId, type) {
         }
       }
 
-      // Si encontramos proveedores en otras regiones, los devolvemos
+
       return otherProviders.length > 0 ? otherProviders : ['No disponible'];
     }
   } catch (error) {
@@ -1869,21 +1869,21 @@ async function fetchProvider(movieId, type) {
   }
 }
 
-// Función para cambiar el idioma del modal
+
 function switchLanguage(language) {
   const descriptionText = document.getElementById('description-text');
   const translatedTitle = document.getElementById('translated-title');
   const languageOptions = document.querySelectorAll('.language-option');
   const languageSlider = document.querySelector('.language-slider');
   
-  // Remover clase active de todas las opciones
+
   languageOptions.forEach(option => option.classList.remove('active'));
   
-  // Añadir clase active a la opción seleccionada
+
   const selectedOption = document.querySelector(`[data-lang="${language}"]`);
   selectedOption.classList.add('active');
   
-  // Mover el slider
+
   if (language === 'es') {
     languageSlider.style.transform = 'translateX(0%)';
     descriptionText.textContent = spanishDescription;
@@ -1895,18 +1895,18 @@ function switchLanguage(language) {
   }
 }
 
-// Función para alternar entre la descripción en español y la descripción original (mantener compatibilidad)
+
 function toggleDescriptionLanguage() {
   const descriptionText = document.getElementById('description-text');
   const translatedTitle = document.getElementById('translated-title');
   const toggleLanguage = document.getElementById('toggle-language');
 
   if (!toggleLanguage.checked) {
-    // Mostrar en español cuando el toggle está desactivado (es)
+
     descriptionText.textContent = spanishDescription;
     translatedTitle.textContent = `(${spanishTitle})`;
   } else {
-    // Mostrar en inglés cuando el toggle está activado (en)
+
     descriptionText.textContent = originalDescription;
     translatedTitle.textContent = "";
   }
@@ -1914,31 +1914,31 @@ function toggleDescriptionLanguage() {
 
 
 
-// Función para renderizar estrellas
+
 function renderStars(voteAverage) {
-  const starCount = Math.round(voteAverage / 2);  // Convertir de 0-10 a 0-5 estrellas
+  const starCount = Math.round(voteAverage / 2);
   let stars = '';
 
-  // Crear las estrellas llenas
+
   for (let i = 0; i < starCount; i++) {
-    stars += '<i class="fas fa-star"></i>';  // Usar un ícono de estrella llena
+    stars += '<i class="fas fa-star"></i>';
   }
 
-  // Crear las estrellas vacías
+
   for (let i = starCount; i < 5; i++) {
-    stars += '<i class="far fa-star"></i>';  // Usar un ícono de estrella vacía
+    stars += '<i class="far fa-star"></i>';
   }
 
   return stars;
 }
 
-// Función para obtener torrents de YTS según el título de la película
+
 async function fetchTorrents(movieTitle) {
   try {
     const response = await fetch(`/api/torrents?movieTitle=${encodeURIComponent(movieTitle)}`);
 
     if (!response.ok) {
-      // Manejar 404 (no torrents encontrados) de forma amigable
+
       if (response.status === 404) {
         elements.modalDescription.insertAdjacentHTML(
           "beforeend",
@@ -1953,24 +1953,24 @@ async function fetchTorrents(movieTitle) {
     const data = await response.json();
 
     if (data.length > 0) {
-      // Handle both old YTS format and new direct torrent format
+
       let allTorrents = [];
       
-      // Check if data is direct torrent array (new format) or YTS movie format (old format)
+
       if (data[0] && data[0].title && data[0].magnet) {
-        // New format: direct torrent array
+
         allTorrents = data.map(torrent => ({
           ...torrent,
           title: torrent.title || movieTitle
         }));
       } else {
-        // Old YTS format: movies with torrents array
+
         data.forEach(movie => {
           if (movie.torrents && movie.torrents.length > 0) {
             movie.torrents.forEach(torrent => {
               allTorrents.push({
                 ...torrent,
-                title: movie.title // Agregar título de la película al torrent
+                title: movie.title
               });
             });
           }
@@ -1978,7 +1978,7 @@ async function fetchTorrents(movieTitle) {
       }
 
       if (allTorrents.length > 0) {
-        // Check if any torrents are demo data
+
         const hasDemo = allTorrents.some(torrent => torrent.isDemo);
         
         allTorrents.sort((a, b) => {
@@ -1990,7 +1990,7 @@ async function fetchTorrents(movieTitle) {
           <div class="torrent-quote">
             <h3>Torrents disponibles</h3>`;
         
-        // Add demo data warning if applicable
+
         if (hasDemo) {
           torrentButtons += `
             <div class="demo-warning" style="background: #ff6b35; color: white; padding: 8px 12px; border-radius: 4px; margin-bottom: 10px; font-size: 14px;">
@@ -2004,7 +2004,7 @@ async function fetchTorrents(movieTitle) {
           const magnetLink = torrent.magnet || torrent.url || `magnet:?xt=urn:btih:${torrent.hash}&dn=${encodeURIComponent(movieTitle)}&tr=udp://tracker.openbittorrent.com:80/announce`;
           const providerInfo = torrent.isDemo ? " 🎭 Demo" : "";
           
-          // Escapar comillas simples y dobles para evitar errores de sintaxis
+
           const escapedMagnetLink = magnetLink.replace(/'/g, "\\'").replace(/"/g, '\\"');
           const escapedMovieTitle = movieTitle.replace(/'/g, "\\'").replace(/"/g, '\\"');
           
@@ -2053,7 +2053,7 @@ async function fetchTorrents(movieTitle) {
       );
     }
   } catch (error) {
-    // Mostrar mensaje de error amigable en el modal
+
     elements.modalTrailer.insertAdjacentHTML(
       "afterend",
       `<div class="no-torrents-message" style="background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%); border-color: #f44336; color: #ffebee;">
@@ -2065,26 +2065,26 @@ async function fetchTorrents(movieTitle) {
   }
 }
 
-// Función para obtener torrents de series de TV
+
 async function fetchTVTorrents(tvTitle, tvDetails) {
   try {
-    // Crear interfaz de selección de temporada y episodio
+
     const seasonSelect = createSeasonEpisodeSelector(tvDetails);
     
     elements.modalTrailer.insertAdjacentHTML("afterend", seasonSelect);
     
-    // Agregar event listeners para los selectores
+
     const seasonSelector = document.getElementById('season-selector');
     const episodeSelector = document.getElementById('episode-selector');
     const searchTorrentsBtn = document.getElementById('search-torrents-btn');
     const torrentResultsContainer = document.getElementById('torrent-results');
     
-    // Actualizar episodios cuando cambie la temporada
+
     seasonSelector.addEventListener('change', function() {
       updateEpisodeSelector(tvDetails, this.value);
     });
     
-    // Buscar torrents cuando se haga clic en el botón
+
     searchTorrentsBtn.addEventListener('click', async function() {
       const selectedSeason = seasonSelector.value;
       const selectedEpisode = episodeSelector.value;
@@ -2094,13 +2094,13 @@ async function fetchTVTorrents(tvTitle, tvDetails) {
         return;
       }
       
-      // Mostrar indicador de carga
+
       torrentResultsContainer.innerHTML = '<div class="loading-torrents">🔍 Buscando torrents...</div>';
       
       await searchTVTorrents(tvTitle, selectedSeason, selectedEpisode, torrentResultsContainer);
     });
     
-    // Cargar episodios de la primera temporada por defecto
+
     if (seasonSelector.value) {
       updateEpisodeSelector(tvDetails, seasonSelector.value);
     }
@@ -2117,13 +2117,13 @@ async function fetchTVTorrents(tvTitle, tvDetails) {
   }
 }
 
-// Función para crear el selector de temporada y episodio
+
 function createSeasonEpisodeSelector(tvDetails) {
   const seasons = tvDetails.seasons || [];
   let seasonOptions = '<option value="">Selecciona una temporada</option>';
   
   seasons.forEach(season => {
-    if (season.season_number > 0) { // Omitir temporada 0 (especiales)
+    if (season.season_number > 0) {
       seasonOptions += `<option value="${season.season_number}">Temporada ${season.season_number} (${season.episode_count} episodios)</option>`;
     }
   });
@@ -2151,7 +2151,7 @@ function createSeasonEpisodeSelector(tvDetails) {
   `;
 }
 
-// Función para actualizar el selector de episodios
+
 function updateEpisodeSelector(tvDetails, seasonNumber) {
   const episodeSelector = document.getElementById('episode-selector');
   const selectedSeason = tvDetails.seasons.find(s => s.season_number == seasonNumber);
@@ -2163,7 +2163,7 @@ function updateEpisodeSelector(tvDetails, seasonNumber) {
   
   let episodeOptions = '<option value="">Temporada completa</option>';
   
-  // Generar opciones para cada episodio
+
   for (let i = 1; i <= selectedSeason.episode_count; i++) {
     episodeOptions += `<option value="${i}">Episodio ${i}</option>`;
   }
@@ -2171,7 +2171,7 @@ function updateEpisodeSelector(tvDetails, seasonNumber) {
   episodeSelector.innerHTML = episodeOptions;
 }
 
-// Función para buscar torrents de TV
+
 async function searchTVTorrents(tvTitle, season, episode, resultsContainer) {
   try {
     const response = await fetch(`/api/tv-torrents?tvTitle=${encodeURIComponent(tvTitle)}&season=${season}&episode=${episode || ''}`);
@@ -2204,16 +2204,16 @@ async function searchTVTorrents(tvTitle, season, episode, resultsContainer) {
   }
 }
 
-// Función para mostrar los torrents de TV
+
 function displayTVTorrents(torrents, container, tvTitle) {
-  // Check if any torrents are demo data
+
   const hasDemo = torrents.some(torrent => torrent.isDemo);
   
   let torrentButtons = `
     <div class="torrent-quote">
       <h4>Torrents encontrados</h4>`;
   
-  // Add demo data warning if applicable
+
   if (hasDemo) {
     torrentButtons += `
       <div class="demo-warning" style="background: #ff6b35; color: white; padding: 8px 12px; border-radius: 4px; margin-bottom: 10px; font-size: 14px;">
@@ -2228,7 +2228,7 @@ function displayTVTorrents(torrents, container, tvTitle) {
     const torrentTitle = torrent.title;
     const providerInfo = torrent.isDemo ? " 🎭 Demo" : "";
     
-    // Escapar comillas simples y dobles para evitar errores de sintaxis
+
     const escapedMagnetLink = magnetLink.replace(/'/g, "\\'").replace(/"/g, '\\"');
     const escapedTorrentTitle = torrentTitle.replace(/'/g, "\\'").replace(/"/g, '\\"');
     
@@ -2267,7 +2267,7 @@ function displayTVTorrents(torrents, container, tvTitle) {
   container.innerHTML = torrentButtons;
 }
 
-// Función para verificar compatibilidad de códecs
+
 function checkCodecSupport() {
   const video = document.createElement('video');
   const codecSupport = {
@@ -2275,21 +2275,21 @@ function checkCodecSupport() {
     h265: video.canPlayType('video/mp4; codecs="hev1.1.6.L93.B0"') !== '',
     vp9: video.canPlayType('video/webm; codecs="vp9"') !== '',
     av1: video.canPlayType('video/mp4; codecs="av01.0.05M.08"') !== '',
-    // Audio codecs
+
     aac: video.canPlayType('audio/mp4; codecs="mp4a.40.2"') !== '',
     mp3: video.canPlayType('audio/mpeg') !== '',
     opus: video.canPlayType('audio/webm; codecs="opus"') !== '',
     vorbis: video.canPlayType('audio/webm; codecs="vorbis"') !== '',
     flac: video.canPlayType('audio/flac') !== '',
-    dts: video.canPlayType('audio/mp4; codecs="dts"') === '', // Normalmente no soportado
-    ac3: video.canPlayType('audio/mp4; codecs="ac-3"') === '', // Normalmente no soportado
+    dts: video.canPlayType('audio/mp4; codecs="dts"') === '',
+    ac3: video.canPlayType('audio/mp4; codecs="ac-3"') === '',
   };
   
   console.log('Codec support:', codecSupport);
   return codecSupport;
 }
 
-// Función para mostrar información sobre problemas de audio comunes
+
 function showAudioTroubleshooting() {
   const troubleshootingMessage = `
     <div style="background: rgba(255, 193, 7, 0.1); border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin: 10px 0;">
@@ -2304,10 +2304,10 @@ function showAudioTroubleshooting() {
     </div>
   `;
   
-  // Buscar un contenedor donde mostrar el mensaje
+
   const playerContainer = document.getElementById('video-player-container');
   if (playerContainer) {
-    // Verificar si ya existe el mensaje para no duplicarlo
+
     const existingTroubleshooting = playerContainer.querySelector('.audio-troubleshooting');
     if (!existingTroubleshooting) {
       const troubleshootingDiv = document.createElement('div');
@@ -2318,22 +2318,22 @@ function showAudioTroubleshooting() {
   }
 }
 
-// Función para iniciar el reproductor de video WebTorrent
+
 function startPlayer(magnetLink, movieTitle) {
   const playerContainer = document.getElementById('video-player-container');
   const videoPlayer = document.getElementById('video-player');
-  const torrentQuote = document.querySelector('.torrent-quote'); // Selector para el contenedor de botones de torrents
+  const torrentQuote = document.querySelector('.torrent-quote');
   const loadingIndicator = document.getElementById('player-loading-indicator');
   const torrentStatsDiv = document.getElementById('torrent-stats');
   const torrentPeersSpan = document.getElementById('torrent-peers');
   const torrentProgressSpan = document.getElementById('torrent-progress');
   const torrentDownloadSpeedSpan = document.getElementById('torrent-download-speed');
   const playerStatusMessage = document.getElementById('player-status-message');
-  const playerLoadingIndicator = document.getElementById('player-loading-indicator'); // Explicitly get for clarity
+  const playerLoadingIndicator = document.getElementById('player-loading-indicator');
   const localSubtitleUploadContainer = document.getElementById('local-subtitle-upload-container');
   const subtitleUploadInput = document.getElementById('subtitle-upload-input');
 
-  // Check if essential elements exist
+
   if (!playerContainer) {
     showNotification('Error: No se encontró el contenedor del reproductor', 'error');
     console.error('video-player-container element not found');
@@ -2346,7 +2346,7 @@ function startPlayer(magnetLink, movieTitle) {
     return;
   }
 
-  // Show the video modal first
+
   const videoModal = document.getElementById('video-modal');
   if (videoModal) {
     videoModal.classList.remove('hidden');
@@ -2357,15 +2357,15 @@ function startPlayer(magnetLink, movieTitle) {
     return;
   }
 
-  // Show initial broad status
+
   if (playerLoadingIndicator) {
     playerLoadingIndicator.textContent = 'Fetching torrent metadata...';
     playerLoadingIndicator.style.display = 'block';
   }
   if (playerStatusMessage) {
-    playerStatusMessage.style.display = 'none'; // Ensure specific status is hidden initially
+    playerStatusMessage.style.display = 'none';
   }
-  if (localSubtitleUploadContainer) { // Hide initially
+  if (localSubtitleUploadContainer) {
       localSubtitleUploadContainer.style.display = 'none';
   }
   if (torrentStatsDiv) {
@@ -2373,14 +2373,14 @@ function startPlayer(magnetLink, movieTitle) {
   }
 
   if (torrentQuote) {
-    torrentQuote.style.display = 'none'; // Ocultar contenedor de botones de torrents
+    torrentQuote.style.display = 'none';
   }
   
-  // The playerContainer is already visible within the modal, no need to show it separately
-  const client = new WebTorrent();
-  window.currentTorrentClient = client; // Guardar cliente globalmente
 
-  // Add error handling for the WebTorrent client
+  const client = new WebTorrent();
+  window.currentTorrentClient = client;
+
+
   client.on('error', (err) => {
     console.error('WebTorrent client error:', err);
     showNotification('Error del cliente torrent: ' + err.message, 'error');
@@ -2394,7 +2394,7 @@ function startPlayer(magnetLink, movieTitle) {
   showNotification('Conectando al torrent...', 'info', 3000);  client.add(magnetLink, (torrent) => {
     showNotification(`Torrent conectado: ${torrent.name}`, 'success');
     
-    // Add error handling for the torrent
+
     torrent.on('error', (err) => {
       console.error('Torrent error:', err);
       showNotification('Error del torrent: ' + err.message, 'error');
@@ -2405,15 +2405,15 @@ function startPlayer(magnetLink, movieTitle) {
       }
     });
 
-    if (playerLoadingIndicator) { // Use the more specific variable name
-      playerLoadingIndicator.textContent = 'Video loading...'; // General status that video is now the focus
+    if (playerLoadingIndicator) {
+      playerLoadingIndicator.textContent = 'Video loading...';
     }    if (torrentStatsDiv) {
-      torrentStatsDiv.style.display = 'block'; // Mostrar estadísticas
+      torrentStatsDiv.style.display = 'block';
     }
     
-    // Add null checks for torrent stat elements
+
     if (torrentPeersSpan) {
-      torrentPeersSpan.textContent = `Peers: ${torrent.numPeers}`; // Initial peer count
+      torrentPeersSpan.textContent = `Peers: ${torrent.numPeers}`;
     }
 
     if (playerStatusMessage) {
@@ -2426,10 +2426,10 @@ function startPlayer(magnetLink, movieTitle) {
       }
     }
 
-    const STALL_TIMEOUT_DURATION = 60000; // 60 seconds
-    if (stallTimeoutId) clearTimeout(stallTimeoutId); // Clear previous timeout just in case
+    const STALL_TIMEOUT_DURATION = 60000;
+    if (stallTimeoutId) clearTimeout(stallTimeoutId);
     stallTimeoutId = setTimeout(() => {
-        const currentVideoPlayer = document.getElementById('video-player'); // Re-fetch in timeout scope
+        const currentVideoPlayer = document.getElementById('video-player');
         if (currentVideoPlayer && currentVideoPlayer.paused && torrent.progress < 0.1 && torrent.numPeers < 2) {
             console.warn('Torrent stalled, timeout reached.');
             if (playerLoadingIndicator) playerLoadingIndicator.style.display = 'none';
@@ -2452,7 +2452,7 @@ function startPlayer(magnetLink, movieTitle) {
     });
 
     torrent.on('upload', bytes => {
-      // Opcional: Mostrar velocidad de subida
+
     });
 
     torrent.on('wire', function onWire(wire, addr) {
@@ -2465,7 +2465,7 @@ function startPlayer(magnetLink, movieTitle) {
         }
     });
 
-    // Enhanced file selection logic starts
+
     const videoExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm', '.flv', '.wmv'];
     let videoFiles = torrent.files.filter(f => {
         return videoExtensions.some(ext => f.name.toLowerCase().endsWith(ext));
@@ -2473,12 +2473,12 @@ function startPlayer(magnetLink, movieTitle) {
         clearTimeout(stallTimeoutId);
         if (playerLoadingIndicator) playerLoadingIndicator.style.display = 'none';
         if (playerStatusMessage) {
-            playerStatusMessage.textContent = 'No video files found in this torrent.'; // More specific than "No compatible..."
+            playerStatusMessage.textContent = 'No video files found in this torrent.';
             playerStatusMessage.style.display = 'block';
         }
         if (torrentStatsDiv) torrentStatsDiv.style.display = 'none';
         showNotification('No se encontraron archivos de video en este torrent', 'error');
-        return; // Exit from client.add callback
+        return;
     }
 
     let selectedFile = null;
@@ -2497,11 +2497,11 @@ function startPlayer(magnetLink, movieTitle) {
         selectedFile = preferredFiles[0];
 
         console.log("Multiple video files found. Auto-selected:", selectedFile.name);
-        // Optional: message about auto-selection
-        // if (playerStatusMessage) {
-        //     playerStatusMessage.textContent = `Auto-selected: ${selectedFile.name}. Playing...`;
-        //     playerStatusMessage.style.display = 'block';
-        // }
+
+
+
+
+
     }    if (!selectedFile) {
         clearTimeout(stallTimeoutId);
         if (playerLoadingIndicator) playerLoadingIndicator.style.display = 'none';
@@ -2511,11 +2511,11 @@ function startPlayer(magnetLink, movieTitle) {
         }
         if (torrentStatsDiv) torrentStatsDiv.style.display = 'none';
         showNotification('No se pudo seleccionar un archivo de video', 'error');
-        return; // Exit from client.add callback
+        return;
     }
 
-    // Refined cleanup for video player
-    // const videoPlayer = document.getElementById('video-player'); // Already available in this scope
+
+
     const oldSources = videoPlayer.getElementsByTagName('source');
     while (oldSources.length > 0) {
         videoPlayer.removeChild(oldSources[0]);
@@ -2525,18 +2525,18 @@ function startPlayer(magnetLink, movieTitle) {
         videoPlayer.removeChild(oldTracks[0]);
     }
     videoPlayer.src = '';
-    videoPlayer.load(); // Reset the player state after clearing sources/tracks
+    videoPlayer.load();
 
-    // Logic to find and add subtitle tracks from torrent files
+
     const videoFileNameWithoutExt = selectedFile.name.substring(0, selectedFile.name.lastIndexOf('.')) || selectedFile.name;
     const subtitleExtensions = ['.srt', '.vtt'];
 
-    torrent.files.forEach(torrentFile => { // Renamed 'file' to 'torrentFile' to avoid scope collision
+    torrent.files.forEach(torrentFile => {
         const fileExtension = torrentFile.name.substring(torrentFile.name.lastIndexOf('.')).toLowerCase();
         const fileNameWithoutExt = torrentFile.name.substring(0, torrentFile.name.lastIndexOf('.')) || torrentFile.name;
 
         if (subtitleExtensions.includes(fileExtension) && fileNameWithoutExt.toLowerCase().startsWith(videoFileNameWithoutExt.toLowerCase())) {
-            // Found a potential subtitle file matching the video file name
+
             torrentFile.getBlobURL((err, blobUrl) => {
                 if (err) {
                     console.error('Error getting blob URL for subtitle file:', torrentFile.name, err);
@@ -2555,9 +2555,9 @@ function startPlayer(magnetLink, movieTitle) {
                 trackElement.srclang = lang;
                 trackElement.label = `${torrentFile.name} (${lang.toUpperCase()})`;
                 trackElement.src = blobUrl;
-                // trackElement.default = true; // Optionally make the first found subtitle default
 
-                // videoPlayer is already defined in the outer scope of startPlayer
+
+
                 videoPlayer.appendChild(trackElement);
                 console.log('Added subtitle track:', torrentFile.name, 'Lang:', lang);
             });
@@ -2577,13 +2577,13 @@ function startPlayer(magnetLink, movieTitle) {
             return;
         }
 
-        // Configuraciones mejoradas para el reproductor de video
-        videoPlayer.muted = false; // Asegurar que no esté muteado
-        videoPlayer.volume = 1.0; // Volumen al máximo
-        videoPlayer.autoplay = false; // No reproducir automáticamente
-        videoPlayer.preload = 'metadata'; // Precargar metadatos
 
-        // Función para verificar y habilitar audio
+        videoPlayer.muted = false;
+        videoPlayer.volume = 1.0;
+        videoPlayer.autoplay = false;
+        videoPlayer.preload = 'metadata';
+
+
         function ensureAudioEnabled() {
             if (videoPlayer.muted) {
                 videoPlayer.muted = false;
@@ -2595,12 +2595,12 @@ function startPlayer(magnetLink, movieTitle) {
             }
         }
 
-        // Función para detectar problemas de audio
+
         function detectAudioIssues() {
-            // Verificar compatibilidad de códecs
+
             const codecSupport = checkCodecSupport();
             
-            // Verificar si hay pistas de audio disponibles
+
             setTimeout(() => {
                 if (videoPlayer.audioTracks && videoPlayer.audioTracks.length === 0) {
                     console.warn('No audio tracks detected in video file');
@@ -2608,21 +2608,21 @@ function startPlayer(magnetLink, movieTitle) {
                     showAudioTroubleshooting();
                 }
                 
-                // Verificar códecs de audio para archivos MKV
+
                 if (selectedFile.name.toLowerCase().endsWith('.mkv')) {
                     console.log('MKV file detected, checking audio compatibility...');
                     showNotification('📁 Archivo MKV detectado. Si no hay audio, podría ser un problema de códec.', 'info', 6000);
                     
-                    // Mostrar información de solución de problemas para archivos MKV
+
                     setTimeout(() => {
                         if (videoPlayer.muted || videoPlayer.volume === 0) {
                             showAudioTroubleshooting();
                         }
                     }, 3000);
                     
-                    // Intentar detectar si el audio funciona
+
                     try {
-                        // Solo crear el contexto de audio si es necesario
+
                         if (window.AudioContext || window.webkitAudioContext) {
                             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                             const source = audioContext.createMediaElementSource(videoPlayer);
@@ -2636,10 +2636,10 @@ function startPlayer(magnetLink, movieTitle) {
                     }
                 }
                 
-                // Verificar después de un tiempo si el audio realmente funciona
+
                 setTimeout(() => {
                     if (videoPlayer.currentTime > 0 && !videoPlayer.paused && videoPlayer.volume > 0 && !videoPlayer.muted) {
-                        // El video está reproduciendo, verificar si realmente hay audio
+
                         console.log('Video playing, checking for actual audio output...');
                     }
                 }, 5000);
@@ -2649,11 +2649,11 @@ function startPlayer(magnetLink, movieTitle) {
         videoPlayer.oncanplay = () => {
             if (playerLoadingIndicator) playerLoadingIndicator.style.display = 'none';
             if (playerStatusMessage) playerStatusMessage.style.display = 'none';
-            if (localSubtitleUploadContainer) { // Show subtitle upload oncanplay
+            if (localSubtitleUploadContainer) {
                 localSubtitleUploadContainer.style.display = 'block';
             }
             
-            // Asegurar que el audio esté habilitado cuando el video esté listo
+
             ensureAudioEnabled();
             detectAudioIssues();
         };
@@ -2663,11 +2663,11 @@ function startPlayer(magnetLink, movieTitle) {
             if (playerLoadingIndicator) playerLoadingIndicator.style.display = 'none';
             if (playerStatusMessage) playerStatusMessage.style.display = 'none';
             
-            // Verificar audio nuevamente cuando comience la reproducción
+
             ensureAudioEnabled();
         };
 
-        // Event listener para errores de audio específicos
+
         videoPlayer.onerror = (event) => {
             const error = videoPlayer.error;
             if (error) {
@@ -2696,11 +2696,11 @@ function startPlayer(magnetLink, movieTitle) {
             }
         };
 
-        // Listener para cambios en el volumen/mute
+
         videoPlayer.onvolumchange = () => {
             if (videoPlayer.muted) {
                 console.log('Video was muted by user or system');
-                // Opcional: mostrar notificación si se mutea automáticamente
+
                 setTimeout(() => {
                     if (videoPlayer.muted) {
                         showNotification('🔇 El audio está desactivado. Haz clic en el botón de volumen para activarlo.', 'info', 5000);
@@ -2709,7 +2709,7 @@ function startPlayer(magnetLink, movieTitle) {
             }
         };
     });
-    // Enhanced file selection logic ends
+
   });
   client.on('error', err => {
     clearTimeout(stallTimeoutId);
@@ -2735,14 +2735,14 @@ function startPlayer(magnetLink, movieTitle) {
       playerStatusMessage.style.display = 'block';
     }
     if (torrentStatsDiv) {
-      torrentStatsDiv.style.display = 'none'; // Hide stats on error
+      torrentStatsDiv.style.display = 'none';
     }
-    // Opcional: Ocultar el reproductor y mostrar los botones de torrent nuevamente
-    // playerContainer.style.display = 'none';
-    // if (torrentQuote) torrentQuote.style.display = 'block';
+
+
+
   });
 
-  if (subtitleUploadInput) { // Ensure element exists before adding listener
+  if (subtitleUploadInput) {
     subtitleUploadInput.addEventListener('change', function(event) {
         const file = event.target.files[0];
         if (!file) {
@@ -2784,24 +2784,24 @@ function startPlayer(magnetLink, movieTitle) {
 }
 
 
-// Función para cerrar el modal
+
 async function closeModal() {
   elements.modal.classList.add('hidden');
   elements.modal.style.display = "none";
-  elements.modalTrailer.innerHTML = ""; // Limpiar tráiler cuando se cierra el modal
+  elements.modalTrailer.innerHTML = "";
 
   if (stallTimeoutId) {
     clearTimeout(stallTimeoutId);
     stallTimeoutId = null;
   }
 
-  // Limpiar estadísticas si están corriendo
+
   if (statsInterval) {
     clearInterval(statsInterval);
     statsInterval = null;
   }
 
-  // Detener y limpiar el torrent del servidor si tenemos información del torrent actual
+
   if (currentTorrentInfo && currentTorrentInfo.infoHash) {
     try {
       console.log(`Stopping torrent from modal close: ${currentTorrentInfo.infoHash}`);
@@ -2824,7 +2824,7 @@ async function closeModal() {
     }
   }
 
-  // Lógica para limpiar el reproductor de WebTorrent
+
   if (window.currentTorrentClient) {
     window.currentTorrentClient.destroy(err => {
       if (err) console.error("Error destruyendo el cliente de WebTorrent:", err);
@@ -2869,7 +2869,7 @@ async function closeModal() {
     if (videoPlayer) {
       videoPlayer.pause();
       videoPlayer.src = '';
-      // Detach event listeners
+
       videoPlayer.onplaying = null;
       videoPlayer.oncanplay = null;
       videoPlayer.load();
@@ -2882,24 +2882,24 @@ async function closeModal() {
     }
   }
 
-  // Resetear información del torrent
+
   currentTorrentInfo = null;
 }
 
-// Evento para actualizar los resultados cuando el usuario busca
+
 let searchTimeout;
 document.getElementById("search-bar").addEventListener("input", (e) => {
-  // Cancelar el timeout anterior si existe
+
   if (searchTimeout) {
     clearTimeout(searchTimeout);
   }
   
   const searchQuery = e.target.value.trim();
   
-  // Actualizar visibilidad del botón limpiar inmediatamente
+
   updateClearButtonVisibility();
   
-  // Si la búsqueda está vacía, restaurar estado inicial inmediatamente
+
   if (searchQuery === '') {
     hideSearchResultsInfo();
     currentPage = 1;
@@ -2907,30 +2907,30 @@ document.getElementById("search-bar").addEventListener("input", (e) => {
     return;
   }
   
-  // Debounce para búsquedas con contenido (300ms de delay)
+
   searchTimeout = setTimeout(() => {
     currentPage = 1;
     getTitles(currentPage);
   }, 300);
 });
 
-// Aplicar filtros y obtener títulos
+
 function applyFilters() {
-  currentPage = 1;  // Reiniciar a la primera página
-  elements.movieGrid.innerHTML = '';  // Limpiar el contenedor de resultados
-  updateClearButtonVisibility(); // Actualizar visibilidad del botón limpiar
-  getTitles(currentPage);  // Volver a cargar los títulos según los nuevos filtros
+  currentPage = 1;
+  elements.movieGrid.innerHTML = '';
+  updateClearButtonVisibility();
+  getTitles(currentPage);
 }
 
-// Obtener el botón de Bitcoin
+
 const btcButton = document.getElementById('btc-button');
 
-// Agregar un evento al botón para copiar la dirección al portapapeles
+
 btcButton.addEventListener('click', function () {
-  // Obtener la dirección de Bitcoin del atributo data-btc-address
+
   const btcAddress = btcButton.getAttribute('data-btc-address');
 
-  // Crear un campo de texto temporal para copiar la dirección
+
   const tempInput = document.createElement('input');
   tempInput.value = btcAddress;
   document.body.appendChild(tempInput);
@@ -2938,19 +2938,19 @@ btcButton.addEventListener('click', function () {
   document.execCommand('copy');
   document.body.removeChild(tempInput);
 
-  // Cambiar el texto del botón temporalmente a "Address copied!"
+
   const originalText = btcButton.innerHTML;
   btcButton.innerHTML = '<i class="fab fa-bitcoin"></i> Address copied!';
 
-  // Restaurar el texto original después de 2 segundos
+
   setTimeout(() => {
     btcButton.innerHTML = originalText;
-  }, 2000); // Cambia el texto por 2 segundos
+  }, 2000);
 });
 
-// ===== FUNCIONES DE AUTENTICACIÓN CON SUPABASE =====
 
-// Mostrar modal de login
+
+
 function showLoginModal() {
   document.getElementById('modal-title').textContent = 'Iniciar Sesión';
   document.getElementById('login-form').classList.remove('hidden');
@@ -2960,7 +2960,7 @@ function showLoginModal() {
   document.getElementById('auth-modal').classList.remove('hidden');
 }
 
-// Mostrar modal de registro
+
 function showRegisterModal() {
   document.getElementById('modal-title').textContent = 'Registrarse';
   document.getElementById('login-form').classList.add('hidden');
@@ -2970,27 +2970,27 @@ function showRegisterModal() {
   document.getElementById('auth-modal').classList.remove('hidden');
 }
 
-// Cambiar a registro
+
 function switchToRegister(e) {
   e.preventDefault();
   showRegisterModal();
 }
 
-// Cambiar a login
+
 function switchToLogin(e) {
   e.preventDefault();
   showLoginModal();
 }
 
-// Ocultar modal
+
 function hideAuthModal() {
   document.getElementById('auth-modal').classList.add('hidden');
-  // Limpiar formularios
+
   document.getElementById('login-form').reset();
   document.getElementById('register-form').reset();
 }
 
-// Manejar login
+
 async function handleLogin(e) {
   e.preventDefault();
   
@@ -3022,7 +3022,7 @@ async function handleLogin(e) {
   }
 }
 
-// Manejar registro
+
 async function handleRegister(e) {
   e.preventDefault();
   
@@ -3056,7 +3056,7 @@ async function handleRegister(e) {
     if (result.success) {
       showNotification('¡Registro exitoso! Revisa tu email para confirmar tu cuenta', 'success');
       hideAuthModal();
-      // Si el usuario se registra y confirma inmediatamente
+
       if (result.data.user && !result.data.user.email_confirmed_at) {
         showNotification('Por favor confirma tu email antes de continuar', 'warning');
       }
@@ -3068,7 +3068,7 @@ async function handleRegister(e) {
   }
 }
 
-// Manejar logout
+
 async function handleLogout() {
   try {
     const result = await auth.signOut();
@@ -3084,7 +3084,7 @@ async function handleLogout() {
   }
 }
 
-// Actualizar UI según estado de autenticación
+
 function updateAuthUI(user) {
   currentUser = user;
   
@@ -3097,7 +3097,7 @@ function updateAuthUI(user) {
   const favoriteFilterGroup = document.getElementById('favorite-filter-group');
   
   if (user) {
-    // Usuario logueado - ocultar botones de login y registro, mostrar botón salir
+
     if (loginBtn) loginBtn.style.display = 'none';
     if (registerBtn) registerBtn.style.display = 'none';
     if (authButtons) authButtons.classList.add('hidden');
@@ -3105,18 +3105,18 @@ function updateAuthUI(user) {
     if (logoutBtn) logoutBtn.style.display = 'inline-flex';
     if (userEmail) userEmail.textContent = user.email;
     
-    // Mostrar filtro de favoritos si existe
+
     if (favoriteFilterGroup) {
       favoriteFilterGroup.style.display = 'flex';
     }
     
-    // Precargar favoritos para mejor rendimiento
+
     preloadUserFavorites();
     
-    // Cargar títulos si el filtro está activado
+
     getTitles();
   } else {
-    // Usuario no logueado - mostrar botones de login y registro, ocultar botón salir
+
     if (loginBtn) loginBtn.style.display = 'inline-flex';
     if (registerBtn) registerBtn.style.display = 'inline-flex';
     if (authButtons) authButtons.classList.remove('hidden');
@@ -3124,16 +3124,16 @@ function updateAuthUI(user) {
     if (logoutBtn) logoutBtn.style.display = 'none';
     if (userEmail) userEmail.textContent = '';
     
-    // Ocultar filtro de favoritos
+
     if (favoriteFilterGroup) {
       favoriteFilterGroup.style.display = 'none';
     }
   }
 }
 
-// Inicializar autenticación al cargar la página
+
 async function initAuth() {
-  // Primero inicializar Supabase
+
   await initSupabase();
   
   if (!auth) {
@@ -3146,7 +3146,7 @@ async function initAuth() {
     const user = await auth.getCurrentUser();
     updateAuthUI(user);
     
-    // Escuchar cambios en la autenticación
+
     auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN') {
         updateAuthUI(session.user);
@@ -3173,22 +3173,22 @@ async function getPlatforms(movieId) {
 }
 
 
-// Cache para favoritos para mejorar rendimiento
+
 let favoritesCache = new Map();
 let lastFavoritesCacheUpdate = 0;
-const FAVORITES_CACHE_DURATION = 30000; // 30 segundos
+const FAVORITES_CACHE_DURATION = 30000;
 
-// Variables para prevenir múltiples clics
+
 let favoriteOperationsInProgress = new Set();
 let lastFavoriteClickTime = 0;
-const FAVORITE_CLICK_DEBOUNCE = 300; // 300ms
+const FAVORITE_CLICK_DEBOUNCE = 300;
 
-// Alternar favoritos - versión optimizada
+
 async function toggleFavorite(movieId, type, event) {
-  // Evitar que el clic en el corazón se propague y abra el modal
+
   event.stopPropagation();
 
-  // Debouncing para evitar clics múltiples rápidos
+
   const now = Date.now();
   if (now - lastFavoriteClickTime < FAVORITE_CLICK_DEBOUNCE) {
     return;
@@ -3200,28 +3200,28 @@ async function toggleFavorite(movieId, type, event) {
     return;
   }
 
-  // Prevenir múltiples operaciones simultáneas en el mismo elemento
+
   const operationKey = `${movieId}-${type}`;
   if (favoriteOperationsInProgress.has(operationKey)) {
-    return; // Operación ya en progreso
+    return;
   }
 
   favoriteOperationsInProgress.add(operationKey);
 
   try {
-    // Feedback visual inmediato
+
     const heartIcon = document.getElementById(`heart-icon-${movieId}`);
     if (!heartIcon) {
       favoriteOperationsInProgress.delete(operationKey);
       return;
     }
 
-    // Agregar clase de loading y desactivar el botón temporalmente
+
     heartIcon.style.pointerEvents = 'none';
     heartIcon.style.opacity = '0.6';
     heartIcon.classList.add('fa-pulse');
 
-    // Obtener datos de la película del DOM
+
     const movieCard = event.target.closest('.movie-card');
     const movieTitle = movieCard?.querySelector('h3')?.textContent || `Movie ${movieId}`;
     const movieImage = movieCard?.querySelector('img')?.src || '';
@@ -3233,53 +3233,53 @@ async function toggleFavorite(movieId, type, event) {
       image: movieImage
     };
 
-    // Verificar estado actual usando cache o consulta rápida
+
     const currentIsFavorite = await isFavoriteOptimized(currentUser.id, movieTitle);
     
     let result;
     if (currentIsFavorite) {
-      // Cambio visual inmediato
+
       heartIcon.style.color = 'black';
       
-      // Operación en background
+
       result = await favorites.removeFavorite(currentUser.id, movieTitle);
       
       if (result.success) {
-        // Actualizar cache
+
         favoritesCache.delete(movieTitle);
         showNotification('Eliminado de favoritos', 'success');
       } else {
-        // Revertir cambio visual si falla
+
         heartIcon.style.color = 'red';
         throw new Error(result.error || 'Error al eliminar favorito');
       }
     } else {
-      // Cambio visual inmediato
+
       heartIcon.style.color = 'red';
       
-      // Operación en background
+
       result = await favorites.addFavorite(currentUser.id, movieData);
       
       if (result.success) {
-        // Actualizar cache
+
         favoritesCache.set(movieTitle, true);
         showNotification('Agregado a favoritos', 'success');
       } else {
-        // Revertir cambio visual si falla
+
         heartIcon.style.color = 'black';
         throw new Error(result.error || 'Error al agregar favorito');
       }
     }
 
-    // Actualizar la lista de favoritos si estamos viendo favoritos
+
     if (showingFavorites) {
-      setTimeout(() => loadFavorites(), 500); // Pequeño delay para mejor UX
+      setTimeout(() => loadFavorites(), 500);
     }
 
   } catch (error) {
     console.error('Error toggleFavorite:', error);
     
-    // Manejar errores de autenticación
+
     if (error.message && error.message.includes('autenticado')) {
       showNotification('Sesión expirada. Por favor, inicia sesión nuevamente', 'warning');
       updateAuthUI(null);
@@ -3287,7 +3287,7 @@ async function toggleFavorite(movieId, type, event) {
       showNotification('Error al actualizar favoritos', 'error');
     }
   } finally {
-    // Restaurar el botón
+
     const heartIcon = document.getElementById(`heart-icon-${movieId}`);
     if (heartIcon) {
       heartIcon.style.pointerEvents = 'auto';
@@ -3299,15 +3299,15 @@ async function toggleFavorite(movieId, type, event) {
   }
 }
 
-// Función optimizada para verificar favoritos usando cache
+
 async function isFavoriteOptimized(userId, movieTitle) {
-  // Si tenemos cache reciente, usarlo
+
   const now = Date.now();
   if (now - lastFavoritesCacheUpdate < FAVORITES_CACHE_DURATION && favoritesCache.has(movieTitle)) {
     return favoritesCache.get(movieTitle);
   }
 
-  // Si no hay cache o está expirado, hacer consulta
+
   try {
     const result = await favorites.isFavorite(userId, movieTitle);
     favoritesCache.set(movieTitle, result);
@@ -3318,7 +3318,7 @@ async function isFavoriteOptimized(userId, movieTitle) {
   }
 }
 
-// Función para precargar favoritos del usuario
+
 async function preloadUserFavorites() {
   if (!currentUser) return;
   
@@ -3327,7 +3327,7 @@ async function preloadUserFavorites() {
     const result = await favorites.getFavorites(currentUser.id);
     
     if (result.success) {
-      // Actualizar cache con todos los favoritos
+
       favoritesCache.clear();
       result.data.forEach(favorite => {
         favoritesCache.set(favorite.movie_title, true);
@@ -3341,7 +3341,7 @@ async function preloadUserFavorites() {
   }
 }
 
-// Función para cargar los favoritos desde Supabase - versión optimizada
+
 async function loadFavorites() {
   if (!currentUser) return;
 
@@ -3351,15 +3351,15 @@ async function loadFavorites() {
     if (result.success) {
       const userFavorites = result.data;
       
-      // Actualizar cache con los favoritos
+
       favoritesCache.clear();
       userFavorites.forEach(favorite => {
         favoritesCache.set(favorite.movie_title, true);
       });
       lastFavoritesCacheUpdate = Date.now();
       
-      // Actualizar el color de los corazones en la UI de manera optimizada
-      // Usar requestAnimationFrame para mejor rendimiento
+
+
       requestAnimationFrame(() => {
         userFavorites.forEach(favorite => {
           const heartIcon = document.getElementById(`heart-icon-${favorite.movie_data.id}`);
@@ -3374,29 +3374,29 @@ async function loadFavorites() {
   }
 }
 
-// Función para activar/desactivar el filtro de favoritos
+
 function toggleFavoritesFilter() {
   showingFavorites = !showingFavorites;
   console.log(`🔄 Toggle favoritos: ${showingFavorites ? 'ACTIVADO' : 'DESACTIVADO'}`);
-  updateFavoritesChip(); // Actualizar estado visual del chip
-  updateClearButtonVisibility(); // Actualizar visibilidad del botón limpiar
+  updateFavoritesChip();
+  updateClearButtonVisibility();
   getTitles();
 }
 
-// Inicializar la carga de títulos y géneros
-// getTitles(); // Comentado para evitar duplicados - se llama en DOMContentLoaded
+
+
 fetchGenres();
-fetchProviders("movie"); // Cargar proveedores iniciales de películas (por defecto)
+fetchProviders("movie");
 
 window.onload = async function () {
-  // Inicializar autenticación con Supabase
+
   await initAuth();
-  updateGenreSelect();  // Cargar los géneros iniciales (por ejemplo, películas)
+  updateGenreSelect();
 };
 
-// Agregar función para mostrar opciones de ver online o descargar
+
 window.showTorrentOptions = function(magnetLink, movieTitle) {
-  // Crear modal profesional con opciones
+
   const modal = document.createElement('div');
   modal.style.position = 'fixed';
   modal.style.top = '0';
@@ -3436,12 +3436,12 @@ window.showTorrentOptions = function(magnetLink, movieTitle) {
 
   document.getElementById('ver-online').onclick = function() {
     document.body.removeChild(modal);
-    // Usar la nueva función que incluye información de seeds/leechers
+
     watchOnlineWithStats(magnetLink, movieTitle);
   };
   document.getElementById('descargar-torrent').onclick = function() {
     document.body.removeChild(modal);
-    // El enlace ya inicia la descarga
+
   };
   document.getElementById('cerrar-torrent-modal').onclick = function() {
     document.body.removeChild(modal);
@@ -3451,9 +3451,9 @@ window.showTorrentOptions = function(magnetLink, movieTitle) {
   };
 };
 
-// Función para explorar archivos en el torrent y mostrar el modal de selección
+
 async function watchOnline(magnetURI, movieTitle) {
-  // Mostrar modal de selección de archivos
+
   const fileSelectionModal = document.getElementById('file-selection-modal');
   fileSelectionModal.classList.remove('hidden');
   fileSelectionModal.style.display = 'block';
@@ -3461,7 +3461,7 @@ async function watchOnline(magnetURI, movieTitle) {
   document.getElementById('file-list').style.display = 'none';
 
   try {
-    // Mostrar mensaje de carga más detallado
+
     document.getElementById('torrent-loading').innerHTML = `
       <p>Explorando torrent...</p>
       <div class="loading-spinner"></div>
@@ -3484,11 +3484,11 @@ async function watchOnline(magnetURI, movieTitle) {
     const torrentInfo = await response.json();
     currentTorrentInfo = torrentInfo;
 
-    // Ocultar loading y mostrar lista de archivos
+
     document.getElementById('torrent-loading').style.display = 'none';
     document.getElementById('file-list').style.display = 'block';
 
-    // Mostrar información del torrent
+
     const torrentInfoHtml = `
       <div class="torrent-info">
         <h4>Información del Torrent:</h4>
@@ -3499,7 +3499,7 @@ async function watchOnline(magnetURI, movieTitle) {
       </div>
     `;
 
-    // Mostrar archivos de video disponibles
+
     const videoFilesList = document.getElementById('video-files-list');
     videoFilesList.innerHTML = torrentInfoHtml;
 
@@ -3539,21 +3539,21 @@ async function watchOnline(magnetURI, movieTitle) {
   }
 }
 
-// Nueva función para ver online con estadísticas mejoradas
+
 async function watchOnlineWithStats(magnetURI, movieTitle) {
-  // Extraer hash del torrent para identificar solicitudes duplicadas
+
   const torrentHash = magnetURI.match(/xt=urn:btih:([^&]+)/i)?.[1] || magnetURI;
   
-  // Verificar si ya hay una solicitud pendiente para este torrent
+
   if (pendingTorrentRequests.has(torrentHash)) {
     showNotification('Ya hay una solicitud en proceso para este torrent. Espera a que termine.', 'warning', 3000);
     return;
   }
   
-  // Marcar solicitud como pendiente
+
   pendingTorrentRequests.set(torrentHash, true);
   
-  // Mostrar modal de selección de archivos
+
   const fileSelectionModal = document.getElementById('file-selection-modal');
   fileSelectionModal.classList.remove('hidden');
   fileSelectionModal.style.display = 'block';
@@ -3561,12 +3561,12 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
   document.getElementById('file-list').style.display = 'none';
 
   let retryCount = 0;
-  const maxRetries = 3; // Reducir a 3 reintentos
-  let currentTimeout = 5000; // Timeout inicial de 5 segundos
+  const maxRetries = 3;
+  let currentTimeout = 5000;
 
   const attemptExplore = async () => {
     try {
-      // Mostrar mensaje de carga más detallado
+
       const retryText = retryCount > 0 ? ` (Intento ${retryCount + 1}/${maxRetries + 1})` : '';
       const statusMessages = [
         'Conectando con la red torrent...',
@@ -3590,7 +3590,7 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
       `;
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // Aumentar a 30 segundos de timeout por request
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const response = await fetch('/api/torrent/explore', {
         method: 'POST',
@@ -3606,10 +3606,10 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
       if (!response.ok) {
         const errorData = await response.json();
         
-        // Si es un error 503 (torrent cargando), reintentar con backoff exponencial
+
         if (response.status === 503 && retryCount < maxRetries) {
           retryCount++;
-          currentTimeout = Math.min(currentTimeout * 1.2, 8000); // Máximo 8 segundos
+          currentTimeout = Math.min(currentTimeout * 1.2, 8000);
           
           document.getElementById('loading-status').textContent = 
             `⏳ El torrent está cargando, reintentando en ${Math.ceil(currentTimeout/1000)} segundos... (${retryCount}/${maxRetries + 1})`;
@@ -3618,7 +3618,7 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
           return;
         }
         
-        // Si es timeout (408), sugerir otro torrent
+
         if (response.status === 408) {
           throw new Error('⏰ El torrent está tardando demasiado en responder. Puede ser un torrent lento o sin peers activos. Intenta con otra calidad.');
         }
@@ -3629,20 +3629,20 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
       const torrentInfo = await response.json();
       currentTorrentInfo = torrentInfo;
 
-      // Si solo hay un archivo de video, saltar la selección y reproducir directamente
+
       if (torrentInfo.videoFiles.length === 1) {
-        // Limpiar solicitud pendiente
+
         pendingTorrentRequests.delete(torrentHash);
         closeFileSelectionModal();
         playVideoFileWithStats(torrentInfo.videoFiles[0].index);
         return;
       }
 
-      // Ocultar loading y mostrar lista de archivos
+
       document.getElementById('torrent-loading').style.display = 'none';
       document.getElementById('file-list').style.display = 'block';
 
-      // Mostrar información detallada del torrent
+
       const torrentInfoHtml = `
         <div class="torrent-info">
           <h4>✅ Torrent Cargado Exitosamente:</h4>
@@ -3657,7 +3657,7 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
         </div>
       `;
 
-      // Mostrar archivos de video disponibles
+
       const videoFilesList = document.getElementById('video-files-list');
       videoFilesList.innerHTML = torrentInfoHtml;
 
@@ -3698,7 +3698,7 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
     } catch (error) {
       console.error('Error explorando torrent:', error);
       
-      // Limpiar solicitud pendiente en caso de error
+
       pendingTorrentRequests.delete(torrentHash);
       
       let errorMessage = error.message;
@@ -3733,11 +3733,11 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
     }
   };
 
-  // Iniciar el proceso de exploración
+
   attemptExplore();
 }
 
-// Función auxiliar para formatear velocidad
+
 function formatSpeed(bytesPerSecond) {
   if (!bytesPerSecond || bytesPerSecond === 0) return '0 B/s';
   
@@ -3748,17 +3748,17 @@ function formatSpeed(bytesPerSecond) {
   return parseFloat((bytesPerSecond / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// Nueva función para reproducir archivo with estadísticas en tiempo real
+
 function playVideoFileWithStats(fileIndex) {
   if (!currentTorrentInfo) {
     alert('Error: Información del torrent no disponible');
     return;
   }
 
-  // Cerrar modal de selección de archivos
+
   closeFileSelectionModal();
 
-  // Mostrar modal del reproductor de video
+
   const videoModalEl = document.getElementById('video-modal');
   videoModalEl.classList.remove('hidden');
   videoModalEl.style.display = 'block';
@@ -3766,30 +3766,30 @@ function playVideoFileWithStats(fileIndex) {
   const videoPlayer = document.getElementById('video-player');
   currentVideoPlayer = videoPlayer;
 
-  // Configurar la URL del stream
+
   const streamUrl = `/api/torrent/stream/${currentTorrentInfo.infoHash}/${fileIndex}`;
   videoPlayer.src = streamUrl;
 
-  // Mostrar y configurar estadísticas
+
   const torrentStatsDiv = document.getElementById('torrent-stats');
   if (torrentStatsDiv) {
     torrentStatsDiv.style.display = 'block';
   }
 
-  // Inicializar estadísticas
+
   updateTorrentStats(currentTorrentInfo);
 
-  // Limpiar interval anterior si existe
+
   if (statsInterval) {
     clearInterval(statsInterval);
   }
 
-  // Configurar actualización periódica de estadísticas
+
   statsInterval = setInterval(() => {
     updateTorrentStatsFromServer(currentTorrentInfo.infoHash);
-  }, 2000); // Actualizar cada 2 segundos
+  }, 2000);
 
-  // Limpiar interval cuando se cierre el modal
+
   const videoModal = document.getElementById('video-modal');
   const originalCloseFunction = window.closeVideoModal;
   window.closeVideoModal = function() {
@@ -3798,25 +3798,25 @@ function playVideoFileWithStats(fileIndex) {
       statsInterval = null;
     }
     if (originalCloseFunction) originalCloseFunction();
-    window.closeVideoModal = originalCloseFunction; // Restaurar función original
+    window.closeVideoModal = originalCloseFunction;
   };
 
-  // Limpiar subtítulos anteriores
+
   clearSubtitles();
 
-  // Cargar subtítulos del torrent si están disponibles
+
   loadTorrentSubtitles();
 
-  // Configurar controles de subtítulos
+
   setupSubtitleControls();
 
-  // Configurar eventos del reproductor
+
   setupVideoPlayerEvents();
 
   showNotification('Iniciando reproducción con estadísticas en tiempo real', 'info', 3000);
 }
 
-// Función para rastrear el progreso del torrent
+
 function startProgressTracking() {
   if (!currentTorrentInfo) return;
 
@@ -3826,7 +3826,7 @@ function startProgressTracking() {
       if (response.ok) {
         const progressData = await response.json();
         
-        // Actualizar información de progreso si hay un elemento para mostrarla
+
         const progressElement = document.getElementById('torrent-progress-info');
         if (progressElement) {
 
@@ -3844,26 +3844,26 @@ function startProgressTracking() {
       console.error('Error obteniendo progreso del torrent:', error);
     }
 
-    // Detener el tracking si el modal se cierra
+
     if (document.getElementById('video-modal').style.display === 'none') {
       clearInterval(progressInterval);
     }
-  }, 2000); // Actualizar cada 2 segundos
+  }, 2000);
 }
 
-// Función para limpiar subtítulos anteriores
+
 function clearSubtitles() {
   const videoPlayer = document.getElementById('video-player');
   const tracks = videoPlayer.querySelectorAll('track');
   tracks.forEach(track => track.remove());
 
-  // Limpiar selectores
+
   document.getElementById('torrent-subtitle-select').innerHTML = '<option value="">Sin subtítulos</option>';
   document.getElementById('online-subtitle-select').innerHTML = '<option value="">Sin subtítulos online</option>';
   document.getElementById('uploaded-subtitle-select').innerHTML = '<option value="">Sin subtítulos subidos</option>';
 }
 
-// Función para cargar subtítulos del torrent
+
 function loadTorrentSubtitles() {
   if (!currentTorrentInfo || !currentTorrentInfo.subtitleFiles) return;
 
@@ -3877,15 +3877,15 @@ function loadTorrentSubtitles() {
   });
 }
 
-// Función para configurar los controles de subtítulos
+
 function setupSubtitleControls() {
-  // Búsqueda de subtítulos online
+
   document.getElementById('search-subtitles-btn').onclick = async function() {
     const language = document.getElementById('language-select').value;
     await searchOnlineSubtitles(language);
   };
 
-  // Subir subtítulos - nuevo flujo con botón de selección separado
+
   document.getElementById('select-file-btn').onclick = function() {
     const fileInput = document.getElementById('subtitle-file');
     fileInput.click();
@@ -3894,36 +3894,36 @@ function setupSubtitleControls() {
   document.getElementById('subtitle-file').onchange = function(event) {
     const file = event.target.files[0];
     if (file) {
-      // Actualizar el botón de selección para mostrar el archivo seleccionado
+
       const selectBtn = document.getElementById('select-file-btn');
       selectBtn.innerHTML = `<span class="btn-icon">📄</span>${file.name}`;
       
-      // Habilitar el botón de subir
+
       const uploadBtn = document.getElementById('upload-subtitle-btn');
       uploadBtn.disabled = false;
       
-      // Actualizar el evento del botón de subir
+
       uploadBtn.onclick = function() {
         uploadSubtitle(file);
       };
     }
   };
 
-  // Cambio de subtítulos del torrent
+
   document.getElementById('torrent-subtitle-select').onchange = function() {
     if (this.value) {
       loadTorrentSubtitle(this.value);
     }
   };
 
-  // Cambio de subtítulos online
+
   document.getElementById('online-subtitle-select').onchange = function() {
     if (this.value) {
       loadOnlineSubtitle(this.value);
     }
   };
 
-  // Cambio de subtítulos subidos
+
   document.getElementById('uploaded-subtitle-select').onchange = function() {
     if (this.value) {
       loadUploadedSubtitle(this.value);
@@ -3931,7 +3931,7 @@ function setupSubtitleControls() {
   };
 }
 
-// Función para cargar subtítulo del torrent
+
 async function loadTorrentSubtitle(subtitleIndex) {
   if (!currentTorrentInfo) {
     showNotification('No hay información del torrent disponible', 'error');
@@ -3949,22 +3949,22 @@ async function loadTorrentSubtitle(subtitleIndex) {
   }
 }
 
-// Función para buscar subtítulos online
+
 async function searchOnlineSubtitles(language) {
   const searchBtn = document.getElementById('search-subtitles-btn');
   const originalText = searchBtn.textContent;
   
   try {
-    // Show loading state
+
     searchBtn.textContent = 'Buscando...';
     searchBtn.disabled = true;
     showNotification('Buscando subtítulos online...', 'info', 2000);
     
-    // Obtener el título original y el ID de IMDb de las variables globales
+
     const movieTitle = originalTitle || 'Unknown Movie';
     const imdbId = currentImdbId || null;
     
-    // Check if we have season/episode selectors (for TV series)
+
     const seasonSelector = document.getElementById('season-selector');
     const episodeSelector = document.getElementById('episode-selector');
     let season = null;
@@ -3977,7 +3977,7 @@ async function searchOnlineSubtitles(language) {
       }
     }
     
-    // Construir la URL con los parámetros necesarios
+
     let searchUrl = `/api/subtitles/search?movieTitle=${encodeURIComponent(movieTitle)}&language=${language}`;
     if (imdbId) {
       searchUrl += `&imdbId=${encodeURIComponent(imdbId)}`;
@@ -4020,37 +4020,37 @@ async function searchOnlineSubtitles(language) {
     console.error('Error buscando subtítulos online:', error);
     showNotification('Error al buscar subtítulos online. Por favor, inténtalo de nuevo.', 'error');
   } finally {
-    // Reset button state
+
     searchBtn.textContent = originalText;
     searchBtn.disabled = false;
   }
 }
 
-// Función para cargar subtítulo online
+
 async function loadOnlineSubtitle(subtitleUrl) {
   try {
     showNotification('Cargando subtítulo online...', 'info', 2000);
     
-    // Primero verificar que la URL del subtítulo sea válida
+
     if (!subtitleUrl || subtitleUrl.includes('undefined')) {
       throw new Error('URL de subtítulo inválida. Por favor, selecciona otro subtítulo.');
     }
     
     console.log('Loading subtitle from URL:', subtitleUrl);
     
-    // Determine if this is an OpenSubtitles URL (our backend endpoint) or external URL
+
     let finalUrl;
     if (subtitleUrl.startsWith('/api/subtitles/opensubtitles-download/')) {
-      // This is our backend OpenSubtitles endpoint, use it directly (no proxy needed)
+
       finalUrl = subtitleUrl;
     } else {
-      // This is an external URL, use the proxy
+
       finalUrl = `/api/subtitles/proxy?url=${encodeURIComponent(subtitleUrl)}`;
     }
     
     console.log('Final URL for subtitle loading:', finalUrl);
     
-    // Verificar que el endpoint puede acceder al subtítulo
+
     const response = await fetch(finalUrl);
     
     if (!response.ok) {
@@ -4060,11 +4060,11 @@ async function loadOnlineSubtitle(subtitleUrl) {
         const errorData = await response.json();
         errorMessage = errorData.message || errorMessage;
       } catch (e) {
-        // Si no se puede parsear JSON, usar el status text
+
         errorMessage = response.statusText || errorMessage;
       }
       
-      // Proporcionar mensajes más específicos según el error
+
       if (response.status === 404) {
         errorMessage = 'Subtítulo no encontrado. Es posible que la URL haya expirado o que el subtítulo ya no esté disponible.';
       } else if (response.status === 403) {
@@ -4076,22 +4076,22 @@ async function loadOnlineSubtitle(subtitleUrl) {
       throw new Error(errorMessage);
     }
     
-    // Verificar que el contenido es válido
+
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
-      // Si recibimos JSON, es probable que sea un error
+
       const jsonResponse = await response.json();
       throw new Error(jsonResponse.message || 'Respuesta inesperada del servidor');
     }
     
-    // Si llegamos aquí, el subtítulo se puede cargar
+
     addSubtitleTrack(finalUrl, 'Online Subtitle', 'es');
     showNotification('Subtítulo online cargado exitosamente', 'success');
     
   } catch (error) {
     console.error('Error loading online subtitle:', error);
     
-    // Proporcionar sugerencias adicionales
+
     let suggestion = '';
     if (error.message.includes('404') || error.message.includes('no encontrado')) {
       suggestion = ' Prueba subiendo tu propio archivo de subtítulos o busca en otro idioma.';
@@ -4103,7 +4103,7 @@ async function loadOnlineSubtitle(subtitleUrl) {
   }
 }
 
-// Función para subir subtítulo
+
 async function uploadSubtitle(file) {
   if (!file) return;
 
@@ -4125,7 +4125,7 @@ async function uploadSubtitle(file) {
 
     const result = await response.json();
     
-    // Agregar al selector de subtítulos subidos
+
     const select = document.getElementById('uploaded-subtitle-select');
     const option = document.createElement('option');
     option.value = result.path;
@@ -4140,13 +4140,13 @@ async function uploadSubtitle(file) {
   }
 }
 
-// Función para cargar subtítulo subido
+
 function loadUploadedSubtitle(subtitlePath) {
   addSubtitleTrack(subtitlePath, 'Uploaded Subtitle', 'es');
   showNotification('Subtítulo subido cargado', 'success');
 }
 
-// Función para agregar track de subtítulo al video
+
 function addSubtitleTrack(src, label, language) {
   const videoPlayer = document.getElementById('video-player');
   
@@ -4161,11 +4161,11 @@ function addSubtitleTrack(src, label, language) {
   }
   
   try {
-    // Remover tracks anteriores del mismo tipo
+
     const existingTracks = videoPlayer.querySelectorAll('track');
     existingTracks.forEach(track => track.remove());
 
-    // Crear nuevo track
+
     const track = document.createElement('track');
     track.kind = 'subtitles';
     track.src = src;
@@ -4173,7 +4173,7 @@ function addSubtitleTrack(src, label, language) {
     track.label = label;
     track.default = true;
 
-    // Agregar event listeners para el track
+
     track.addEventListener('load', () => {
       console.log('Subtítulo cargado exitosamente:', src);
       showNotification('Subtítulos activados automáticamente', 'success');
@@ -4188,7 +4188,7 @@ function addSubtitleTrack(src, label, language) {
         error: track.error
       });
       
-      // Intentar obtener información más detallada del error
+
       let errorMessage = 'Error al cargar el archivo de subtítulo';
       
       if (track.error) {
@@ -4216,7 +4216,7 @@ function addSubtitleTrack(src, label, language) {
       
       showNotification(errorMessage, 'error');
       
-      // Intentar verificar si el archivo es accesible
+
       console.log('Verificando accesibilidad del subtítulo...');
       fetch(src, {method: 'HEAD'})
         .then(response => {
@@ -4226,7 +4226,7 @@ function addSubtitleTrack(src, label, language) {
             headers: Object.fromEntries(response.headers.entries())
           });
           
-          // Si es un subtítulo de OpenSubtitles, hacer debug adicional
+
           if (src.includes('/api/subtitles/opensubtitles-download/')) {
             const debugUrl = src.replace('/api/subtitles/opensubtitles-download/', '/api/subtitles/debug/');
             console.log('Haciendo debug del subtítulo:', debugUrl);
@@ -4253,10 +4253,10 @@ function addSubtitleTrack(src, label, language) {
 
     videoPlayer.appendChild(track);
     
-    // Habilitar automáticamente los subtítulos cuando se cargan
+
     setTimeout(() => {
       if (videoPlayer.textTracks.length > 0) {
-        // Activar automáticamente la primera pista de subtítulos
+
         videoPlayer.textTracks[0].mode = 'showing';
         console.log('Subtítulos habilitados automáticamente');
         showNotification('Subtítulos activados automáticamente', 'success', 2000);
@@ -4269,7 +4269,7 @@ function addSubtitleTrack(src, label, language) {
   }
 }
 
-// Función para habilitar subtítulos automáticamente
+
 function enableSubtitles() {
   const videoPlayer = document.getElementById('video-player');
   const tracks = videoPlayer.textTracks;
@@ -4287,7 +4287,7 @@ function enableSubtitles() {
   return tracksEnabled > 0;
 }
 
-// Función para deshabilitar subtítulos
+
 function disableSubtitles() {
   const videoPlayer = document.getElementById('video-player');
   const tracks = videoPlayer.textTracks;
@@ -4305,20 +4305,20 @@ function disableSubtitles() {
   return tracksDisabled > 0;
 }
 
-// Función para cerrar el modal del reproductor de video
+
 async function closeVideoModal() {
   const videoModal = document.getElementById('video-modal');
   videoModal.classList.add('hidden');
   videoModal.style.display = 'none';
   
-  // Detener y limpiar el video player
+
   const videoPlayer = document.getElementById('video-player');
   if (videoPlayer) {
     videoPlayer.pause();
     videoPlayer.src = '';
     videoPlayer.load();
     
-    // Limpiar pistas de subtítulos
+
     const tracks = videoPlayer.getElementsByTagName('track');
     while (tracks.length > 0) {
       videoPlayer.removeChild(tracks[0]);
@@ -4332,7 +4332,7 @@ async function closeVideoModal() {
     currentVideoPlayer = null;
   }
   
-  // Limpiar URLs de blob de subtítulos locales
+
   if (window.localSubtitleBlobUrls) {
     window.localSubtitleBlobUrls.forEach(url => {
       URL.revokeObjectURL(url);
@@ -4340,31 +4340,31 @@ async function closeVideoModal() {
     window.localSubtitleBlobUrls = [];
   }
   
-  // Limpiar el cliente torrent WebTorrent si existe
+
   if (window.currentTorrentClient) {
     window.currentTorrentClient.destroy();
     window.currentTorrentClient = null;
   }
   
-  // Limpiar mensaje de solución de problemas de audio
+
   const troubleshootingDiv = document.querySelector('.audio-troubleshooting');
   if (troubleshootingDiv) {
     troubleshootingDiv.remove();
   }
   
-  // Limpiar timeout de stall si existe
+
   if (stallTimeoutId) {
     clearTimeout(stallTimeoutId);
     stallTimeoutId = null;
   }
   
-  // Limpiar estadísticas si están corriendo
+
   if (statsInterval) {
     clearInterval(statsInterval);
     statsInterval = null;
   }
   
-  // Detener y limpiar el torrent del servidor si tenemos información del torrent actual
+
   if (currentTorrentInfo && currentTorrentInfo.infoHash) {
     try {
       console.log(`Stopping torrent: ${currentTorrentInfo.infoHash}`);
@@ -4395,7 +4395,7 @@ async function closeVideoModal() {
     }
   }
   
-  // Limpiar cliente WebTorrent local si existe
+
   if (window.currentTorrentClient) {
     try {
       window.currentTorrentClient.destroy();
@@ -4405,21 +4405,21 @@ async function closeVideoModal() {
     }
   }
   
-  // Limpiar URLs de blob de subtítulos locales
+
   if (window.localSubtitleBlobUrls && window.localSubtitleBlobUrls.length > 0) {
     window.localSubtitleBlobUrls.forEach(url => URL.revokeObjectURL(url));
     window.localSubtitleBlobUrls = [];
     console.log('URLs de subtítulos locales limpiadas');
   }
   
-  // Resetear información del torrent
+
   currentTorrentInfo = null;
   
-  // Limpiar elementos de la UI
+
   const torrentStatsDiv = document.getElementById('torrent-stats');
   if (torrentStatsDiv) {
     torrentStatsDiv.style.display = 'none';
-    // Resetear valores de estadísticas
+
     const peersElement = document.getElementById('torrent-peers');
     const progressElement = document.getElementById('torrent-progress');
     const downloadSpeedElement = document.getElementById('torrent-download-speed');
@@ -4434,18 +4434,18 @@ async function closeVideoModal() {
   console.log('Video modal cerrado y recursos limpiados completamente');
 }
 
-// Función para cerrar el modal de selección de archivos
+
 function closeFileSelectionModal() {
   const fileSelectionModal = document.getElementById('file-selection-modal');
   fileSelectionModal.classList.add('hidden');
   fileSelectionModal.style.display = 'none';
-  // Limpiar solicitudes pendientes al cerrar
+
   pendingTorrentRequests.clear();
 }
 
-// Función para actualizar estadísticas del torrent
+
 function updateTorrentStats(torrentInfo) {
-  // Actualizar seeds y leechers (elementos originales)
+
   const seedsElement = document.getElementById('torrent-seeds');
   const leechersElement = document.getElementById('torrent-leechers');
   const peersElement = document.getElementById('torrent-peers');
@@ -4454,7 +4454,7 @@ function updateTorrentStats(torrentInfo) {
   if (leechersElement) leechersElement.textContent = `Leechers: ${torrentInfo.leechers || 0}`;
   if (peersElement) peersElement.textContent = `Peers: ${torrentInfo.numPeers || 0}`;
 
-  // Actualizar progreso (elementos originales)
+
   const progressElement = document.getElementById('torrent-progress');
   const progressBarFill = document.getElementById('progress-bar-fill');
   const progressPercentage = document.getElementById('progress-percentage');
@@ -4464,14 +4464,14 @@ function updateTorrentStats(torrentInfo) {
   if (progressBarFill) progressBarFill.style.width = `${progress}%`;
   if (progressPercentage) progressPercentage.textContent = `${progress}%`;
 
-  // Actualizar velocidades (elementos originales)
+
   const downloadSpeedElement = document.getElementById('torrent-download-speed');
   const uploadSpeedElement = document.getElementById('torrent-upload-speed');
   
   if (downloadSpeedElement) downloadSpeedElement.textContent = `↓ ${formatSpeed(torrentInfo.downloadSpeed)}`;
   if (uploadSpeedElement) uploadSpeedElement.textContent = `↑ ${formatSpeed(torrentInfo.uploadSpeed)}`;
 
-  // Actualizar datos descargados/subidos (elementos originales)
+
   const downloadedElement = document.getElementById('torrent-downloaded');
   const uploadedElement = document.getElementById('torrent-uploaded');
   const timeRemainingElement = document.getElementById('torrent-time-remaining');
@@ -4483,7 +4483,7 @@ function updateTorrentStats(torrentInfo) {
     timeRemainingElement.textContent = `ETA: ${eta}`;
   }
 
-  // Actualizar elementos compactos del nuevo overlay
+
   const seedsCompact = document.getElementById('torrent-seeds-compact');
   const leechersCompact = document.getElementById('torrent-leechers-compact');
   const progressCompact = document.getElementById('torrent-progress-compact');
@@ -4497,7 +4497,7 @@ function updateTorrentStats(torrentInfo) {
   if (progressBarFillCompact) progressBarFillCompact.style.width = `${progress}%`;
 }
 
-// Función para obtener estadísticas actualizadas del servidor
+
 async function updateTorrentStatsFromServer(infoHash) {
   try {
     const response = await fetch(`/api/torrent/stats/${infoHash}`);
@@ -4510,7 +4510,7 @@ async function updateTorrentStatsFromServer(infoHash) {
       console.warn('No se pudieron obtener estadísticas actualizadas del torrent');
     }
   } catch (error) {
-    // Si hay error de conexión, limpiar el interval para evitar spam
+
     if (error.message.includes('Failed to fetch') || error.message.includes('net::ERR_CONNECTION_REFUSED')) {
       if (statsInterval) {
         clearInterval(statsInterval);
@@ -4523,7 +4523,7 @@ async function updateTorrentStatsFromServer(infoHash) {
   }
 }
 
-// Función auxiliar para formatear tiempo
+
 function formatTime(seconds) {
   if (!seconds || seconds === Infinity) return '--:--';
   
@@ -4538,7 +4538,7 @@ function formatTime(seconds) {
   }
 }
 
-// Función para configurar eventos del reproductor de video
+
 function setupVideoPlayerEvents() {
   const videoPlayer = document.getElementById('video-player');
   const playerLoadingIndicator = document.getElementById('player-loading-indicator');
@@ -4546,7 +4546,7 @@ function setupVideoPlayerEvents() {
   
   if (!videoPlayer) return;
 
-  // Mostrar indicador de carga inicial
+
   if (playerLoadingIndicator) {
     playerLoadingIndicator.textContent = 'Cargando video...';
     playerLoadingIndicator.style.display = 'block';
@@ -4607,16 +4607,16 @@ function setupVideoPlayerEvents() {
   });
 }
 
-// Add test function to window for manual testing
+
 window.testVideoStreamingFeatures = testVideoStreamingFeatures;
 
-// Test server API endpoints
+
 async function testServerAPIs() {
   console.log('Testing Server APIs...');
   showNotification('Testing server APIs...', 'info');
   
   try {
-    // Test subtitle search API
+
     const subtitleResponse = await fetch('/api/subtitles/search?movieTitle=Test Movie&language=es');
     if (subtitleResponse.ok) {
       const subtitles = await subtitleResponse.json();
@@ -4626,7 +4626,7 @@ async function testServerAPIs() {
       throw new Error('Subtitle search API failed');
     }
     
-    // Test a simple health check if available
+
     try {
       const healthResponse = await fetch('/api/health');
       if (healthResponse.ok) {
@@ -4645,40 +4645,40 @@ async function testServerAPIs() {
   }
 }
 
-// Add to window for manual testing
+
 window.testServerAPIs = testServerAPIs;
 
-// Limpiar recursos al cerrar o navegar fuera de la página
+
 window.addEventListener('beforeunload', () => {
   if (statsInterval) {
     clearInterval(statsInterval);
     statsInterval = null;
   }
   
-  // Limpiar solicitudes pendientes
+
   pendingTorrentRequests.clear();
   
-  // Limpiar URLs de blobs
+
   if (window.localSubtitleBlobUrls) {
     window.localSubtitleBlobUrls.forEach(url => {
       try {
         URL.revokeObjectURL(url);
       } catch (error) {
-        // Ignorar errores al limpiar URLs
+
       }
     });
     window.localSubtitleBlobUrls = [];
   }
 });
 
-// Función para alternar las acciones del torrent
+
 window.toggleTorrentActions = function(button) {
   const torrentItem = button.closest('.torrent-item');
   const actionsDiv = torrentItem.querySelector('.torrent-actions');
   const allActions = document.querySelectorAll('.torrent-actions');
   const allButtons = document.querySelectorAll('.torrent-button');
   
-  // Cerrar todas las otras acciones abiertas
+
   allActions.forEach(actions => {
     if (actions !== actionsDiv && actions.classList.contains('active')) {
       actions.classList.remove('active');
@@ -4689,16 +4689,16 @@ window.toggleTorrentActions = function(button) {
     }
   });
   
-  // Remover estado activo de otros botones
+
   allButtons.forEach(btn => {
     if (btn !== button) {
       btn.classList.remove('active');
     }
   });
   
-  // Toggle del botón y acciones actuales
+
   if (actionsDiv.classList.contains('active')) {
-    // Cerrar
+
     button.classList.remove('active');
     actionsDiv.classList.remove('active');
     actionsDiv.style.maxHeight = '0px';
@@ -4706,20 +4706,20 @@ window.toggleTorrentActions = function(button) {
       actionsDiv.style.display = 'none';
     }, 300);
   } else {
-    // Abrir
+
     button.classList.add('active');
     actionsDiv.style.display = 'flex';
     actionsDiv.classList.add('active');
-    // Pequeño delay para la animación
+
     setTimeout(() => {
       actionsDiv.style.maxHeight = '80px';
     }, 10);
   }
 };
 
-// Cerrar acciones de torrent al hacer clic fuera
+
 document.addEventListener('click', function(event) {
-  // Si el clic no es en un torrent item
+
   if (!event.target.closest('.torrent-item')) {
     const allActions = document.querySelectorAll('.torrent-actions.active');
     const allButtons = document.querySelectorAll('.torrent-button.active');
@@ -4738,11 +4738,11 @@ document.addEventListener('click', function(event) {
   }
 });
 
-// Inicializar la aplicación cuando el DOM esté listo
+
 document.addEventListener('DOMContentLoaded', async function() {
-  // Inicializar autenticación
+
   await initAuth();
   
-  // Otros inicializadores que puedan existir
+
   console.log('Aplicación inicializada con autenticación Supabase');
 });

@@ -1,4 +1,4 @@
-// server.js
+
 import express from 'express';
 import fetch from 'node-fetch';
 import WebTorrent from 'webtorrent';
@@ -19,57 +19,57 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const API_KEY = process.env.API_KEY; // Cargar la API key desde el .env
+const API_KEY = process.env.API_KEY;
 const VIMEO_ACCESS_TOKEN = process.env.VIMEO_ACCESS_TOKEN;
 const OPENSUBTITLES_API_KEY = process.env.OPENSUBTITLES_API_KEY;
 
-// Helper function to filter adult content based on adult filter setting
+
 function filterAdultContent(results, adultFilter) {
   if (!results) return results;
   
   if (adultFilter === 'only') {
-    // Show only adult content
+ 
     return results.filter(item => item.adult === true);
   } else if (adultFilter === 'false') {
-    // Exclude adult content (already handled by API parameter, but just in case)
+ 
     return results.filter(item => item.adult !== true);
   }
   
-  // For adultFilter === '' (include all), return all results
+ 
   return results;
 }
 
 
-// Crear cliente de WebTorrent
+
 const client = new WebTorrent();
 
-// Crear cache de subtítulos
+
 const subtitleCache = new Map();
 
-// Configurar TorrentSearchApi
+
 const torrentSearch = require('torrent-search-api');
 
-// Función para configurar proveedores de torrent de forma segura
+
 function setupTorrentProviders() {
-  // ...
+ 
   
   try {
-    // Usar enablePublicProviders() como en la búsqueda manual exitosa
+ 
     torrentSearch.enablePublicProviders();
-    // ...
+ 
     
     const activeProviders = torrentSearch.getActiveProviders();
-    // ...
+ 
     
     return activeProviders.length > 0;
   } catch (error) {
-    // ...
+ 
     
-    // Fallback al método anterior si falla
+ 
     const availableProviders = torrentSearch.getProviders().map(p => p.name);
-    // ...
+ 
     
-    // Lista de proveedores a habilitar (en orden de preferencia)
+ 
     const preferredProviders = [
       '1337x',
       'Rarbg', 
@@ -85,44 +85,44 @@ function setupTorrentProviders() {
       try {
         if (availableProviders.includes(provider)) {
           torrentSearch.enableProvider(provider);
-          // ...
+ 
           enabledCount++;
         } else {
-          // ...
+ 
         }
       } catch (error) {
-        // ...
+ 
       }
     }
     
     const activeProviders = torrentSearch.getActiveProviders();
-    // ...
+ 
     
     return enabledCount > 0;
   }
 }
 
-// API para verificar el estado de los proveedores de torrent
+
 app.get('/api/torrent-status', async (req, res) => {
   try {
     const activeProviders = torrentSearch.getActiveProviders();
     const allProviders = torrentSearch.getProviders();
     
-    // Test basic search functionality
+ 
     let searchWorking = false;
     let testError = null;
     
     try {
-      // ...
+ 
       const testResults = await Promise.race([
         torrentSearch.search('test', 'TV', 1),
         new Promise((resolve) => setTimeout(() => resolve([]), 5000))
       ]);
       searchWorking = true;
-      // ...
+ 
     } catch (error) {
       testError = error.message;
-      // ...
+ 
     }
     
     const status = {
@@ -136,14 +136,14 @@ app.get('/api/torrent-status', async (req, res) => {
       fallbackMode: !searchWorking || activeProviders.length === 0,
       config: {
         hasAPIKey: !!(API_KEY && API_KEY !== 'demo_key_for_testing'),
-        knownSeriesCount: 30 // Known series in the mapping
+        knownSeriesCount: 30
       }
     };
     
     res.json(status);
     
   } catch (error) {
-    // ...
+ 
     res.status(500).json({
       error: 'Error checking torrent status',
       message: error.message,
@@ -152,12 +152,12 @@ app.get('/api/torrent-status', async (req, res) => {
   }
 });
 
-// Configurar proveedores
+
 const hasActiveProviders = setupTorrentProviders();
 
-// Mock torrent data para fallback cuando la búsqueda real falla
+
 const mockTorrentData = {
-  // Movies
+ 
   movies: [
     {
       title: "Example Movie 2024 1080p BluRay x264-EXAMPLE",
@@ -187,7 +187,7 @@ const mockTorrentData = {
     }
   ],
   
-  // TV Shows
+ 
   tv: [
     {
       title: "Example Series S01E01 1080p HDTV x264-EXAMPLE",
@@ -222,14 +222,14 @@ const mockTorrentData = {
   ]
 };
 
-// Función para generar datos mock personalizados basados en el título
+
 function generateMockTorrents(title, type = 'movie', season = null, episode = null) {
-  // ...
+ 
   
   const baseTorrents = type === 'tv' ? mockTorrentData.tv : mockTorrentData.movies;
   const mockTorrents = [];
   
-  // Generar variaciones de calidad
+ 
   const qualities = [
     { name: '1080p', size: type === 'tv' ? '550 MB' : '1.8 GB', seeds: 95, peers: 28 },
     { name: '720p', size: type === 'tv' ? '350 MB' : '1.2 GB', seeds: 67, peers: 19 },
@@ -237,7 +237,7 @@ function generateMockTorrents(title, type = 'movie', season = null, episode = nu
   ];
   
   qualities.forEach((quality, index) => {
-    // Generar hash único para cada torrent
+ 
     const hash = require('crypto')
       .createHash('sha1')
       .update(`${title}-${quality.name}-${type}-${Date.now()}-${index}`)
@@ -277,7 +277,7 @@ function generateMockTorrents(title, type = 'movie', season = null, episode = nu
     mockTorrents.push(mockTorrent);
   });
   
-  // ...
+ 
   return mockTorrents;
 }
 const additionalTrackers = [
@@ -293,7 +293,7 @@ const additionalTrackers = [
   'udp://tracker.internetwarriors.net:1337/announce'
 ];
 
-// Configurar multer para subir subtítulos
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadsDir = path.join(__dirname, 'uploads', 'subtitles');
@@ -309,16 +309,16 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// Middleware para parsear JSON
+
 app.use(express.json());
 
-// Servir archivos estáticos
+
 app.use(express.static('public'));
 
-// Servir archivos de subtítulos
+
 app.use('/subtitles', express.static(path.join(__dirname, 'uploads', 'subtitles')));
 
-// Ruta para servir configuración de Supabase al cliente
+
 app.get('/api/config', (req, res) => {
   res.json({
     SUPABASE_URL: process.env.SUPABASE_URL,
@@ -326,7 +326,7 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// Ruta para obtener géneros
+
 app.get('/api/genres', async (req, res) => {
   try {
     if (!API_KEY) {
@@ -340,12 +340,12 @@ app.get('/api/genres', async (req, res) => {
     const data = await response.json();
     res.json(data);
   } catch (error) {
-    // ...
+ 
     res.status(500).json({ message: 'Error fetching genres' });
   }
 });
 
-// Ruta para obtener géneros según el tipo de contenido (movie o tv)
+
 app.get('/api/genres/:type', async (req, res) => {
   const { type } = req.params;
 
@@ -359,15 +359,15 @@ app.get('/api/genres/:type', async (req, res) => {
     const url = `https://api.themoviedb.org/3/genre/${type}/list?api_key=${API_KEY}&language=es`;
     const response = await fetch(url);
     const data = await response.json();
-    res.json(data.genres);  // Solo devolver la lista de géneros
+    res.json(data.genres);
   } catch (error) {
-    // ...
+ 
     res.status(500).json({ message: 'Error fetching genres' });
   }
 });
 
 
-// Ruta para obtener películas o series según filtros
+
 app.get('/api/titles', async (req, res) => {
   const { type, searchQuery, genre, platform, sortBy, page, adultFilter } = req.query;
   
@@ -389,11 +389,11 @@ app.get('/api/titles', async (req, res) => {
     
     const data = await response.json();
     
-    // Filter out results without poster images
+ 
     if (data.results) {
       data.results = data.results.filter(item => item.poster_path);
       
-      // Apply adult content filtering
+ 
       data.results = filterAdultContent(data.results, adultFilter);
       
       data.total_results = data.results.length;
@@ -402,7 +402,7 @@ app.get('/api/titles', async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error('Error fetching titles:', error);
-    // Return empty results instead of failing
+ 
     res.status(200).json({
       results: [],
       total_pages: 0,
@@ -412,7 +412,7 @@ app.get('/api/titles', async (req, res) => {
   }
 });
 
-// Nueva ruta para búsqueda optimizada que busca en movies y TV simultáneamente
+
 app.get('/api/search-all', async (req, res) => {
   const { searchQuery, genre, platform, sortBy, page = 1, type, adultFilter } = req.query;
   
@@ -435,21 +435,21 @@ app.get('/api/search-all', async (req, res) => {
       });
     }
 
-    // Construir URLs de búsqueda basadas en filtros seleccionados
+ 
     let movieUrl = null;
     let tvUrl = null;
     
-    // Determinar qué tipo de contenido buscar basado en filtros
+ 
     const searchMovies = !type || type === '' || type === 'movie';
     const searchTV = !type || type === '' || type === 'tv';
     
-    // Construir parámetros de búsqueda
+ 
     const baseParams = `api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}&page=${page}&language=en`;
     const platformParam = platform && platform !== '' ? `&with_watch_providers=${platform}&watch_region=US` : '';
     const genreParam = genre && genre !== '' ? `&with_genres=${genre}` : '';
     const adultParam = adultFilter === 'false' ? '&include_adult=false' : '&include_adult=true';
     
-    // Solo realizar búsquedas necesarias según filtros
+ 
     if (searchMovies) {
       movieUrl = `https://api.themoviedb.org/3/search/movie?${baseParams}${platformParam}${genreParam}${adultParam}`;
     }
@@ -458,7 +458,7 @@ app.get('/api/search-all', async (req, res) => {
       tvUrl = `https://api.themoviedb.org/3/search/tv?${baseParams}${platformParam}${genreParam}${adultParam}`;
     }
     
-    // Realizar búsquedas en paralelo solo para tipos necesarios
+ 
     const requests = [];
     if (movieUrl) requests.push(fetch(movieUrl));
     if (tvUrl) requests.push(fetch(tvUrl));
@@ -469,7 +469,7 @@ app.get('/api/search-all', async (req, res) => {
     
     const responses = await Promise.all(requests);
     
-    // Verificar respuestas
+ 
     for (const response of responses) {
       if (!response.ok) {
         throw new Error(`TMDb API error: ${response.statusText}`);
@@ -482,7 +482,7 @@ app.get('/api/search-all', async (req, res) => {
     let movieData = { results: [], total_results: 0, total_pages: 0 };
     let tvData = { results: [], total_results: 0, total_pages: 0 };
     
-    // Asignar datos según el orden de las consultas
+ 
     let dataIndex = 0;
     if (searchMovies) {
       movieData = dataResults[dataIndex++];
@@ -491,31 +491,31 @@ app.get('/api/search-all', async (req, res) => {
       tvData = dataResults[dataIndex++];
     }
     
-    // Filtrar resultados sin imágenes y aplicar filtro de contenido adulto
+ 
     const moviesWithType = (movieData.results || [])
-      .filter(item => item.poster_path) // Solo mostrar resultados con imagen
+      .filter(item => item.poster_path)
       .map(item => ({
         ...item,
         content_type: 'movie'
       }));
     
     const tvWithType = (tvData.results || [])
-      .filter(item => item.poster_path) // Solo mostrar resultados con imagen
+      .filter(item => item.poster_path)
       .map(item => ({
         ...item,
         content_type: 'tv'
       }));
     
-    // Combinar resultados antes de aplicar el filtro de adultos
+ 
     let allResults = [...moviesWithType, ...tvWithType];
     
-    // Aplicar filtro de contenido adulto
+ 
     allResults = filterAdultContent(allResults, adultFilter);
     
-    // Ordenar por popularidad por defecto
+ 
     allResults.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
     
-    // Información adicional sobre filtros activos
+ 
     const activeFilters = {
       platform: platform && platform !== '' ? platform : null,
       genre: genre && genre !== '' ? genre : null,
@@ -523,7 +523,7 @@ app.get('/api/search-all', async (req, res) => {
       adultFilter: adultFilter && adultFilter !== '' ? adultFilter : null
     };
     
-    // Separar los resultados filtrados por tipo para contar correctamente
+ 
     const filteredMovies = allResults.filter(item => item.content_type === 'movie');
     const filteredTV = allResults.filter(item => item.content_type === 'tv');
     
@@ -548,7 +548,7 @@ app.get('/api/search-all', async (req, res) => {
 });
 
 
-// Ruta para buscar tráiler en YouTube
+
 app.get('/api/youtube-trailer', async (req, res) => {
   const title = req.query.title;
   const year = req.query.year;
@@ -556,7 +556,7 @@ app.get('/api/youtube-trailer', async (req, res) => {
     return res.status(400).json({ error: 'Title is required' });
   }
 
-  // Mejorar búsqueda incluyendo año si está disponible
+ 
   const searchTerm = year ? `${title} ${year} trailer` : `${title} trailer`;
   const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchTerm)}`;
 
@@ -564,14 +564,14 @@ app.get('/api/youtube-trailer', async (req, res) => {
     const response = await fetch(searchUrl);
     const data = await response.text();
 
-    // Intentar extraer múltiples videos y filtrar por relevancia
+ 
     const videoMatches = data.matchAll(/"videoId":"([^"]+)".*?"title":"([^"]+)"/g);
     
     for (const match of videoMatches) {
       const videoId = match[1];
       const videoTitle = match[2];
       
-      // Filtrar por trailers oficiales y evitar reacciones/reviews
+ 
       if (videoTitle.toLowerCase().includes('trailer') && 
           !videoTitle.toLowerCase().includes('reaction') &&
           !videoTitle.toLowerCase().includes('review') &&
@@ -584,7 +584,7 @@ app.get('/api/youtube-trailer', async (req, res) => {
       }
     }
 
-    // Fallback: extraer el primer ID de video de los resultados
+ 
     const videoIdMatch = data.match(/"videoId":"(.*?)"/);
     if (videoIdMatch && videoIdMatch[1]) {
       return res.json({ 
@@ -601,7 +601,7 @@ app.get('/api/youtube-trailer', async (req, res) => {
   }
 });
 
-// Ruta para buscar tráiler en Vimeo
+
 app.get('/api/vimeo-trailer', async (req, res) => {
   const title = req.query.title;
   const year = req.query.year;
@@ -609,7 +609,7 @@ app.get('/api/vimeo-trailer', async (req, res) => {
     return res.status(400).json({ error: 'Title is required' });
   }
 
-  // Mejorar búsqueda incluyendo año si está disponible
+ 
   const searchTerm = year ? `${title} ${year} trailer` : `${title} trailer`;
   const searchUrl = `https://api.vimeo.com/videos?query=${encodeURIComponent(searchTerm)}&per_page=5`;
 
@@ -622,13 +622,13 @@ app.get('/api/vimeo-trailer', async (req, res) => {
     const data = await response.json();
 
     if (data.data && data.data.length > 0) {
-      // Buscar el trailer más relevante (filtrar por palabras clave)
+ 
       const relevantTrailer = data.data.find(video => {
         const name = video.name.toLowerCase();
         const description = video.description ? video.description.toLowerCase() : '';
         return (name.includes('trailer') || name.includes('official')) && 
                !name.includes('fan') && !name.includes('reaction') && !name.includes('review');
-      }) || data.data[0]; // Fallback al primer resultado
+      }) || data.data[0];
 
       const vimeoTrailerId = relevantTrailer.uri.split('/').pop();
       return res.json({ 
@@ -645,7 +645,7 @@ app.get('/api/vimeo-trailer', async (req, res) => {
   }
 });
 
-// Nueva ruta mejorada para buscar trailers con múltiples fuentes
+
 app.get('/api/enhanced-trailer', async (req, res) => {
   const { title, year, type, id, season } = req.query;
   
@@ -656,12 +656,12 @@ app.get('/api/enhanced-trailer', async (req, res) => {
   try {
     let trailerResult = null;
 
-    // 1. Primero intentar obtener trailer oficial de TMDb si tenemos el ID
+ 
     if (id && API_KEY) {
       try {
         let tmdbUrl;
         
-        // Para series de TV con temporada específica, buscar trailers de la temporada
+ 
         if (type === 'tv' && season) {
           tmdbUrl = `https://api.themoviedb.org/3/tv/${id}/season/${season}?api_key=${API_KEY}&append_to_response=videos`;
         } else {
@@ -672,14 +672,14 @@ app.get('/api/enhanced-trailer', async (req, res) => {
         const tmdbData = await tmdbResponse.json();
         
         if (tmdbData.videos && tmdbData.videos.results.length > 0) {
-          // Buscar trailers oficiales primero
+ 
           const officialTrailers = tmdbData.videos.results.filter(video => 
             video.type === 'Trailer' && 
             video.official === true && 
             (video.site === 'YouTube' || video.site === 'Vimeo')
           );
           
-          // Si no hay trailers oficiales, buscar cualquier trailer
+ 
           const anyTrailers = tmdbData.videos.results.filter(video => 
             video.type === 'Trailer' && 
             (video.site === 'YouTube' || video.site === 'Vimeo')
@@ -703,12 +703,12 @@ app.get('/api/enhanced-trailer', async (req, res) => {
       }
     }
 
-    // 2. Si no se encontró en TMDb, buscar en YouTube con búsqueda mejorada
+ 
     if (!trailerResult) {
       try {
         let searchTerm;
         
-        // Para series de TV con temporada, incluir temporada en búsqueda
+ 
         if (type === 'tv' && season) {
           searchTerm = year ? 
             `${title} season ${season} ${year} trailer` : 
@@ -722,14 +722,14 @@ app.get('/api/enhanced-trailer', async (req, res) => {
         const response = await fetch(youtubeUrl);
         const data = await response.text();
         
-        // Extraer múltiples IDs de video y sus títulos
+ 
         const videoMatches = data.matchAll(/"videoId":"([^"]+)".*?"title":"([^"]+)"/g);
         
         for (const match of videoMatches) {
           const videoId = match[1];
           const videoTitle = match[2];
           
-          // Filtrar resultados más relevantes
+ 
           const lowerTitle = videoTitle.toLowerCase();
           if (lowerTitle.includes('trailer') && 
               !lowerTitle.includes('reaction') &&
@@ -737,7 +737,7 @@ app.get('/api/enhanced-trailer', async (req, res) => {
               !lowerTitle.includes('fan made') &&
               !lowerTitle.includes('parody')) {
             
-            // Para series, verificar si el título incluye la temporada si se especificó
+ 
             if (type === 'tv' && season) {
               if (lowerTitle.includes(`season ${season}`) || 
                   lowerTitle.includes(`s${season}`) ||
@@ -766,7 +766,7 @@ app.get('/api/enhanced-trailer', async (req, res) => {
           }
         }
         
-        // Fallback al primer video si no hay uno específicamente marcado como trailer
+ 
         if (!trailerResult && data.match(/"videoId":"(.*?)"/)) {
           const firstVideoId = data.match(/"videoId":"(.*?)"/)[1];
           trailerResult = {
@@ -783,7 +783,7 @@ app.get('/api/enhanced-trailer', async (req, res) => {
       }
     }
 
-    // 3. Si no se encontró en YouTube, intentar Vimeo
+ 
     if (!trailerResult && VIMEO_ACCESS_TOKEN) {
       try {
         let searchTerm;
@@ -830,7 +830,7 @@ app.get('/api/enhanced-trailer', async (req, res) => {
       }
     }
 
-    // 4. Si no se encontró en Vimeo, intentar Dailymotion
+ 
     if (!trailerResult) {
       try {
         let searchTerm;
@@ -843,7 +843,7 @@ app.get('/api/enhanced-trailer', async (req, res) => {
           searchTerm = year ? `${title} ${year} trailer` : `${title} trailer`;
         }
         
-        // Usar API pública de Dailymotion para búsqueda
+ 
         const dailymotionUrl = `https://www.dailymotion.com/json/videos?search=${encodeURIComponent(searchTerm)}&fields=id,title&limit=5`;
         
         const response = await fetch(dailymotionUrl);
@@ -889,7 +889,7 @@ app.get('/api/enhanced-trailer', async (req, res) => {
   }
 });
 
-// Define tus rutas de API después de configurar los archivos estáticos
+
 app.get('/api/titles/details', async (req, res) => {
     const { id, type, language } = req.query;
     
@@ -908,13 +908,13 @@ app.get('/api/titles/details', async (req, res) => {
       
       const url = `https://api.themoviedb.org/3/${type}/${id}?api_key=${API_KEY}&language=${language}&append_to_response=videos`;
       const response = await fetch(url, {
-        timeout: 10000, // 10 second timeout
+        timeout: 10000,
         headers: {
           'User-Agent': 'ATV-App/1.0'
         }
       });
       
-      // Verifica si la respuesta es correcta
+ 
       if (!response.ok) {
         throw new Error(`Failed to fetch data from TMDb: ${response.statusText}`);
       }
@@ -923,7 +923,7 @@ app.get('/api/titles/details', async (req, res) => {
       res.json(data);
     } catch (error) {
       console.error('Error fetching movie details:', error);
-      // Return a fallback response instead of failing completely
+ 
       res.status(200).json({
         id: id,
         title: 'Movie Details Unavailable',
@@ -936,7 +936,7 @@ app.get('/api/titles/details', async (req, res) => {
     }
   });
   
-// Ruta para obtener proveedores
+
 app.get('/api/providers', async (req, res) => {
     const { type } = req.query;
     
@@ -957,7 +957,7 @@ app.get('/api/providers', async (req, res) => {
     }
   });  
 
-  // Ruta para obtener proveedor
+ 
   app.get('/api/:type/:id/watch/providers', async (req, res) => {
     const { type, id } = req.params;
     
@@ -978,19 +978,19 @@ app.get('/api/providers', async (req, res) => {
     }
   });
 
-// Ruta para obtener torrents desde YTS
+
 app.get('/api/torrents', async (req, res) => {
     const { movieTitle } = req.query;
   
-    // Verifica que movieTitle esté presente
+ 
     if (!movieTitle) {
       return res.status(400).json({ message: 'Movie title is required' });
     }
 
-    // Normalizar el título para mejorar las búsquedas
+ 
     const normalizedTitle = movieTitle
-      .replace(/'/g, '') // Remover apóstrofes
-      .replace(/\s+/g, ' ') // Normalizar espacios múltiples
+      .replace(/'/g, '')
+      .replace(/\s+/g, ' ')
       .trim();
   
     console.log(`🎬 Movie torrent search request: ${movieTitle}`);
@@ -999,19 +999,19 @@ app.get('/api/torrents', async (req, res) => {
     }
   
     try {
-      // Buscar en YTS primero
+ 
       const torrentsUrl = `https://yts.mx/api/v2/list_movies.json?query_term=${encodeURIComponent(normalizedTitle)}`;
       
       let ytsMovies = [];
       let torrentSearchMovies = [];
       
-      // Buscar en YTS
+ 
       try {
         console.log(`🔍 Searching YTS for: ${normalizedTitle}`);
         const response = await fetch(torrentsUrl);
         const data = await response.json();
         
-        // Si la respuesta de YTS contiene películas, procesarlas
+ 
         if (data?.data?.movies?.length > 0) {
           console.log(`✅ Found ${data.data.movies.length} movies from YTS`);
           ytsMovies = data.data.movies;
@@ -1023,12 +1023,12 @@ app.get('/api/torrents', async (req, res) => {
         console.log(`⚠️  YTS search failed: ${ytsError.message}`);
       }
       
-      // Siempre buscar también en TorrentSearchApi para obtener más resultados
+ 
       if (hasActiveProviders) {
         console.log(`🔄 Trying TorrentSearchApi for movie: ${normalizedTitle}`);
         
         try {
-          // Usar 'All' en lugar de 'Movies' para obtener más resultados
+ 
           const searchResults = await torrentSearch.search(normalizedTitle, 'All', 20);
           console.log(`📊 Found ${searchResults.length} raw results from TorrentSearchApi`);
           
@@ -1040,7 +1040,7 @@ app.get('/api/torrents', async (req, res) => {
               size: r.size 
             })));
             
-            // Procesar resultados de TorrentSearchApi
+ 
             torrentSearchMovies = await processMovieTorrentResults(searchResults, movieTitle);
             console.log(`✅ Processed ${torrentSearchMovies.length} movies from TorrentSearchApi`);
             console.log(`📝 Processed TorrentSearchApi results:`, torrentSearchMovies.map(m => ({ 
@@ -1055,16 +1055,16 @@ app.get('/api/torrents', async (req, res) => {
         }
       }
       
-      // Combinar resultados de ambas fuentes
+ 
       let movieTorrents = [...ytsMovies, ...torrentSearchMovies];
       
-      // Si no se encontraron torrents reales, usar datos mock
+ 
       if (movieTorrents.length === 0) {
         console.log(`🎭 No real movie torrents found, using mock data for: ${movieTitle}`);
         console.log(`🚧 Real torrent search failed - likely due to network/firewall restrictions`);
         movieTorrents = generateMockTorrents(movieTitle, 'movie');
         
-        // Mock data already includes isDemo and demoMessage from generateMockTorrents
+ 
       }
       
       console.log(`📤 Final movie torrents count: ${movieTorrents.length}`);
@@ -1079,17 +1079,17 @@ app.get('/api/torrents', async (req, res) => {
     } catch (error) {
       console.error('❌ Error fetching movie torrents:', error);
       
-      // En caso de error completo, devolver datos mock
+ 
       console.log(`🎭 Error fallback: generating mock data for ${movieTitle}`);
       console.log(`🚧 Search error: ${error.message} - Using demo data`);
       const mockTorrents = generateMockTorrents(movieTitle, 'movie');
-      // Mock data already includes isDemo and demoMessage from generateMockTorrents
+ 
       
       res.json(mockTorrents);
     }
   });
 
-// Función auxiliar para procesar resultados de torrents de películas
+
 async function processMovieTorrentResults(searchResults, movieTitle) {
   const movieTorrents = [];
   
@@ -1107,7 +1107,7 @@ async function processMovieTorrentResults(searchResults, movieTitle) {
       console.log(`🔍 Processing torrent ${i + 1}: ${torrent.title} (Provider: ${torrent.provider})`);
       
       try {
-        // Obtener el magnet link
+ 
         console.log(`🧲 Getting magnet for: ${torrent.title}`);
         const magnetLink = await torrentSearch.getMagnet(torrent);
         
@@ -1118,11 +1118,11 @@ async function processMovieTorrentResults(searchResults, movieTitle) {
         
         console.log(`✅ Got magnet link for: ${torrent.title}`);
         
-        // Convertir al formato esperado por el frontend
+ 
         const normalizedTorrent = {
           id: i + 1,
           title: torrent.title || torrent.name || 'Unknown',
-          year: new Date().getFullYear(), // Año por defecto
+          year: new Date().getFullYear(),
           imdb_code: '',
           torrents: [{
             url: magnetLink,
@@ -1160,7 +1160,7 @@ async function processMovieTorrentResults(searchResults, movieTitle) {
   }
 }
 
-// Ruta para obtener detalles de una serie de TV
+
 app.get('/api/tv/details/:tvId', async (req, res) => {
   const { tvId } = req.params;
   
@@ -1187,7 +1187,7 @@ app.get('/api/tv/details/:tvId', async (req, res) => {
     const url = `https://api.themoviedb.org/3/tv/${tvId}?api_key=${API_KEY}&language=en&append_to_response=videos,seasons`;
     
     const response = await fetch(url, {
-      timeout: 10000, // 10 second timeout
+      timeout: 10000,
       headers: {
         'User-Agent': 'ATV-App/1.0'
       }
@@ -1218,11 +1218,11 @@ app.get('/api/tv/details/:tvId', async (req, res) => {
 
 
 
-// Ruta para obtener torrents de series de TV
+
 app.get('/api/tv-torrents', async (req, res) => {
   const { tvTitle, season, episode } = req.query;
   
-  // Verifica que tvTitle esté presente
+ 
   if (!tvTitle) {
     return res.status(400).json({ message: 'TV title is required' });
   }
@@ -1230,7 +1230,7 @@ app.get('/api/tv-torrents', async (req, res) => {
   try {
     console.log(`TV torrent search request: ${tvTitle} S${season}E${episode}`);
     
-    // Usar la nueva función de búsqueda de torrents reales
+ 
     const torrents = await searchRealTVTorrents(tvTitle, season, episode);
     
     if (torrents.length > 0) {
@@ -1247,11 +1247,11 @@ app.get('/api/tv-torrents', async (req, res) => {
   }
 });
 
-// Nueva ruta para buscar torrents de TV usando TMDb ID (compatible con tv-search)
+
 app.post('/api/tv-torrents/search', async (req, res) => {
   const { showId, seasonNumber, episodeNumber } = req.body;
   
-  // Verificar que se proporcionen los parámetros requeridos
+ 
   if (!showId || !seasonNumber || !episodeNumber) {
     return res.status(400).json({ 
       message: 'showId, seasonNumber, and episodeNumber are required',
@@ -1266,7 +1266,7 @@ app.post('/api/tv-torrents/search', async (req, res) => {
   try {
     console.log(`TV torrent search by ID: ${showId} S${seasonNumber}E${episodeNumber}`);
     
-    // Usar la función de búsqueda por ID de TMDb
+ 
     const torrents = await searchTVTorrentsById(showId, seasonNumber, episodeNumber);
     
     if (torrents.length > 0) {
@@ -1283,11 +1283,11 @@ app.post('/api/tv-torrents/search', async (req, res) => {
   }
 });
 
-// Ruta alternativa usando el mismo formato que tv-search (/search)
+
 app.post('/api/search', async (req, res) => {
   const { showId, seasonNumber, episodeNumber } = req.body;
   
-  // Verificar que se proporcionen los parámetros requeridos
+ 
   if (!showId || !seasonNumber || !episodeNumber) {
     return res.status(400).json({ 
       message: 'showId, seasonNumber, and episodeNumber are required',
@@ -1302,7 +1302,7 @@ app.post('/api/search', async (req, res) => {
   try {
     console.log(`TV torrent search (tv-search compatible): ${showId} S${seasonNumber}E${episodeNumber}`);
     
-    // Usar la función de búsqueda por ID de TMDb
+ 
     const torrents = await searchTVTorrentsById(showId, seasonNumber, episodeNumber);
     
     if (torrents.length > 0) {
@@ -1319,19 +1319,19 @@ app.post('/api/search', async (req, res) => {
   }
 });
 
-// Función para buscar torrents reales de series de TV usando TorrentSearchApi
+
 async function searchRealTVTorrents(tvTitle, season, episode) {
   try {
     console.log(`🔍 Searching real TV torrents for: ${tvTitle} S${season}E${episode}`);
     
-    // Verificar si hay proveedores activos
+ 
     const activeProviders = torrentSearch.getActiveProviders();
     if (activeProviders.length === 0) {
       console.log('⚠️  No active torrent providers, using mock data');
       return generateMockTorrents(tvTitle, 'tv', season, episode);
     }
     
-    // Construir el query de búsqueda
+ 
     let query = tvTitle;
     if (season && episode) {
       query += ` S${season.toString().padStart(2, '0')}E${episode.toString().padStart(2, '0')}`;
@@ -1344,12 +1344,12 @@ async function searchRealTVTorrents(tvTitle, season, episode) {
     let searchResults = [];
     
     try {
-      // Buscar torrents usando la API con timeout
+ 
       console.log(`🎯 Attempting real torrent search: ${query}`);
       
       const searchPromise = torrentSearch.search(query, 'TV', 50);
       const timeoutPromise = new Promise((resolve) => {
-        setTimeout(() => resolve([]), 10000); // 10 second timeout for real search
+        setTimeout(() => resolve([]), 10000);
       });
       
       searchResults = await Promise.race([searchPromise, timeoutPromise]);
@@ -1368,7 +1368,7 @@ async function searchRealTVTorrents(tvTitle, season, episode) {
     if (!searchResults || searchResults.length === 0) {
       console.log('🔄 No real torrents found, trying alternative search...');
       
-      // Intentar con un query simplificado
+ 
       const simpleQuery = tvTitle.replace(/[:\-&]/g, '').trim();
       const altQuery = season && episode ? 
         `${simpleQuery} S${season.toString().padStart(2, '0')}E${episode.toString().padStart(2, '0')}` :
@@ -1401,7 +1401,7 @@ async function searchRealTVTorrents(tvTitle, season, episode) {
   }
 }
 
-// Function to check if a torrent is relevant to the search query
+
 function isTorrentRelevant(torrent, requestedTitle, season = null, episode = null) {
   if (!torrent || !(torrent.title || torrent.name)) {
     return false;
@@ -1409,7 +1409,7 @@ function isTorrentRelevant(torrent, requestedTitle, season = null, episode = nul
 
   const torrentTitle = torrent.title || torrent.name;
   
-  // Normalize strings for comparison (lowercase, remove special chars)
+ 
   const normalizeString = (str) => {
     return str.toLowerCase()
       .replace(/[^a-z0-9\s]/g, ' ')
@@ -1422,31 +1422,31 @@ function isTorrentRelevant(torrent, requestedTitle, season = null, episode = nul
 
   const requestWords = normalizedRequest.split(' ').filter(word => word.length > 2);
   
-  // Function to calculate sophisticated match score with positional awareness
+ 
   const calculateMatchScore = (text, requestWords) => {
     const textWords = text.split(' ').filter(word => word.length > 2);
     
-    // For exact phrase match, check position to avoid false positives
+ 
     if (text.includes(normalizedRequest)) {
       const position = text.indexOf(normalizedRequest);
-      // If the match is at the beginning, high score
+ 
       if (position === 0 || position <= 5) {
         return 1.0;
       }
-      // If it's incidental (like "The Chosen" in "Zorro The Chosen One"), lower score
+ 
       const wordsBeforeMatch = text.substring(0, position).split(' ').filter(w => w.length > 2).length;
       if (wordsBeforeMatch > 2 || text.split(' ').length > requestWords.length * 2.5) {
-        return 0.2; // Very low score for incidental matches
+        return 0.2;
       }
       return 0.8;
     }
     
-    // Check for word-by-word match
+ 
     let matchedWords = 0;
     let exactMatches = 0;
     let sequentialMatches = 0;
     
-    // Check for sequential word matches (higher weight)
+ 
     for (let i = 0; i <= textWords.length - requestWords.length; i++) {
       let consecutive = 0;
       for (let j = 0; j < requestWords.length; j++) {
@@ -1459,7 +1459,7 @@ function isTorrentRelevant(torrent, requestedTitle, season = null, episode = nul
       sequentialMatches = Math.max(sequentialMatches, consecutive);
     }
     
-    // Individual word matches
+ 
     requestWords.forEach(requestWord => {
       if (textWords.includes(requestWord)) {
         exactMatches++;
@@ -1471,11 +1471,11 @@ function isTorrentRelevant(torrent, requestedTitle, season = null, episode = nul
       }
     });
     
-    // Bonus for sequential matches (words in order)
+ 
     const sequentialBonus = sequentialMatches === requestWords.length ? 0.4 : 
                            sequentialMatches > 0 ? sequentialMatches / requestWords.length * 0.2 : 0;
     
-    // Bonus for all exact matches
+ 
     const exactMatchBonus = exactMatches === requestWords.length ? 0.3 : 0;
     
     const baseScore = requestWords.length > 0 ? matchedWords / requestWords.length : 0;
@@ -1483,10 +1483,10 @@ function isTorrentRelevant(torrent, requestedTitle, season = null, episode = nul
     return Math.min(1.0, baseScore + sequentialBonus + exactMatchBonus);
   };
 
-  // Calculate match score for torrent title
+ 
   const titleScore = calculateMatchScore(normalizedTorrentTitle, requestWords);
   
-  // For TV series, also check season/episode if provided
+ 
   if (season !== null) {
     const seasonPattern = new RegExp(`s0?${season}(?![0-9])|season\\s*0?${season}(?![0-9])`, 'i');
     const hasSeasonMatch = seasonPattern.test(torrentTitle);
@@ -1495,24 +1495,24 @@ function isTorrentRelevant(torrent, requestedTitle, season = null, episode = nul
       const episodePattern = new RegExp(`e0?${episode}(?![0-9])|episode\\s*0?${episode}(?![0-9])`, 'i');
       const hasEpisodeMatch = episodePattern.test(torrentTitle);
       
-      // For TV shows with specific season/episode, require both season and episode match
-      // plus at least 50% title match (stricter than subtitles since false positives are more problematic)
+ 
+ 
       return hasSeasonMatch && hasEpisodeMatch && titleScore >= 0.5;
     } else {
-      // For season-only requests, require season match plus at least 50% title match
+ 
       return hasSeasonMatch && titleScore >= 0.5;
     }
   }
   
-  // For movies or general searches, require high title match to avoid false positives
-  // This will filter out incidental matches like "The Chosen" in "Zorro The Chosen One"
+ 
+ 
   return titleScore >= 0.7;
 }
 
-// Función auxiliar para procesar resultados de torrents
+
 async function processTorrentResults(searchResults, tvTitle, season, episode) {
   try {
-    // Filter torrents for relevance first
+ 
     console.log(`🔍 Filtering ${searchResults.length} torrents for relevance to "${tvTitle}"`);
     const relevantTorrents = searchResults.filter(torrent => 
       isTorrentRelevant(torrent, tvTitle, season, episode)
@@ -1525,7 +1525,7 @@ async function processTorrentResults(searchResults, tvTitle, season, episode) {
     
     console.log(`✅ Found ${relevantTorrents.length} relevant torrents out of ${searchResults.length} total`);
     
-    // Procesar resultados y obtener magnets
+ 
     const torrents = [];
     const maxResults = Math.min(relevantTorrents.length, 20);
     
@@ -1539,16 +1539,16 @@ async function processTorrentResults(searchResults, tvTitle, season, episode) {
       try {
         let magnetLink = null;
         
-        // Intentar obtener el magnet link
+ 
         try {
           magnetLink = await torrentSearch.getMagnet(torrent);
           console.log(`✅ Got magnet for torrent ${i + 1}/${maxResults}`);
         } catch (magnetError) {
           console.log(`⚠️  Could not get magnet for torrent ${i + 1}: ${magnetError.message}`);
-          // Continuar sin magnet link
+ 
         }
         
-        // Normalizar el formato del resultado
+ 
         const normalizedTorrent = {
           title: torrent.title || torrent.name || 'Unknown',
           size: torrent.size || 'Unknown',
@@ -1562,9 +1562,9 @@ async function processTorrentResults(searchResults, tvTitle, season, episode) {
           type: 'tv',
           season: season,
           episode: episode,
-          // Extraer hash del magnet si está disponible
+ 
           hash: magnetLink ? magnetLink.match(/xt=urn:btih:([^&]+)/i)?.[1] : (torrent.hash || undefined),
-          // Preserve demo flags if they exist, otherwise mark as real torrent
+ 
           isDemo: torrent.isDemo || false,
           demoMessage: torrent.demoMessage || undefined
         };
@@ -1574,7 +1574,7 @@ async function processTorrentResults(searchResults, tvTitle, season, episode) {
       } catch (itemError) {
         console.error(`❌ Error processing torrent item ${i}:`, itemError.message);
         
-        // Agregar un torrent básico sin magnet en caso de error
+ 
         torrents.push({
           title: torrent.title || torrent.name || 'Unknown',
           size: torrent.size || 'Unknown',
@@ -1589,14 +1589,14 @@ async function processTorrentResults(searchResults, tvTitle, season, episode) {
           season: season,
           episode: episode,
           error: 'Could not retrieve magnet link',
-          // Preserve demo flags if they exist, otherwise mark as real torrent
+ 
           isDemo: torrent.isDemo || false,
           demoMessage: torrent.demoMessage || undefined
         });
       }
     }
     
-    // Ordenar por seeds (descendente)
+ 
     torrents.sort((a, b) => (b.seeds || 0) - (a.seeds || 0));
     
     console.log(`✅ Successfully processed ${torrents.length} TV torrents`);
@@ -1609,10 +1609,10 @@ async function processTorrentResults(searchResults, tvTitle, season, episode) {
   }
 }
 
-// Función para buscar torrent de manera case-insensitive
+
 function findTorrentByHash(hashOrMagnet) {
   try {
-    // Si es un magnet URI, extraer el hash
+ 
     let targetHash = hashOrMagnet;
     if (hashOrMagnet.includes('magnet:')) {
       const match = hashOrMagnet.match(/xt=urn:btih:([^&]+)/i);
@@ -1623,14 +1623,14 @@ function findTorrentByHash(hashOrMagnet) {
     
     targetHash = targetHash.toLowerCase();
     
-    // Buscar en la lista de torrents del cliente
+ 
     for (const torrent of client.torrents) {
       if (torrent.infoHash && torrent.infoHash.toLowerCase() === targetHash) {
         return torrent;
       }
     }
     
-    // Si no se encuentra en la lista real, intentar con client.get() como fallback
+ 
     const fallbackTorrent = client.get(hashOrMagnet);
     if (fallbackTorrent && fallbackTorrent.infoHash && 
         fallbackTorrent.infoHash.toLowerCase() === targetHash) {
@@ -1644,7 +1644,7 @@ function findTorrentByHash(hashOrMagnet) {
   }
 }
 
-// Función auxiliar para verificar si un torrent está realmente listo
+
 function isTorrentReady(torrent) {
   if (!torrent) {
     console.log(`🔍 isTorrentReady: No torrent provided`);
@@ -1656,7 +1656,7 @@ function isTorrentReady(torrent) {
     return false;
   }
   
-  // Verificar metadata básica
+ 
   if (!torrent.infoHash || !torrent.name || torrent.name === 'Unknown') {
     console.log(`🔍 isTorrentReady: Missing basic metadata`, {
       hasInfoHash: !!torrent.infoHash,
@@ -1665,7 +1665,7 @@ function isTorrentReady(torrent) {
     return false;
   }
   
-  // Verificar archivos
+ 
   if (!torrent.files || !Array.isArray(torrent.files) || torrent.files.length === 0) {
     console.log(`🔍 isTorrentReady: No valid files`, {
       hasFiles: !!torrent.files,
@@ -1675,7 +1675,7 @@ function isTorrentReady(torrent) {
     return false;
   }
   
-  // Verificar que al menos un archivo tenga nombre válido
+ 
   const validFiles = torrent.files.filter(file => file && file.name && file.name.trim() !== '');
   if (validFiles.length === 0) {
     console.log(`🔍 isTorrentReady: No files with valid names`);
@@ -1686,20 +1686,20 @@ function isTorrentReady(torrent) {
   return true;
 }
 
-// Función auxiliar para verificar si un torrent está corrupto
+
 function isTorrentCorrupted(torrent) {
   if (!torrent) {
     console.log('🔍 Torrent is null/undefined');
     return true;
   }
   
-  // Verificar si está destruido
+ 
   if (torrent.destroyed) {
     console.log(`🔍 Torrent is destroyed: ${torrent.name || 'Unknown'}`);
     return true;
   }
   
-  // Verificar metadata básica
+ 
   if (!torrent.infoHash || !torrent.name || torrent.name === 'Unknown') {
     console.log(`🔍 Torrent missing basic metadata:`, {
       name: torrent.name || 'Missing',
@@ -1709,19 +1709,19 @@ function isTorrentCorrupted(torrent) {
     return true;
   }
   
-  // Verificar si tiene archivos válidos
+ 
   if (!torrent.files || torrent.files.length === 0) {
     console.log(`🔍 Torrent has no files: ${torrent.name}`);
     return true;
   }
   
-  // Verificar si el progreso es válido (puede ser 0 pero no NaN)
+ 
   if (isNaN(torrent.progress)) {
     console.log(`🔍 Torrent has invalid progress: ${torrent.name}, progress=${torrent.progress}`);
     return true;
   }
   
-  // Verificar numPeers (puede ser 0 pero no undefined)
+ 
   if (torrent.numPeers === undefined) {
     console.log(`🔍 Torrent has undefined numPeers: ${torrent.name}`);
     return true;
@@ -1730,7 +1730,7 @@ function isTorrentCorrupted(torrent) {
   return false;
 }
 
-// Limpieza inicial al arrancar el servidor
+
 function initialCleanup() {
   console.log('🧹 Performing initial cleanup of corrupted torrents...');
   const torrents = client.torrents;
@@ -1761,7 +1761,7 @@ function initialCleanup() {
   console.log(`✅ Initial cleanup complete. Removed ${removedCount} corrupted torrents.`);
 }
 
-// Función de limpieza periódica más agresiva
+
 function periodicCleanup() {
   console.log('🔄 Running periodic torrent cleanup...');
   const torrents = client.torrents;
@@ -1784,13 +1784,13 @@ function periodicCleanup() {
   }
 }
 
-// Ejecutar limpieza inicial después de 5 segundos
+
 setTimeout(initialCleanup, 5000);
 
-// Ejecutar limpieza periódica cada 2 minutos
+
 setInterval(periodicCleanup, 2 * 60 * 1000);
 
-// Función para forzar limpieza inmediata (útil para debugging)
+
 app.get('/api/cleanup', (req, res) => {
   console.log('🔧 Manual cleanup requested via API');
   periodicCleanup();
@@ -1798,7 +1798,7 @@ app.get('/api/cleanup', (req, res) => {
   res.json({ message: 'Cleanup completed' });
 });
 
-// Función auxiliar para verificar si un objeto es un torrent real (no solo un stub)
+
 function isRealTorrent(torrent) {
   return torrent && 
          typeof torrent === 'object' && 
@@ -1807,7 +1807,7 @@ function isRealTorrent(torrent) {
          torrent.hasOwnProperty('infoHash');
 }
 
-// Función para verificar si un torrent realmente existe en la lista del cliente
+
 function torrentExistsInClient(magnetURI) {
   try {
     const infoHash = magnetURI.match(/xt=urn:btih:([^&]+)/i)?.[1];
@@ -1823,12 +1823,12 @@ function torrentExistsInClient(magnetURI) {
   }
 }
 
-// Función segura para limpiar torrents corruptos
+
 function safeRemoveTorrent(magnetURI, reason = 'cleanup') {
   const torrentHash = magnetURI.match(/xt=urn:btih:([^&]+)/i)?.[1] || 'unknown';
   
   try {
-    // Solo intentar eliminar si realmente existe en la lista del cliente
+ 
     if (torrentExistsInClient(magnetURI)) {
       console.log(`[${torrentHash}] Safely removing torrent (${reason})`);
       client.remove(magnetURI);
@@ -1843,7 +1843,7 @@ function safeRemoveTorrent(magnetURI, reason = 'cleanup') {
   }
 }
 
-// API para detener y limpiar un torrent específico (llamado al cerrar video)
+
 app.delete('/api/torrent/stop/:infoHash', (req, res) => {
   const { infoHash } = req.params;
   
@@ -1855,7 +1855,7 @@ app.delete('/api/torrent/stop/:infoHash', (req, res) => {
   console.log(`[${torrentHash}] Stop request received`);
   
   try {
-    // Buscar el torrent
+ 
     const torrent = findTorrentByHash(infoHash);
     
     if (!torrent) {
@@ -1868,12 +1868,12 @@ app.delete('/api/torrent/stop/:infoHash', (req, res) => {
     
     console.log(`[${torrentHash}] Stopping torrent: ${torrent.name || 'Unknown'}`);
     
-    // Pausar todas las descargas y uploads
+ 
     if (torrent.pause && typeof torrent.pause === 'function') {
       torrent.pause();
     }
     
-    // Desconectar todos los peers
+ 
     if (torrent.wires && Array.isArray(torrent.wires)) {
       torrent.wires.forEach(wire => {
         try {
@@ -1886,7 +1886,7 @@ app.delete('/api/torrent/stop/:infoHash', (req, res) => {
       });
     }
     
-    // Limpiar archivos temporales y streams
+ 
     if (torrent.files && Array.isArray(torrent.files)) {
       torrent.files.forEach(file => {
         try {
@@ -1903,18 +1903,18 @@ app.delete('/api/torrent/stop/:infoHash', (req, res) => {
       });
     }
     
-    // Destruir el torrent completamente
+ 
     const destroyPromise = new Promise((resolve, reject) => {
       const destroyTimeout = setTimeout(() => {
         console.log(`[${torrentHash}] Destroy timeout, forcing removal`);
         resolve();
-      }, 5000); // 5 segundos timeout
+      }, 5000);
       
       torrent.destroy((err) => {
         clearTimeout(destroyTimeout);
         if (err) {
           console.log(`[${torrentHash}] Error during destroy:`, err.message);
-          resolve(); // Continuar a pesar del error
+          resolve();
         } else {
           console.log(`[${torrentHash}] Successfully destroyed`);
           resolve();
@@ -1923,7 +1923,7 @@ app.delete('/api/torrent/stop/:infoHash', (req, res) => {
     });
     
     destroyPromise.then(() => {
-      // Verificar que el torrent se eliminó de la lista del cliente
+ 
       const stillExists = findTorrentByHash(infoHash);
       if (stillExists) {
         console.log(`[${torrentHash}] Torrent still exists after destroy, forcing removal`);
@@ -1934,7 +1934,7 @@ app.delete('/api/torrent/stop/:infoHash', (req, res) => {
         }
       }
       
-      // Limpiar cache de subtítulos relacionado
+ 
       const subtitleKeysToDelete = [];
       for (const [key, value] of subtitleCache.entries()) {
         if (key.includes(infoHash.toLowerCase()) || key.includes(infoHash.toUpperCase())) {
@@ -1965,24 +1965,24 @@ app.delete('/api/torrent/stop/:infoHash', (req, res) => {
   }
 });
 
-// API alternativa usando POST para sendBeacon (navegadores envían POST para sendBeacon)
+
 app.post('/api/torrent/stop/:infoHash', (req, res) => {
-  // Redirigir al método DELETE
+ 
   console.log(`[${req.params.infoHash}] Stop request via POST (sendBeacon)`);
   
-  // Llamar al handler del DELETE
+ 
   const deleteReq = { 
     params: req.params,
     body: req.body
   };
   
-  // Simular la respuesta para el método DELETE
+ 
   const mockRes = {
     status: (code) => ({ json: (data) => console.log(`POST response ${code}:`, data) }),
     json: (data) => console.log('POST response:', data)
   };
   
-  // Ejecutar la lógica de limpieza de manera asíncrona
+ 
   setTimeout(() => {
     try {
       const { infoHash } = req.params;
@@ -2003,28 +2003,28 @@ app.post('/api/torrent/stop/:infoHash', (req, res) => {
     }
   }, 100);
   
-  // Responder inmediatamente al sendBeacon
+ 
   res.status(200).json({ message: 'Cleanup initiated', success: true });
 });
 
-// Endpoint para obtener estadísticas de un torrent específico
+
 app.get('/api/torrent/stats/:infoHash', (req, res) => {
   const { infoHash } = req.params;
   
   try {
-    // Buscar el torrent en el cliente WebTorrent
+ 
     const torrent = client.torrents.find(t => t.infoHash === infoHash);
     
     if (!torrent) {
       return res.status(404).json({ error: 'Torrent not found' });
     }
     
-    // Verificar si el torrent está listo
+ 
     if (!torrent.ready) {
       return res.status(503).json({ error: 'Torrent not ready' });
     }
     
-    // Devolver estadísticas del torrent
+ 
     const stats = {
       infoHash: torrent.infoHash,
       name: torrent.name,
@@ -2054,38 +2054,38 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-// Función auxiliar para buscar torrents usando TMDb ID (implementación similar a tv-search)
+
 async function searchTVTorrentsById(showId, seasonNumber, episodeNumber) {
   try {
     console.log(`🔍 Searching TV torrents by ID: ${showId} S${seasonNumber}E${episodeNumber}`);
     
     let seriesName = null;
     
-    // Intentar obtener detalles de la serie desde TMDb si hay API key
+ 
     if (API_KEY && API_KEY !== 'demo_key_for_testing') {
       try {
         const seriesDetails = await getTVSeriesDetails(showId);
         if (seriesDetails) {
           console.log(`📺 TMDb series details - name: "${seriesDetails.name}", original_name: "${seriesDetails.original_name}"`);
           
-          // Función auxiliar para detectar si un string contiene caracteres no latinos
+ 
           const containsNonLatinChars = (str) => {
             if (!str) return false;
-            // Detectar caracteres asiáticos (coreano, japonés, chino, etc.)
+ 
             return /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(str);
           };
           
-          // Lógica inteligente para seleccionar el nombre
+ 
           if (seriesDetails.original_name && !containsNonLatinChars(seriesDetails.original_name)) {
-            // Si original_name existe y está en caracteres latinos, usarlo
+ 
             seriesName = seriesDetails.original_name;
             console.log(`🌍 Using original_name (Latin chars): ${seriesName}`);
           } else if (seriesDetails.name && !containsNonLatinChars(seriesDetails.name)) {
-            // Si name está en caracteres latinos, usarlo
+ 
             seriesName = seriesDetails.name;
             console.log(`🌍 Using name (Latin chars): ${seriesName}`);
           } else {
-            // Si no tenemos un nombre en caracteres latinos, usar el que tenemos
+ 
             seriesName = seriesDetails.original_name || seriesDetails.name;
             console.log(`⚠️  Using non-Latin name as fallback: ${seriesName}`);
           }
@@ -2101,13 +2101,13 @@ async function searchTVTorrentsById(showId, seasonNumber, episodeNumber) {
       console.log('⚠️  No TMDb API key available');
     }
     
-    // Si no se pudo obtener el nombre de la serie, usar fallback genérico
+ 
     if (!seriesName) {
       seriesName = `TV Show ${showId}`;
       console.log(`🎯 Using generic fallback name: ${seriesName}`);
     }
     
-    // Buscar torrents usando el nombre de la serie
+ 
     return await searchRealTVTorrents(seriesName, seasonNumber, episodeNumber);
     
   } catch (error) {
@@ -2117,7 +2117,7 @@ async function searchTVTorrentsById(showId, seasonNumber, episodeNumber) {
   }
 }
 
-// Función auxiliar para obtener detalles del episodio desde TMDb
+
 async function getTVEpisodeDetails(showId, seasonNumber, episodeNumber) {
   try {
     if (!API_KEY) {
@@ -2139,7 +2139,7 @@ async function getTVEpisodeDetails(showId, seasonNumber, episodeNumber) {
   }
 }
 
-// Función auxiliar para obtener detalles de la serie desde TMDb
+
 async function getTVSeriesDetails(showId) {
   try {
     if (!API_KEY) {
@@ -2160,7 +2160,7 @@ async function getTVSeriesDetails(showId) {
     return null;
   }
 }
-// API para explorar archivos dentro de un torrent
+
 app.post('/api/torrent/explore', (req, res) => {
   const { magnetURI } = req.body;
   
@@ -2172,46 +2172,46 @@ app.post('/api/torrent/explore', (req, res) => {
   console.log(`[${torrentHash}] Exploring torrent request received`);
 
   try {
-    // Verificar si el torrent ya existe
+ 
     const existingTorrent = findTorrentByHash(magnetURI);
     if (existingTorrent) {
       console.log(`[${torrentHash}] Found existing torrent: ${existingTorrent.name || 'Unknown'}`);
       console.log(`[${torrentHash}] Peers: ${existingTorrent.numPeers}, Progress: ${(existingTorrent.progress * 100).toFixed(1)}%`);
       
-      // Verificar si el torrent está corrupto
+ 
       if (isTorrentCorrupted(existingTorrent)) {
         console.log(`[${torrentHash}] Existing torrent is corrupted, removing and retrying`);
         safeRemoveTorrent(magnetURI, 'corrupted existing torrent');
-        // Continuar con agregar el torrent nuevamente
+ 
       } else if (isTorrentReady(existingTorrent)) {
-        // Si está listo, devolver información inmediatamente
+ 
         console.log(`[${torrentHash}] Existing torrent has files: ${existingTorrent.files.length}`);
         return sendTorrentInfo(existingTorrent, res);
       } else if (existingTorrent.numPeers === 0) {
-        // Si no tiene peers, destruir y reintentar
+ 
         console.log(`[${torrentHash}] Existing torrent has no peers, removing and retrying`);
         safeRemoveTorrent(magnetURI, 'no peers');
-        // Continuar con agregar el torrent nuevamente
+ 
       } else {
-        // Si existe pero no tiene archivos aún, esperar con timeout más largo
+ 
         console.log(`[${torrentHash}] Existing torrent loading, waiting for files...`);
         let waitTime = 0;
-        const maxWaitTime = 25000; // Reducir a 25 segundos para torrents existentes
-        const checkInterval = 3000; // Verificar cada 3 segundos
+        const maxWaitTime = 25000;
+        const checkInterval = 3000;
         
         const waitForFiles = () => {
-          if (res.headersSent) return; // La respuesta ya fue enviada
+          if (res.headersSent) return;
           
           if (waitTime >= maxWaitTime) {
             console.log(`[${torrentHash}] Timeout waiting for existing torrent files`);
-            // Destruir el torrent problemático antes de responder
+ 
             safeRemoveTorrent(magnetURI, 'timeout');
             return res.status(503).json({ 
               message: 'This torrent is taking too long to load. It might be a slow or dead torrent. Please try a different quality or torrent.' 
             });
           }
           
-          // Verificar si se corrompió durante la espera
+ 
           if (isTorrentCorrupted(existingTorrent)) {
             console.log(`[${torrentHash}] Torrent became corrupted during wait, removing`);
             safeRemoveTorrent(magnetURI, 'corrupted during wait');
@@ -2225,7 +2225,7 @@ app.post('/api/torrent/explore', (req, res) => {
             return sendTorrentInfo(existingTorrent, res);
           }
           
-          // Si el torrent pierde todos los peers, destruirlo
+ 
           if (existingTorrent.numPeers === 0 && waitTime > 10000) {
             console.log(`[${torrentHash}] Torrent lost all peers, giving up`);
             safeRemoveTorrent(magnetURI, 'lost all peers');
@@ -2235,7 +2235,7 @@ app.post('/api/torrent/explore', (req, res) => {
           }
           
           waitTime += checkInterval;
-          if (waitTime % 6000 === 0) { // Log cada 6 segundos
+          if (waitTime % 6000 === 0) {
             console.log(`[${torrentHash}] Still waiting for files... ${waitTime}ms/${maxWaitTime}ms, peers: ${existingTorrent.numPeers}`);
           }
           setTimeout(waitForFiles, checkInterval);
@@ -2251,17 +2251,17 @@ app.post('/api/torrent/explore', (req, res) => {
     let torrentAdded = false;
     
     client.add(magnetURI, { 
-      destroyStoreOnDestroy: false, // No destruir automáticamente
-      maxConns: 55, // Más conexiones
+      destroyStoreOnDestroy: false,
+      maxConns: 55,
       announce: additionalTrackers
     }, (torrent) => {
-      if (torrentAdded) return; // Evitar callbacks múltiples
+      if (torrentAdded) return;
       torrentAdded = true;
       
       console.log(`[${torrentHash}] Torrent added successfully: ${torrent.name || 'Unknown'}`);
       console.log(`[${torrentHash}] Initial peers: ${torrent.numPeers}`);
       
-      // Configurar eventos del torrent
+ 
       torrent.on('metadata', () => {
         console.log(`[${torrentHash}] Metadata received for: ${torrent.name}`);
       });
@@ -2284,13 +2284,13 @@ app.post('/api/torrent/explore', (req, res) => {
         console.log(`[${torrentHash}] New peer connected, total peers: ${torrent.numPeers}`);
       });
       
-      // Esperar a que se carguen los archivos con timeout más inteligente
+ 
       let waitTime = 0;
-      const maxWaitTime = 40000; // 40 segundos para torrents nuevos
-      const checkInterval = 2000; // Verificar cada 2 segundos
+      const maxWaitTime = 40000;
+      const checkInterval = 2000;
       
       const checkTorrentReady = () => {
-        if (res.headersSent) return; // La respuesta ya fue enviada
+        if (res.headersSent) return;
         
         if (waitTime >= maxWaitTime) {
           console.log(`[${torrentHash}] Timeout waiting for new torrent files`);
@@ -2304,7 +2304,7 @@ app.post('/api/torrent/explore', (req, res) => {
           return sendTorrentInfo(torrent, res);
         }
         
-        // Si no hay peers después de 15 segundos, es probablemente un torrent muerto
+ 
         if (torrent.numPeers === 0 && waitTime > 15000) {
           console.log(`[${torrentHash}] No peers found, torrent might be dead`);
           torrent.destroy();
@@ -2314,23 +2314,23 @@ app.post('/api/torrent/explore', (req, res) => {
         }
         
         waitTime += checkInterval;
-        if (waitTime % 8000 === 0) { // Log cada 8 segundos
+        if (waitTime % 8000 === 0) {
           console.log(`[${torrentHash}] Waiting for torrent files... ${waitTime}ms/${maxWaitTime}ms, peers: ${torrent.numPeers}`);
         }
         setTimeout(checkTorrentReady, checkInterval);
       };
 
-      // Verificar inmediatamente si ya está listo
+ 
       if (isTorrentReady(torrent)) {
         console.log(`[${torrentHash}] Torrent immediately ready`);
         sendTorrentInfo(torrent, res);
       } else {
-        // Si no está listo, empezar a verificar
-        setTimeout(checkTorrentReady, 3000); // Esperar 3 segundos antes de empezar
+ 
+        setTimeout(checkTorrentReady, 3000);
       }
     });
 
-    // Timeout de seguridad global
+ 
     setTimeout(() => {
       if (!res.headersSent) {
         console.log(`[${torrentHash}] Global timeout reached for torrent`);
@@ -2338,7 +2338,7 @@ app.post('/api/torrent/explore', (req, res) => {
           message: 'Request timeout. The torrent is taking too long to respond. Please try again with a different torrent or quality.' 
         });
       }
-    }, 45000); // 45 segundos timeout global
+    }, 45000);
 
   } catch (error) {
     console.error(`[${torrentHash}] Error exploring torrent:`, error);
@@ -2346,7 +2346,7 @@ app.post('/api/torrent/explore', (req, res) => {
   }
 });
 
-// Función auxiliar para enviar información del torrent
+
 function sendTorrentInfo(torrent, res) {
   try {
     console.log('sendTorrentInfo called, torrent:', {
@@ -2357,16 +2357,16 @@ function sendTorrentInfo(torrent, res) {
       numPeers: torrent.numPeers
     });
 
-    // Verificar primero si el torrent está corrupto
+ 
     if (isTorrentCorrupted(torrent)) {
       console.log('Torrent is corrupted, cannot send info');
-      torrent.destroy(); // Limpiar inmediatamente
+      torrent.destroy();
       return res.status(503).json({ 
         message: 'Torrent is corrupted. Please try again with a different torrent.' 
       });
     }
 
-    // Verificar que el torrent tenga archivos cargados
+ 
     if (!torrent || !torrent.files || !Array.isArray(torrent.files) || torrent.files.length === 0) {
       console.log('Torrent files not ready, returning 503');
       return res.status(503).json({ 
@@ -2374,10 +2374,10 @@ function sendTorrentInfo(torrent, res) {
       });
     }
 
-    // Crear copias de las arrays para evitar problemas de concurrencia
+ 
     const files = [...torrent.files];
 
-    // Filtrar solo archivos de video
+ 
     const videoExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v'];
     const videoFiles = files.filter(file => {
       if (!file || !file.name) return false;
@@ -2385,7 +2385,7 @@ function sendTorrentInfo(torrent, res) {
       return videoExtensions.includes(ext);
     });
 
-    // Filtrar archivos de subtítulos
+ 
     const subtitleExtensions = ['.srt', '.vtt', '.ass', '.ssa', '.sub'];
     const subtitleFiles = files.filter(file => {
       if (!file || !file.name) return false;
@@ -2393,7 +2393,7 @@ function sendTorrentInfo(torrent, res) {
       return subtitleExtensions.includes(ext);
     });
 
-    // Contar seeds y leechers de forma segura
+ 
     let seeds = 0;
     let leechers = 0;
     
@@ -2406,7 +2406,7 @@ function sendTorrentInfo(torrent, res) {
             leechers++;
           }
         } catch (wireError) {
-          // Ignorar errores de wires individuales
+ 
         }
       });
     }
@@ -2455,7 +2455,7 @@ function sendTorrentInfo(torrent, res) {
     res.json(torrentInfo);
   } catch (error) {
     console.error('Error in sendTorrentInfo:', error);
-    // Si hay error, intentar limpiar el torrent
+ 
     try {
       if (torrent && torrent.destroy) {
         torrent.destroy();
@@ -2469,7 +2469,7 @@ function sendTorrentInfo(torrent, res) {
   }
 }
 
-// API para hacer streaming de un archivo de video del torrent
+
 app.get('/api/torrent/stream/:infoHash/:fileIndex', (req, res) => {
   const { infoHash, fileIndex } = req.params;
   const range = req.headers.range;
@@ -2480,13 +2480,13 @@ app.get('/api/torrent/stream/:infoHash/:fileIndex', (req, res) => {
     return res.status(404).json({ message: 'Torrent not found' });
   }
 
-  // Verificar si el torrent está corrupto o no tiene archivos
+ 
   if (isTorrentCorrupted(torrent) || !isTorrentReady(torrent)) {
     console.log(`Stream request for corrupted/unready torrent: ${infoHash}`);
     return res.status(503).json({ message: 'Torrent is not ready for streaming. Please wait or try again.' });
   }
 
-  // Verificar que files existe y es un array válido
+ 
   if (!torrent.files || !Array.isArray(torrent.files) || torrent.files.length === 0) {
     console.log(`Stream request but torrent has no files: ${infoHash}`);
     return res.status(503).json({ message: 'Torrent files not available yet. Please wait and try again.' });
@@ -2500,20 +2500,20 @@ app.get('/api/torrent/stream/:infoHash/:fileIndex', (req, res) => {
 
   const fileSize = file.length;
   
-  // Detectar cuando el cliente se desconecta
+ 
   const onClientDisconnect = () => {
     console.log(`[${infoHash}] Client disconnected from stream`);
-    // No destruir inmediatamente el torrent ya que el usuario podría reconectarse
-    // Solo logear para propósitos de debugging
+ 
+ 
   };
 
-  // Escuchar cuando el cliente cierra la conexión
+ 
   res.on('close', onClientDisconnect);
   res.on('finish', () => {
     console.log(`[${infoHash}] Stream finished normally`);
   });
 
-  // Limpiar listeners cuando la respuesta termine
+ 
   const originalEnd = res.end;
   res.end = function(...args) {
     res.removeListener('close', onClientDisconnect);
@@ -2521,7 +2521,7 @@ app.get('/api/torrent/stream/:infoHash/:fileIndex', (req, res) => {
   };
   
   if (range) {
-    // Manejo de range requests para streaming
+ 
     const parts = range.replace(/bytes=/, "").split("-");
     const start = parseInt(parts[0], 10);
     const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
@@ -2533,12 +2533,12 @@ app.get('/api/torrent/stream/:infoHash/:fileIndex', (req, res) => {
       'Content-Length': chunksize,
       'Content-Type': 'video/mp4',
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'no-cache' // Evitar cache para streams en vivo
+      'Cache-Control': 'no-cache' 
     });
     
     const stream = file.createReadStream({ start, end });
     
-    // Manejar errores del stream
+ 
     stream.on('error', (error) => {
       console.log(`[${infoHash}] Stream error (range): ${error.message}`);
       if (!res.headersSent) {
@@ -2546,7 +2546,7 @@ app.get('/api/torrent/stream/:infoHash/:fileIndex', (req, res) => {
       }
     });
     
-    // Manejar desconexión del cliente
+ 
     res.on('close', () => {
       if (stream && !stream.destroyed) {
         stream.destroy();
@@ -2560,12 +2560,12 @@ app.get('/api/torrent/stream/:infoHash/:fileIndex', (req, res) => {
       'Content-Length': fileSize,
       'Content-Type': 'video/mp4',
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'no-cache' // Evitar cache para streams en vivo
+      'Cache-Control': 'no-cache' 
     });
     
     const stream = file.createReadStream();
     
-    // Manejar errores del stream
+ 
     stream.on('error', (error) => {
       console.log(`[${infoHash}] Stream error (full): ${error.message}`);
       if (!res.headersSent) {
@@ -2573,7 +2573,7 @@ app.get('/api/torrent/stream/:infoHash/:fileIndex', (req, res) => {
       }
     });
     
-    // Manejar desconexión del cliente
+ 
     res.on('close', () => {
       if (stream && !stream.destroyed) {
         stream.destroy();
@@ -2585,7 +2585,7 @@ app.get('/api/torrent/stream/:infoHash/:fileIndex', (req, res) => {
   }
 });
 
-// API para obtener archivos de subtítulos del torrent
+
 app.get('/api/torrent/subtitle/:infoHash/:fileIndex', (req, res) => {
   const { infoHash, fileIndex } = req.params;
 
@@ -2595,13 +2595,13 @@ app.get('/api/torrent/subtitle/:infoHash/:fileIndex', (req, res) => {
     return res.status(404).json({ message: 'Torrent not found' });
   }
 
-  // Verificar si el torrent está corrupto o no tiene archivos
+ 
   if (isTorrentCorrupted(torrent) || !isTorrentReady(torrent)) {
     console.log(`Subtitle request for corrupted/unready torrent: ${infoHash}`);
     return res.status(503).json({ message: 'Torrent is not ready for subtitle access. Please wait or try again.' });
   }
 
-  // Verificar que files existe y es un array válido
+ 
   if (!torrent.files || !Array.isArray(torrent.files) || torrent.files.length === 0) {
     console.log(`Subtitle request but torrent has no files: ${infoHash}`);
     return res.status(503).json({ message: 'Torrent files not available yet. Please wait and try again.' });
@@ -2618,7 +2618,7 @@ app.get('/api/torrent/subtitle/:infoHash/:fileIndex', (req, res) => {
   
   const stream = file.createReadStream();
   
-  // Manejar errores del stream de subtítulos
+ 
   stream.on('error', (error) => {
     console.log(`Subtitle stream error: ${error.message}`);
     if (!res.headersSent) {
@@ -2626,7 +2626,7 @@ app.get('/api/torrent/subtitle/:infoHash/:fileIndex', (req, res) => {
     }
   });
   
-  // Manejar desconexión del cliente
+ 
   res.on('close', () => {
     if (stream && !stream.destroyed) {
       stream.destroy();
@@ -2636,7 +2636,7 @@ app.get('/api/torrent/subtitle/:infoHash/:fileIndex', (req, res) => {
   stream.pipe(res);
 });
 
-// API para obtener el progreso de un torrent
+
 app.get('/api/torrent/progress/:infoHash', (req, res) => {
   const { infoHash } = req.params;
   
@@ -2646,7 +2646,7 @@ app.get('/api/torrent/progress/:infoHash', (req, res) => {
     return res.status(404).json({ message: 'Torrent not found' });
   }
 
-  // Verificar si el torrent está corrupto
+ 
   if (isTorrentCorrupted(torrent)) {
     console.log(`Progress request for corrupted torrent: ${infoHash}`);
     return res.status(503).json({ message: 'Torrent is corrupted or not ready' });
@@ -2670,12 +2670,12 @@ app.get('/api/torrent/progress/:infoHash', (req, res) => {
   res.json(progressInfo);
 });
 
-// API para buscar subtítulos en línea (OpenSubtitles compatible)
+
 app.get('/api/subtitles/search', async (req, res) => {
   const { imdbId, movieTitle, language = 'es', season, episode } = req.query;
   
   try {
-    // Verificar que tenemos al menos el título de la película
+ 
     if (!movieTitle) {
       return res.status(400).json({ message: 'movieTitle is required' });
     }
@@ -2684,7 +2684,7 @@ app.get('/api/subtitles/search', async (req, res) => {
     
     let subtitles = [];
     
-    // Si tenemos la API key de OpenSubtitles, usar la API real
+ 
     if (OPENSUBTITLES_API_KEY) {
       try {
         subtitles = await searchOpenSubtitles(movieTitle, imdbId, language, season, episode);
@@ -2707,28 +2707,28 @@ app.get('/api/subtitles/search', async (req, res) => {
   }
 });
 
-// Función para buscar subtítulos en OpenSubtitles
+
 async function searchOpenSubtitles(movieTitle, imdbId, language, season = null, episode = null) {
   const subtitles = [];
   
   try {
     console.log('Searching OpenSubtitles with API key...');
     
-    // Construir parámetros de búsqueda
+ 
     let searchParams = `languages=${language}`;
     
     if (imdbId) {
-      // Si tenemos el ID de IMDb, usarlo (más preciso)
+ 
       const cleanImdbId = imdbId.replace('tt', '');
       searchParams += `&imdb_id=${cleanImdbId}`;
       console.log(`Searching by IMDb ID: ${cleanImdbId}`);
     } else {
-      // Si no, buscar por título
+ 
       searchParams += `&query=${encodeURIComponent(movieTitle)}`;
       console.log(`Searching by title: ${movieTitle}`);
     }
     
-    // Add season/episode parameters if provided
+ 
     if (season !== null) {
       searchParams += `&season_number=${season}`;
       if (episode !== null) {
@@ -2736,7 +2736,7 @@ async function searchOpenSubtitles(movieTitle, imdbId, language, season = null, 
       }
     }
     
-    // Buscar subtítulos directamente (sin login para API key)
+ 
     const searchUrl = `https://api.opensubtitles.com/api/v1/subtitles?${searchParams}`;
     console.log(`Making request to: ${searchUrl}`);
     
@@ -2759,7 +2759,7 @@ async function searchOpenSubtitles(movieTitle, imdbId, language, season = null, 
     const searchData = await searchResponse.json();
     console.log(`OpenSubtitles returned ${searchData.data ? searchData.data.length : 0} results`);
     
-    // Procesar resultados
+ 
     if (searchData.data && Array.isArray(searchData.data)) {
       let filteredCount = 0;
       searchData.data.forEach((subtitle, index) => {
@@ -2768,7 +2768,7 @@ async function searchOpenSubtitles(movieTitle, imdbId, language, season = null, 
             const file = subtitle.attributes.files[0];
             const attributes = subtitle.attributes;
             
-            // Debug: Log para ver la estructura de datos
+ 
             console.log(`Subtitle ${index}:`, {
               id: subtitle.id,
               fileId: file.file_id,
@@ -2776,18 +2776,18 @@ async function searchOpenSubtitles(movieTitle, imdbId, language, season = null, 
               url: attributes.url
             });
             
-            // Apply relevance filtering
+ 
             const seasonNum = season !== null ? parseInt(season) : null;
             const episodeNum = episode !== null ? parseInt(episode) : null;
             
             if (!isSubtitleRelevant(subtitle, movieTitle, seasonNum, episodeNum)) {
               console.log(`Filtering out irrelevant subtitle: ${file.file_name}`);
               filteredCount++;
-              return; // Skip this subtitle
+              return;
             }
             
-            // Incluir el file_id en la URL para usarlo directamente
-            // Usar una URL directa sin pasar por el proxy
+ 
+ 
             const downloadUrl = `/api/subtitles/opensubtitles-download/${subtitle.id}/${file.file_id}`;
             
             subtitles.push({
@@ -2820,7 +2820,7 @@ async function searchOpenSubtitles(movieTitle, imdbId, language, season = null, 
   return subtitles;
 }
 
-// Función auxiliar para obtener nombres de idiomas
+
 function getLanguageName(langCode) {
   const languageNames = {
     'es': 'Español',
@@ -2838,7 +2838,7 @@ function getLanguageName(langCode) {
   return languageNames[langCode] || langCode.toUpperCase();
 }
 
-// Function to check if a subtitle is relevant to the requested content
+
 function isSubtitleRelevant(subtitle, requestedTitle, season = null, episode = null) {
   if (!subtitle || !subtitle.attributes || !subtitle.attributes.files || subtitle.attributes.files.length === 0) {
     return false;
@@ -2849,7 +2849,7 @@ function isSubtitleRelevant(subtitle, requestedTitle, season = null, episode = n
   const movieName = subtitle.attributes.feature_details?.movie_name || '';
   const seriesName = subtitle.attributes.feature_details?.title || '';
   
-  // Normalize strings for comparison (lowercase, remove special chars)
+ 
   const normalizeString = (str) => {
     return str.toLowerCase()
       .replace(/[^a-z0-9\s]/g, ' ')
@@ -2864,30 +2864,30 @@ function isSubtitleRelevant(subtitle, requestedTitle, season = null, episode = n
 
   const requestWords = normalizedRequest.split(' ').filter(word => word.length > 2);
   
-  // Function to calculate sophisticated match score with positional awareness
+ 
   const calculateMatchScore = (text, requestWords, isMainTitle = false) => {
     const textWords = text.split(' ').filter(word => word.length > 2);
     
-    // For exact phrase match, require it to be at the beginning or a major part
+ 
     if (text.includes(normalizedRequest)) {
       const position = text.indexOf(normalizedRequest);
-      // If it's a main title field and the match is at the beginning, high score
+ 
       if (isMainTitle && position === 0) {
         return 1.0;
       }
-      // If it's just incidental (like "Foundation" in "Shoah Foundation Story"), lower score
+ 
       if (position > 10 || text.split(' ').length > requestWords.length * 2) {
-        return 0.3; // Reduced score for incidental matches
+        return 0.3;
       }
       return 0.8;
     }
     
-    // Check for word-by-word match
+ 
     let matchedWords = 0;
     let exactMatches = 0;
     let sequentialMatches = 0;
     
-    // Check for sequential word matches (higher weight)
+ 
     for (let i = 0; i <= textWords.length - requestWords.length; i++) {
       let consecutive = 0;
       for (let j = 0; j < requestWords.length; j++) {
@@ -2900,7 +2900,7 @@ function isSubtitleRelevant(subtitle, requestedTitle, season = null, episode = n
       sequentialMatches = Math.max(sequentialMatches, consecutive);
     }
     
-    // Individual word matches
+ 
     requestWords.forEach(requestWord => {
       if (textWords.includes(requestWord)) {
         exactMatches++;
@@ -2912,11 +2912,11 @@ function isSubtitleRelevant(subtitle, requestedTitle, season = null, episode = n
       }
     });
     
-    // Bonus for sequential matches (words in order)
+ 
     const sequentialBonus = sequentialMatches === requestWords.length ? 0.4 : 
                            sequentialMatches > 0 ? sequentialMatches / requestWords.length * 0.2 : 0;
     
-    // Bonus for all exact matches
+ 
     const exactMatchBonus = exactMatches === requestWords.length ? 0.3 : 0;
     
     const baseScore = requestWords.length > 0 ? matchedWords / requestWords.length : 0;
@@ -2924,16 +2924,16 @@ function isSubtitleRelevant(subtitle, requestedTitle, season = null, episode = n
     return Math.min(1.0, baseScore + sequentialBonus + exactMatchBonus);
   };
 
-  // Calculate match scores for different fields with different weights
-  // Filename is most reliable, movie/series names can be misleading
+ 
+ 
   const fileNameScore = calculateMatchScore(normalizedFileName, requestWords, true);
   const movieNameScore = calculateMatchScore(normalizedMovieName, requestWords, true);
   const seriesNameScore = calculateMatchScore(normalizedSeriesName, requestWords, true);
   
-  // Weighted scoring - filename is most reliable, others need higher threshold
+ 
   const weightedScore = (fileNameScore * 0.7) + (Math.max(movieNameScore, seriesNameScore) * 0.3);
   
-  // For TV series, also check season/episode if provided
+ 
   if (season !== null) {
     const seasonPattern = new RegExp(`s0?${season}(?![0-9])|season\\s*0?${season}(?![0-9])`, 'i');
     const hasSeasonMatch = seasonPattern.test(fileName);
@@ -2942,44 +2942,44 @@ function isSubtitleRelevant(subtitle, requestedTitle, season = null, episode = n
       const episodePattern = new RegExp(`e0?${episode}(?![0-9])|episode\\s*0?${episode}(?![0-9])`, 'i');
       const hasEpisodeMatch = episodePattern.test(fileName);
       
-      // For TV shows with specific season/episode, require both season and episode match
-      // plus at least 40% title match
+ 
+ 
       return hasSeasonMatch && hasEpisodeMatch && weightedScore >= 0.4;
     } else {
-      // For season-only requests, require season match plus at least 40% title match
+ 
       return hasSeasonMatch && weightedScore >= 0.4;
     }
   }
   
-  // For movies or general searches, if filename has strong match, use it
+ 
   if (fileNameScore >= 0.7) {
     return true;
   }
   
-  // Otherwise require higher threshold for weighted score
-  // This will filter out incidental matches like "Foundation" in "Shoah Foundation Story"
+ 
+ 
   return weightedScore >= 0.7;
 }
 
-// Function to convert SRT format to WebVTT format for browser compatibility
+
 function convertSrtToWebVtt(srtContent) {
-  // Start with WEBVTT header
+ 
   let webvtt = 'WEBVTT\n\n';
   
-  // Split content into subtitle blocks
+ 
   const blocks = srtContent.trim().split(/\n\s*\n/);
   
   for (const block of blocks) {
     const lines = block.trim().split('\n');
     if (lines.length >= 3) {
-      // Skip the subtitle number (first line)
+ 
       const timeLine = lines[1];
       const textLines = lines.slice(2);
       
-      // Convert time format from SRT (00:00:00,000) to WebVTT (00:00:00.000)
+ 
       const webvttTime = timeLine.replace(/,/g, '.');
       
-      // Add the subtitle entry
+ 
       webvtt += webvttTime + '\n';
       webvtt += textLines.join('\n') + '\n\n';
     }
@@ -2988,7 +2988,7 @@ function convertSrtToWebVtt(srtContent) {
   return webvtt;
 }
 
-// API para hacer proxy de subtítulos y evitar problemas de CORS
+
 app.get('/api/subtitles/proxy', async (req, res) => {
   const { url } = req.query;
 
@@ -2999,14 +2999,14 @@ app.get('/api/subtitles/proxy', async (req, res) => {
   console.log(`Proxying subtitle from: ${url}`);
 
   try {
-    // Verificar si es una URL interna (opensubtitles) - redirigir al endpoint correcto
+ 
     if (url.startsWith('/api/subtitles/opensubtitles-download/')) {
-      // Redirigir al endpoint específico en lugar de procesar aquí
+ 
       console.log(`Redirecting OpenSubtitles URL to specific endpoint: ${url}`);
       return res.redirect(url);
     }
 
-    // Para URLs externas, verificar que sean válidas
+ 
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       return res.status(400).json({ 
         message: 'Invalid URL format. URL must start with http:// or https://',
@@ -3014,23 +3014,23 @@ app.get('/api/subtitles/proxy', async (req, res) => {
       });
     }
 
-    // Configurar headers basados en la fuente
+ 
     const headers = {
       'User-Agent': 'ATV v1.0',
       'Accept': 'text/plain, text/vtt, application/x-subrip, */*',
       'Accept-Encoding': 'identity'
     };
 
-    // Si es una URL de OpenSubtitles, agregar autenticación
+ 
     if (url.includes('opensubtitles.com') && OPENSUBTITLES_API_KEY) {
       headers['Api-Key'] = OPENSUBTITLES_API_KEY;
       console.log('Added OpenSubtitles API key to headers');
     }
 
-    // Para URLs externas, intentar fetch con headers apropiados
+ 
     const response = await fetch(url, {
       headers: headers,
-      timeout: 15000 // 15 segundos de timeout
+      timeout: 15000
     });
     
     console.log(`Response status: ${response.status} ${response.statusText}`);
@@ -3057,20 +3057,20 @@ app.get('/api/subtitles/proxy', async (req, res) => {
       });
     }
     
-    // Obtener el contenido del subtítulo
+ 
     const content = await response.text();
     console.log(`Subtitle content length: ${content.length} characters`);
     
-    // Detectar si es SRT o VTT y establecer el content type apropiado
+ 
     const isVTT = content.includes('WEBVTT') || url.includes('.vtt');
     const contentType = isVTT ? 'text/vtt; charset=utf-8' : 'text/plain; charset=utf-8';
     
-    // Establecer las cabeceras para indicar que es un archivo de subtítulos
+ 
     res.setHeader('Content-Type', contentType);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    // Si el contenido está vacío o es muy corto, considerarlo como error
+ 
     if (!content || content.length < 10) {
       console.error('Subtitle content is empty or too short');
       return res.status(404).json({ 
@@ -3079,7 +3079,7 @@ app.get('/api/subtitles/proxy', async (req, res) => {
       });
     }
 
-    // Verificar si el contenido parece ser HTML (error page)
+ 
     if (content.toLowerCase().includes('<html>') || content.toLowerCase().includes('<!doctype')) {
       console.error('Received HTML instead of subtitle content');
       return res.status(404).json({ 
@@ -3088,7 +3088,7 @@ app.get('/api/subtitles/proxy', async (req, res) => {
       });
     }
 
-    // Enviar el contenido del subtítulo al cliente
+ 
     res.send(content);
 
   } catch (error) {
@@ -3113,7 +3113,7 @@ app.get('/api/subtitles/proxy', async (req, res) => {
 
 
 
-// Función auxiliar para formatear tiempo en formato SRT
+
 function formatSRTTime(seconds) {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -3123,7 +3123,7 @@ function formatSRTTime(seconds) {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${milliseconds.toString().padStart(3, '0')}`;
 }
 
-// API para subir subtítulos manualmente
+
 app.post('/api/subtitles/upload', upload.single('subtitle'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No subtitle file uploaded' });
@@ -3140,16 +3140,16 @@ app.post('/api/subtitles/upload', upload.single('subtitle'), (req, res) => {
   res.json(subtitleInfo);
 });
 
-// Handle preflight requests for OpenSubtitles downloads
+
 app.options('/api/subtitles/opensubtitles-download/:subtitleId/:fileId', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
-  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  res.setHeader('Access-Control-Max-Age', '86400');
   res.status(200).end();
 });
 
-// API de debug para verificar subtítulos de OpenSubtitles
+
 app.get('/api/subtitles/debug/:subtitleId/:fileId', async (req, res) => {
   const { subtitleId, fileId } = req.params;
   
@@ -3160,7 +3160,7 @@ app.get('/api/subtitles/debug/:subtitleId/:fileId', async (req, res) => {
   }
 
   try {
-    // Llamar a la API de OpenSubtitles para obtener la URL de descarga
+ 
     const downloadResponse = await fetch(`https://api.opensubtitles.com/api/v1/download`, {
       method: 'POST',
       headers: {
@@ -3180,11 +3180,11 @@ app.get('/api/subtitles/debug/:subtitleId/:fileId', async (req, res) => {
       return res.status(500).json({ error: 'No download link received' });
     }
 
-    // Descargar el archivo para debug
+ 
     const subtitleResponse = await fetch(downloadData.link);
     const content = await subtitleResponse.text();
     
-    // Retornar información de debug
+ 
     res.json({
       subtitleId,
       fileId,
@@ -3207,7 +3207,7 @@ app.get('/api/subtitles/debug/:subtitleId/:fileId', async (req, res) => {
   }
 });
 
-// API específica para descargar subtítulos de OpenSubtitles
+
 app.get('/api/subtitles/opensubtitles-download/:subtitleId/:fileId', async (req, res) => {
   const { subtitleId, fileId } = req.params;
   
@@ -3226,7 +3226,7 @@ app.get('/api/subtitles/opensubtitles-download/:subtitleId/:fileId', async (req,
   try {
     console.log(`[SUBTITLE DOWNLOAD] Downloading OpenSubtitles subtitle: ${subtitleId}/${fileId}`);
     
-    // Llamar a la API de OpenSubtitles para obtener la URL de descarga
+ 
     const downloadResponse = await fetch(`https://api.opensubtitles.com/api/v1/download`, {
       method: 'POST',
       headers: {
@@ -3257,7 +3257,7 @@ app.get('/api/subtitles/opensubtitles-download/:subtitleId/:fileId', async (req,
 
     console.log('[SUBTITLE DOWNLOAD] OpenSubtitles download link obtained:', downloadData.link);
 
-    // Descargar el archivo de subtítulos
+ 
     const subtitleResponse = await fetch(downloadData.link, {
       headers: {
         'User-Agent': 'ATV v1.0'
@@ -3270,36 +3270,36 @@ app.get('/api/subtitles/opensubtitles-download/:subtitleId/:fileId', async (req,
       throw new Error(`Failed to download subtitle file: ${subtitleResponse.statusText}`);
     }
 
-    // Leer el contenido del subtítulo como texto
+ 
     const subtitleContent = await subtitleResponse.text();
     console.log('[SUBTITLE DOWNLOAD] Subtitle content length:', subtitleContent.length);
 
-    // Verificar que el contenido no esté vacío
+ 
     if (!subtitleContent || subtitleContent.trim().length === 0) {
       throw new Error('Subtitle file is empty');
     }
 
-    // Limpiar y normalizar el contenido del subtítulo
+ 
     let cleanContent = subtitleContent;
     
-    // Eliminar BOM si existe
+ 
     cleanContent = cleanContent.replace(/^\uFEFF/, '');
     
-    // Normalizar terminadores de línea a LF (más compatible con navegadores)
+ 
     cleanContent = cleanContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     
-    // Verificar que tenga el formato SRT básico
+ 
     const srtPattern = /^\d+\s*\n\d{2}:\d{2}:\d{2},\d{3}\s*-->\s*\d{2}:\d{2}:\d{2},\d{3}/m;
     if (!srtPattern.test(cleanContent)) {
       console.log('[SUBTITLE DOWNLOAD] Warning: Content does not appear to be valid SRT format');
-      // Intentar arreglar formato básico si es posible
+ 
       cleanContent = cleanContent.trim();
       if (!cleanContent.endsWith('\n')) {
         cleanContent += '\n';
       }
     }
 
-    // Asegurar que termine con una línea vacía
+ 
     if (!cleanContent.endsWith('\n\n')) {
       cleanContent += '\n';
     }
@@ -3307,29 +3307,29 @@ app.get('/api/subtitles/opensubtitles-download/:subtitleId/:fileId', async (req,
     console.log('[SUBTITLE DOWNLOAD] Content preview:', cleanContent.substring(0, 200));
     console.log('[SUBTITLE DOWNLOAD] Content ends with:', cleanContent.substring(Math.max(0, cleanContent.length - 50)));
 
-    // Convertir SRT a WebVTT para mejor compatibilidad con navegadores
+ 
     const webvttContent = convertSrtToWebVtt(cleanContent);
     console.log('[SUBTITLE DOWNLOAD] Converted to WebVTT, length:', webvttContent.length);
 
-    // Configurar headers para la respuesta
-    res.setHeader('Content-Type', 'text/vtt; charset=utf-8'); // Usar text/vtt que es más estándar para subtítulos
+ 
+    res.setHeader('Content-Type', 'text/vtt; charset=utf-8');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
     res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length');
-    // NO usar Content-Disposition: attachment para subtítulos que se cargan en el video player
+ 
     res.setHeader('Content-Length', Buffer.byteLength(webvttContent, 'utf8'));
-    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache por 1 hora
+    res.setHeader('Cache-Control', 'public, max-age=3600');
 
     console.log('[SUBTITLE DOWNLOAD] Sending subtitle content to client');
     
-    // Enviar el contenido en formato WebVTT
+ 
     res.send(webvttContent);
 
   } catch (error) {
     console.error('[SUBTITLE DOWNLOAD] Error downloading OpenSubtitles subtitle:', error);
     
-    // Proporcionar un mensaje de error más específico
+ 
     let errorMessage = 'Error al descargar subtítulo';
     let statusCode = 500;
     
@@ -3354,7 +3354,7 @@ app.get('/api/subtitles/opensubtitles-download/:subtitleId/:fileId', async (req,
   }
 });
 
-// API para actuar como proxy y descargar subtítulos, evitando problemas de CORS
+
 app.get('/api/subtitles/download', async (req, res) => {
   const { url } = req.query;
 
@@ -3368,11 +3368,11 @@ app.get('/api/subtitles/download', async (req, res) => {
       throw new Error(`Failed to fetch subtitle from external source: ${response.statusText}`);
     }
     
-    // Establecer las cabeceras adecuadas para que el cliente lo interprete como un archivo de texto
+ 
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Access-Control-Allow-Origin', '*');
 
-    // Enviar el contenido del subtítulo al cliente
+ 
     response.body.pipe(res);
 
   } catch (error) {
@@ -3383,13 +3383,13 @@ app.get('/api/subtitles/download', async (req, res) => {
 
 
 
-// Función para extraer calidad del título del torrent
+
 function extractQualityFromTitle(title) {
   if (!title) return 'Unknown';
   
   const titleUpper = title.toUpperCase();
   
-  // Buscar resoluciones comunes en orden de preferencia (más específicas primero)
+ 
   const qualityPatterns = [
     { pattern: /2160P|4K|UHD/i, quality: '4K' },
     { pattern: /1080P/i, quality: '1080p' },
@@ -3415,7 +3415,7 @@ function extractQualityFromTitle(title) {
     }
   }
   
-  // Si no se encuentra una calidad específica, intentar extraer números seguidos de 'P'
+ 
   const resolutionMatch = title.match(/(\d{3,4})P/i);
   if (resolutionMatch) {
     return resolutionMatch[1] + 'p';

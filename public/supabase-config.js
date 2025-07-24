@@ -1,8 +1,8 @@
-// supabase-config.js
-// Importar Supabase desde CDN (ya cargado en index.html)
-// const { createClient } = supabase (se accede globalmente)
 
-// Función para obtener configuración de Supabase desde el servidor
+
+
+
+
 async function getSupabaseConfig() {
   try {
     const response = await fetch('/api/config');
@@ -17,13 +17,13 @@ async function getSupabaseConfig() {
   }
 }
 
-// Inicializar Supabase de forma asíncrona
+
 let supabaseClient = null;
 
 async function initializeSupabase() {
   const config = await getSupabaseConfig();
   
-  // Configurar opciones adicionales para resolver errores 406
+
   const options = {
     auth: {
       autoRefreshToken: true,
@@ -43,9 +43,9 @@ async function initializeSupabase() {
   return supabaseClient;
 }
 
-// Funciones de autenticación
+
 window.supabaseAuth = {
-  // Registrar nuevo usuario
+
   async signUp(email, password, userData = {}) {
     try {
       if (!supabaseClient) await initializeSupabase();
@@ -66,7 +66,7 @@ window.supabaseAuth = {
     }
   },
 
-  // Iniciar sesión
+
   async signIn(email, password) {
     try {
       if (!supabaseClient) await initializeSupabase();
@@ -84,7 +84,7 @@ window.supabaseAuth = {
     }
   },
 
-  // Cerrar sesión
+
   async signOut() {
     try {
       if (!supabaseClient) await initializeSupabase();
@@ -98,14 +98,14 @@ window.supabaseAuth = {
     }
   },
 
-  // Obtener usuario actual
+
   async getCurrentUser() {
     try {
       if (!supabaseClient) await initializeSupabase();
       
       const { data: { user }, error } = await supabaseClient.auth.getUser();
       if (error) {
-        // Si es solo un error de sesión faltante, no lo reportamos como error
+
         if (error.message && error.message.includes('Auth session missing')) {
           return null; // Usuario no logueado (estado normal)
         }
@@ -113,7 +113,7 @@ window.supabaseAuth = {
       }
       return user;
     } catch (error) {
-      // Solo registrar errores que no sean de sesión faltante
+
       if (!error.message || !error.message.includes('Auth session missing')) {
         console.error('Error obteniendo usuario:', error);
       }
@@ -121,34 +121,34 @@ window.supabaseAuth = {
     }
   },
 
-  // Escuchar cambios en la autenticación
+
   async onAuthStateChange(callback) {
     if (!supabaseClient) await initializeSupabase();
     return supabaseClient.auth.onAuthStateChange(callback);
   }
 };
 
-// Funciones para gestión de favoritos
+
 window.supabaseFavorites = {
-  // Obtener favoritos del usuario
+
   async getFavorites(userId) {
     try {
       if (!supabaseClient) await initializeSupabase();
       
-      // Verificar autenticación actual
+
       const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
       if (authError || !user) {
         console.error('Usuario no autenticado:', authError);
         return { success: false, error: 'Usuario no autenticado' };
       }
       
-      // Verificar que el userId coincida con el usuario autenticado
+
       if (user.id !== userId) {
         console.error('Mismatch entre usuario autenticado y userId solicitado');
         return { success: false, error: 'No autorizado' };
       }
       
-      // Intentar obtener favoritos directamente sin verificaciones adicionales
+
       console.log('🔍 Obteniendo favoritos para usuario:', user.id);
       const { data, error } = await supabaseClient
         .from('favorites')
@@ -157,7 +157,7 @@ window.supabaseFavorites = {
       
       if (error) {
         console.error('Error RLS en getFavorites:', error);
-        // Si es un error de RLS, mostrar información útil
+
         if (error.code === '42501') {
           console.error('🚨 ERROR RLS: La tabla favorites no tiene las políticas correctas.');
           console.error('🔧 Ejecuta el script supabase-rls-fix.sql en tu proyecto Supabase.');
@@ -173,19 +173,19 @@ window.supabaseFavorites = {
     }
   },
 
-  // Agregar favorito
+
   async addFavorite(userId, movieData) {
     try {
       if (!supabaseClient) await initializeSupabase();
       
-      // Verificar autenticación actual
+
       const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
       if (authError || !user) {
         console.error('Usuario no autenticado:', authError);
         return { success: false, error: 'Usuario no autenticado' };
       }
       
-      // Verificar que el userId coincida con el usuario autenticado
+
       if (user.id !== userId) {
         console.error('Mismatch entre usuario autenticado y userId solicitado');
         return { success: false, error: 'No autorizado' };
@@ -203,7 +203,7 @@ window.supabaseFavorites = {
       
       if (error) {
         console.error('Error RLS en addFavorite:', error);
-        // Si es un error de RLS, mostrar información útil
+
         if (error.code === '42501') {
           console.error('🚨 ERROR RLS: La tabla favorites no tiene las políticas correctas.');
           console.error('🔧 Ejecuta el script supabase-rls-fix.sql en tu proyecto Supabase.');
@@ -219,19 +219,19 @@ window.supabaseFavorites = {
     }
   },
 
-  // Eliminar favorito
+
   async removeFavorite(userId, movieTitle) {
     try {
       if (!supabaseClient) await initializeSupabase();
       
-      // Verificar autenticación actual
+
       const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
       if (authError || !user) {
         console.error('Usuario no autenticado:', authError);
         return { success: false, error: 'Usuario no autenticado' };
       }
       
-      // Verificar que el userId coincida con el usuario autenticado
+
       if (user.id !== userId) {
         console.error('Mismatch entre usuario autenticado y userId solicitado');
         return { success: false, error: 'No autorizado' };
@@ -260,19 +260,19 @@ window.supabaseFavorites = {
     }
   },
 
-  // Obtener todos los favoritos de un usuario (OPTIMIZADO)
+
   async getAllUserFavorites(userId) {
     try {
       if (!supabaseClient) await initializeSupabase();
       
-      // Verificar autenticación actual
+
       const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
       if (authError || !user) {
         console.warn('Usuario no autenticado para obtener favoritos');
         return [];
       }
       
-      // Verificar que el userId coincida con el usuario autenticado
+
       if (user.id !== userId) {
         console.warn('Mismatch entre usuario autenticado y userId solicitado');
         return [];
@@ -300,19 +300,19 @@ window.supabaseFavorites = {
     }
   },
 
-  // Verificar si una película es favorita
+
   async isFavorite(userId, movieTitle) {
     try {
       if (!supabaseClient) await initializeSupabase();
       
-      // Verificar autenticación actual
+
       const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
       if (authError || !user) {
         console.warn('Usuario no autenticado para verificar favorito');
         return false;
       }
       
-      // Verificar que el userId coincida con el usuario autenticado
+
       if (user.id !== userId) {
         console.warn('Mismatch entre usuario autenticado y userId solicitado');
         return false;
@@ -343,18 +343,18 @@ window.supabaseFavorites = {
   }
 };
 
-// Inicializar Supabase cuando se carga el archivo
-// Esto permite que esté listo para cuando se necesite
+
+
 initializeSupabase().catch(error => {
   console.error('Error inicializando Supabase:', error);
 });
 
-// Función de debugging completa para verificar estado de autenticación
+
 window.debugSupabaseAuth = async function() {
   console.log('🔍 === DEBUG COMPLETO DE SUPABASE ===');
   
   try {
-    // 1. Verificar configuración del servidor
+
     console.log('1️⃣ Verificando configuración del servidor...');
     const configResponse = await fetch('/api/config');
     const config = await configResponse.json();
@@ -365,7 +365,7 @@ window.debugSupabaseAuth = async function() {
       keyStart: config.SUPABASE_ANON_KEY?.substring(0, 20) + '...'
     });
     
-    // 2. Verificar inicialización del cliente
+
     console.log('2️⃣ Verificando cliente Supabase...');
     if (!supabaseClient) {
       console.log('❌ Cliente de Supabase no inicializado, intentando inicializar...');
@@ -379,7 +379,7 @@ window.debugSupabaseAuth = async function() {
       return;
     }
     
-    // 3. Verificar usuario actual
+
     console.log('3️⃣ Verificando autenticación...');
     const { data: { user }, error } = await supabaseClient.auth.getUser();
     
@@ -396,7 +396,7 @@ window.debugSupabaseAuth = async function() {
         last_sign_in_at: user.last_sign_in_at
       });
       
-      // 4. Verificar acceso a tabla favorites (sin RLS)
+
       console.log('4️⃣ Verificando acceso a tabla favorites...');
       const { data, error: favError } = await supabaseClient
         .from('favorites')
@@ -411,7 +411,7 @@ window.debugSupabaseAuth = async function() {
         console.log('✅ Acceso a tabla favorites exitoso');
       }
       
-      // 5. Intentar inserción de prueba
+
       console.log('5️⃣ Probando inserción de prueba...');
       const testTitle = 'TEST_MOVIE_' + Date.now();
       const { data: testData, error: testError } = await supabaseClient
@@ -431,7 +431,7 @@ window.debugSupabaseAuth = async function() {
         }
       } else {
         console.log('✅ Inserción de prueba exitosa');
-        // Limpiar el registro de prueba
+
         await supabaseClient
           .from('favorites')
           .delete()
@@ -450,7 +450,7 @@ window.debugSupabaseAuth = async function() {
   }
 };
 
-// Función para verificar y recrear políticas RLS
+
 window.debugSupabaseRLS = async function() {
   console.log('🔧 Para solucionar el problema, ejecuta este SQL en el editor de Supabase:');
   console.log(`

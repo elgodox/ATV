@@ -1,9 +1,9 @@
-// module-loader.js
-// Este archivo actúa como un wrapper para cargar módulos de manera segura
+
+
 
 async function loadSupabaseConfig() {
   try {
-    // Esperar a que el script de supabase-config.js se cargue
+
     let attempts = 0;
     while (!window.supabaseAuth && attempts < 50) {
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -20,7 +20,7 @@ async function loadSupabaseConfig() {
     }
   } catch (error) {
     console.error('Error loading Supabase config:', error);
-    // Fallback para desarrollo sin Supabase
+
     return {
       auth: {
         signUp: async () => ({ success: false, error: 'Supabase no configurado' }),
@@ -39,5 +39,5 @@ async function loadSupabaseConfig() {
   }
 }
 
-// Hacer disponible globalmente
+
 window.loadSupabaseConfig = loadSupabaseConfig;
