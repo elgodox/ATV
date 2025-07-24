@@ -3518,7 +3518,7 @@ h1 {
 }
 
 /* Modal de autenticación */
-.modal {
+#auth-modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -3532,11 +3532,11 @@ h1 {
   backdrop-filter: blur(5px);
 }
 
-.modal.hidden {
+#auth-modal.hidden {
   display: none !important;
 }
 
-.modal-content {
+#auth-modal .modal-content {
   background: white;
   padding: 0;
   border-radius: 16px;
@@ -3559,7 +3559,7 @@ h1 {
   }
 }
 
-.modal-header {
+#auth-modal .modal-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   padding: 20px;
@@ -3569,12 +3569,12 @@ h1 {
   align-items: center;
 }
 
-.modal-header h2 {
+#auth-modal .modal-header h2 {
   margin: 0;
   font-size: 1.4em;
 }
 
-.close-modal {
+#auth-modal .close-modal {
   background: none;
   border: none;
   color: white;
@@ -3590,11 +3590,11 @@ h1 {
   transition: background-color 0.2s;
 }
 
-.close-modal:hover {
+#auth-modal .close-modal:hover {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
-.modal-body {
+#auth-modal .modal-body {
   padding: 30px;
 }
 
@@ -3693,12 +3693,12 @@ h1 {
     gap: 8px;
   }
   
-  .modal-content {
+  #auth-modal .modal-content {
     width: 95%;
     margin: 10px;
   }
   
-  .modal-body {
+  #auth-modal .modal-body {
     padding: 20px;
   }
 }
