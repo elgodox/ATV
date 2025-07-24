@@ -3065,6 +3065,9 @@ function updateAuthUI(user) {
       favoriteFilterGroup.style.display = 'flex';
     }
     
+    // Precargar favoritos para mejor rendimiento
+    preloadUserFavorites();
+    
     // Cargar títulos si el filtro está activado
     getTitles();
   } else {
@@ -3122,18 +3125,55 @@ async function getPlatforms(movieId) {
 }
 
 
-// Alternar favoritos
+// Cache para favoritos para mejorar rendimiento
+let favoritesCache = new Map();
+let lastFavoritesCacheUpdate = 0;
+const FAVORITES_CACHE_DURATION = 30000; // 30 segundos
+
+// Variables para prevenir múltiples clics
+let favoriteOperationsInProgress = new Set();
+let lastFavoriteClickTime = 0;
+const FAVORITE_CLICK_DEBOUNCE = 300; // 300ms
+
+// Alternar favoritos - versión optimizada
 async function toggleFavorite(movieId, type, event) {
   // Evitar que el clic en el corazón se propague y abra el modal
   event.stopPropagation();
 
+  // Debouncing para evitar clics múltiples rápidos
+  const now = Date.now();
+  if (now - lastFavoriteClickTime < FAVORITE_CLICK_DEBOUNCE) {
+    return;
+  }
+  lastFavoriteClickTime = now;
+
   if (!currentUser) {
-      showNotification("Primero debes iniciar sesión", 'warning');
-      return;
+    showNotification("Primero debes iniciar sesión", 'warning');
+    return;
   }
 
+  // Prevenir múltiples operaciones simultáneas en el mismo elemento
+  const operationKey = `${movieId}-${type}`;
+  if (favoriteOperationsInProgress.has(operationKey)) {
+    return; // Operación ya en progreso
+  }
+
+  favoriteOperationsInProgress.add(operationKey);
+
   try {
-    // Obtener datos de la película del DOM o de las variables globales
+    // Feedback visual inmediato
+    const heartIcon = document.getElementById(`heart-icon-${movieId}`);
+    if (!heartIcon) {
+      favoriteOperationsInProgress.delete(operationKey);
+      return;
+    }
+
+    // Agregar clase de loading y desactivar el botón temporalmente
+    heartIcon.style.pointerEvents = 'none';
+    heartIcon.style.opacity = '0.6';
+    heartIcon.classList.add('fa-pulse');
+
+    // Obtener datos de la película del DOM
     const movieCard = event.target.closest('.movie-card');
     const movieTitle = movieCard?.querySelector('h3')?.textContent || `Movie ${movieId}`;
     const movieImage = movieCard?.querySelector('img')?.src || '';
@@ -3142,56 +3182,118 @@ async function toggleFavorite(movieId, type, event) {
       id: movieId,
       title: movieTitle,
       type: type,
-      image: movieImage,
-      // Agregar más datos si están disponibles
+      image: movieImage
     };
 
-    // Verificar si ya es favorito
-    const isFav = await favorites.isFavorite(currentUser.id, movieTitle);
+    // Verificar estado actual usando cache o consulta rápida
+    const currentIsFavorite = await isFavoriteOptimized(currentUser.id, movieTitle);
     
-    if (isFav) {
-      // Remover de favoritos
-      const result = await favorites.removeFavorite(currentUser.id, movieTitle);
+    let result;
+    if (currentIsFavorite) {
+      // Cambio visual inmediato
+      heartIcon.style.color = 'black';
+      
+      // Operación en background
+      result = await favorites.removeFavorite(currentUser.id, movieTitle);
+      
       if (result.success) {
-        document.getElementById(`heart-icon-${movieId}`).style.color = 'black';
+        // Actualizar cache
+        favoritesCache.delete(movieTitle);
         showNotification('Eliminado de favoritos', 'success');
       } else {
-        console.error('Error removiendo favorito:', result.error);
-        if (result.error && result.error.includes('autenticado')) {
-          showNotification('Sesión expirada. Por favor, inicia sesión nuevamente', 'warning');
-          updateAuthUI(null); // Limpiar estado de usuario
-        } else {
-          showNotification('Error al eliminar favorito: ' + (result.error || 'Error desconocido'), 'error');
-        }
+        // Revertir cambio visual si falla
+        heartIcon.style.color = 'red';
+        throw new Error(result.error || 'Error al eliminar favorito');
       }
     } else {
-      // Agregar a favoritos
-      const result = await favorites.addFavorite(currentUser.id, movieData);
+      // Cambio visual inmediato
+      heartIcon.style.color = 'red';
+      
+      // Operación en background
+      result = await favorites.addFavorite(currentUser.id, movieData);
+      
       if (result.success) {
-        document.getElementById(`heart-icon-${movieId}`).style.color = 'red';
+        // Actualizar cache
+        favoritesCache.set(movieTitle, true);
         showNotification('Agregado a favoritos', 'success');
       } else {
-        console.error('Error agregando favorito:', result.error);
-        if (result.error && result.error.includes('autenticado')) {
-          showNotification('Sesión expirada. Por favor, inicia sesión nuevamente', 'warning');
-          updateAuthUI(null); // Limpiar estado de usuario
-        } else {
-          showNotification('Error al agregar favorito: ' + (result.error || 'Error desconocido'), 'error');
-        }
+        // Revertir cambio visual si falla
+        heartIcon.style.color = 'black';
+        throw new Error(result.error || 'Error al agregar favorito');
       }
     }
 
-    // Actualizar la lista de favoritos
+    // Actualizar la lista de favoritos si estamos viendo favoritos
     if (showingFavorites) {
-      loadFavorites();
+      setTimeout(() => loadFavorites(), 500); // Pequeño delay para mejor UX
     }
+
   } catch (error) {
     console.error('Error toggleFavorite:', error);
-    showNotification('Error al actualizar favoritos', 'error');
+    
+    // Manejar errores de autenticación
+    if (error.message && error.message.includes('autenticado')) {
+      showNotification('Sesión expirada. Por favor, inicia sesión nuevamente', 'warning');
+      updateAuthUI(null);
+    } else {
+      showNotification('Error al actualizar favoritos', 'error');
+    }
+  } finally {
+    // Restaurar el botón
+    const heartIcon = document.getElementById(`heart-icon-${movieId}`);
+    if (heartIcon) {
+      heartIcon.style.pointerEvents = 'auto';
+      heartIcon.style.opacity = '1';
+      heartIcon.classList.remove('fa-pulse');
+    }
+    
+    favoriteOperationsInProgress.delete(operationKey);
   }
 }
 
-// Función para cargar los favoritos desde Supabase
+// Función optimizada para verificar favoritos usando cache
+async function isFavoriteOptimized(userId, movieTitle) {
+  // Si tenemos cache reciente, usarlo
+  const now = Date.now();
+  if (now - lastFavoritesCacheUpdate < FAVORITES_CACHE_DURATION && favoritesCache.has(movieTitle)) {
+    return favoritesCache.get(movieTitle);
+  }
+
+  // Si no hay cache o está expirado, hacer consulta
+  try {
+    const result = await favorites.isFavorite(userId, movieTitle);
+    favoritesCache.set(movieTitle, result);
+    return result;
+  } catch (error) {
+    console.error('Error checking favorite status:', error);
+    return false;
+  }
+}
+
+// Función para precargar favoritos del usuario
+async function preloadUserFavorites() {
+  if (!currentUser) return;
+  
+  try {
+    console.log('🚀 Precargando favoritos del usuario...');
+    const result = await favorites.getFavorites(currentUser.id);
+    
+    if (result.success) {
+      // Actualizar cache con todos los favoritos
+      favoritesCache.clear();
+      result.data.forEach(favorite => {
+        favoritesCache.set(favorite.movie_title, true);
+      });
+      lastFavoritesCacheUpdate = Date.now();
+      
+      console.log(`✅ ${result.data.length} favoritos precargados en cache`);
+    }
+  } catch (error) {
+    console.error('Error precargando favoritos:', error);
+  }
+}
+
+// Función para cargar los favoritos desde Supabase - versión optimizada
 async function loadFavorites() {
   if (!currentUser) return;
 
@@ -3201,12 +3303,22 @@ async function loadFavorites() {
     if (result.success) {
       const userFavorites = result.data;
       
-      // Actualizar el color de los corazones en la UI
+      // Actualizar cache con los favoritos
+      favoritesCache.clear();
       userFavorites.forEach(favorite => {
-        const heartIcon = document.getElementById(`heart-icon-${favorite.movie_data.id}`);
-        if (heartIcon) {
-          heartIcon.style.color = 'red';
-        }
+        favoritesCache.set(favorite.movie_title, true);
+      });
+      lastFavoritesCacheUpdate = Date.now();
+      
+      // Actualizar el color de los corazones en la UI de manera optimizada
+      // Usar requestAnimationFrame para mejor rendimiento
+      requestAnimationFrame(() => {
+        userFavorites.forEach(favorite => {
+          const heartIcon = document.getElementById(`heart-icon-${favorite.movie_data.id}`);
+          if (heartIcon) {
+            heartIcon.style.color = 'red';
+          }
+        });
       });
     }
   } catch (error) {

@@ -194,7 +194,6 @@
   overflow: hidden;
   /* Enhanced accessibility */
   outline: none;
-  tabindex: 0;
 }
 
 .suggestion-tag::before {
@@ -1085,11 +1084,61 @@ h1 {
 .card-icons i {
   font-size: 1.2em;
   cursor: pointer;
-  transition: color 0.3s ease, transform 0.3s ease;
+  transition: color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+  position: relative;
 }
 
 .card-icons i:hover {
   transform: scale(1.1); /* Efecto de zoom al pasar el ratón por encima */
+}
+
+/* Mejores estilos para el corazón de favoritos */
+.fa-heart {
+  color: rgba(255, 255, 255, 0.6);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fa-heart:hover {
+  color: #ff4757 !important;
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 8px rgba(255, 71, 87, 0.5));
+}
+
+.fa-heart[style*="red"] {
+  color: #ff4757 !important;
+  filter: drop-shadow(0 0 6px rgba(255, 71, 87, 0.4));
+}
+
+.fa-heart[style*="black"] {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Animación de pulso para loading */
+@keyframes heartPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.fa-heart.fa-pulse {
+  animation: heartPulse 1s infinite;
+}
+
+/* Estados activos mejorados */
+.fa-heart:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+/* Mejorar feedback visual para el botón de visto */
+.fa-eye {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fa-eye:hover {
+  color: #3742fa !important;
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 8px rgba(55, 66, 250, 0.5));
 }
 
 .movie-card img {
