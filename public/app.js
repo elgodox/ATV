@@ -24,6 +24,7 @@ let spanishTitle = '';
 let currentUser = null;
 let showingFavorites = false;
 let stallTimeoutId = null;
+let statsInterval = null;
 window.localSubtitleBlobUrls = [];
 // Watch progress tracking variables
 let watchProgressInterval = null;
