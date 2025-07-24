@@ -7,9 +7,9 @@ async function initSupabase() {
     const supabaseModule = await window.loadSupabaseConfig();
     auth = supabaseModule.auth;
     favorites = supabaseModule.favorites;
-    console.log('✅ Supabase configurado correctamente');
+    // ...
   } catch (error) {
-    console.error('❌ Error configurando Supabase:', error);
+    // ...
     // Continuar sin Supabase (modo offline/demo)
   }
 }
@@ -81,7 +81,7 @@ function hideNotification() {
 
 // Test function for debugging and verification
 function testVideoStreamingFeatures() {
-  console.log('Testing Video Streaming Features...');
+  // ...
   
   // Test notification system
   showNotification('Testing notification system', 'info', 2000);
@@ -113,10 +113,10 @@ function testVideoStreamingFeatures() {
   const missingElements = subtitleElements.filter(id => !document.getElementById(id));
   
   if (missingElements.length > 0) {
-    console.warn('Missing subtitle elements:', missingElements);
+    // ...
     showNotification(`Missing subtitle elements: ${missingElements.join(', ')}`, 'warning');
   } else {
-    console.log('All subtitle elements found');
+    // ...
     showNotification('All subtitle controls are available', 'success');
   }
 }
@@ -621,7 +621,7 @@ document.getElementById('auth-modal').addEventListener('click', (e) => {
 // Debug: verificar que los elementos principales existan
 document.addEventListener('DOMContentLoaded', function() {
   setTimeout(() => {
-    console.log('=== DEBUG: Verificando elementos ===');
+    // ...
     const requiredElements = [
       'search-bar',
       'filters-toggle', 
@@ -636,11 +636,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     requiredElements.forEach(id => {
       const element = document.getElementById(id);
-      console.log(`${id}:`, element ? '✓ Encontrado' : '✗ NO ENCONTRADO');
+      // ...
     });
     
-    console.log('Radio buttons tipo:', document.querySelectorAll('input[name="type"]').length);
-    console.log('=== FIN DEBUG ===');
+    // ...
+    // ...
   }, 1000);
 });
 
@@ -663,7 +663,7 @@ async function fetchProviders(type) {
       });
     }
   } catch (error) {
-    console.error("Error fetching providers:", error);
+    // ...
   }
 }
 
@@ -674,7 +674,7 @@ async function fetchData(endpoint, params = '') {
     const response = await fetch(`/api/${endpoint}?${params}`);
     return await response.json();
   } catch (error) {
-    console.error('Error fetching data:', error);
+    // ...
   }
 }
 
@@ -707,11 +707,11 @@ async function getGenres(type) {
     } else if (data && Array.isArray(data.genres)) {
       return data.genres;
     } else {
-      console.warn('Invalid genres response:', data);
+      // ...
       return [];
     }
   } catch (error) {
-    console.error('Error fetching genres:', error);
+    // ...
     return [];
   }
 }
@@ -779,35 +779,35 @@ async function getTitles(page = 1) {
   
   // Verificar si el filtro de favoritos está activo
   if (showingFavorites) {
-    console.log('🔍 Cargando favoritos...');
+    // ...
     
     if (!currentUser) {
-      console.log('❌ No hay usuario autenticado');
+      // ...
       elements.movieGrid.innerHTML = '<p>Debes iniciar sesión para ver tus favoritos.</p>';
       return;
     }
 
     try {
-      console.log('📡 Obteniendo favoritos de la base de datos...');
+      // ...
       const favoritesResult = await favorites.getFavorites(currentUser.id);
       
-      console.log('📊 Resultado de favoritos:', favoritesResult);
+      // ...
       
       if (!favoritesResult.success) {
-        console.log('❌ Error al obtener favoritos:', favoritesResult.error);
+        // ...
         elements.movieGrid.innerHTML = '<p>Error al cargar favoritos: ' + (favoritesResult.error || 'Error desconocido') + '</p>';
         return;
       }
 
       let userFavorites = favoritesResult.data || [];
-      console.log(`✅ Favoritos obtenidos: ${userFavorites.length} elementos`);
+      // ...
 
       // Filter favorites by the current type (movie or tv), or all if no type selected
       if (type && type !== '') {
-        console.log(`🔽 Filtrando por tipo: ${type}`);
+        // ...
         const beforeFilter = userFavorites.length;
         userFavorites = userFavorites.filter(fav => fav.movie_data.type === type);
-        console.log(`📊 Después del filtro: ${userFavorites.length}/${beforeFilter}`);
+        // ...
       }
 
       if (userFavorites.length === 0) {
@@ -1040,10 +1040,9 @@ async function getTitles(page = 1) {
 // Función para actualizar los colores de los corazones basado en el estado real de favoritos
 async function updateFavoriteColors(titles, contentType) {
   if (!currentUser) return;
-  
+
   // Si estamos mostrando favoritos, todos deberían estar en rojo
   if (showingFavorites) {
-    console.log('� Modo favoritos: marcando todos como favoritos');
     for (const title of titles) {
       const heartIcon = document.getElementById(`heart-icon-${title.id}`);
       if (heartIcon) {
@@ -1052,26 +1051,22 @@ async function updateFavoriteColors(titles, contentType) {
     }
     return;
   }
-  
+
   // Verificación real de favoritos para modo normal
-  console.log('� Verificando estado real de favoritos para cada título...');
-  
   for (const title of titles) {
     try {
       // Obtener el título correcto
       const movieTitle = title.title || title.name;
       const titleType = title.content_type || contentType || 'movie';
-      
+
       // Verificar si es favorito
       const isFav = await isFavorite(title.id, titleType);
       const heartIcon = document.getElementById(`heart-icon-${title.id}`);
-      
+
       if (heartIcon) {
         heartIcon.style.color = isFav ? 'red' : 'black';
-        console.log(`${isFav ? '❤️' : '🖤'} ${movieTitle}: ${isFav ? 'FAVORITO' : 'no favorito'}`);
       }
     } catch (error) {
-      console.warn(`⚠️ Error verificando favorito para ${title.title || title.name}:`, error);
       // En caso de error, dejar como no favorito (negro)
       const heartIcon = document.getElementById(`heart-icon-${title.id}`);
       if (heartIcon) {
@@ -1079,17 +1074,15 @@ async function updateFavoriteColors(titles, contentType) {
       }
     }
   }
-  
-  console.log('✅ Verificación de favoritos completada');
 }
+
 
 // NUEVA FUNCIÓN OPTIMIZADA: reemplaza a updateFavoriteColors anterior
 async function updateFavoriteColors_OPTIMIZED(titles, contentType) {
   if (!currentUser) return;
-  
+
   // Si estamos mostrando favoritos, todos deberían estar en rojo
   if (showingFavorites) {
-    console.log('❤️ Modo favoritos: marcando todos como favoritos');
     for (const title of titles) {
       const heartIcon = document.getElementById(`heart-icon-${title.id}`);
       if (heartIcon) {
@@ -1098,34 +1091,26 @@ async function updateFavoriteColors_OPTIMIZED(titles, contentType) {
     }
     return;
   }
-  
+
   try {
-    console.log('🔍 Obteniendo todos los favoritos del usuario de una vez...');
-    
     // Obtener todos los favoritos del usuario de una sola vez
     const userFavorites = await favorites.getAllUserFavorites(currentUser.id);
-    console.log('📋 Favoritos obtenidos:', userFavorites);
-    
+
     // Crear un Set para búsqueda rápida por título
     const favoritesTitles = new Set(userFavorites.map(fav => fav.movie_title));
-    
+
     // Actualizar cada ícono según el estado
     for (const title of titles) {
       const movieTitle = title.title || title.name;
       const heartIcon = document.getElementById(`heart-icon-${title.id}`);
-      
+
       if (heartIcon) {
         const isFavorite = favoritesTitles.has(movieTitle);
         heartIcon.style.color = isFavorite ? 'red' : 'black';
-        console.log(`${isFavorite ? '❤️' : '🖤'} ${movieTitle}: ${isFavorite ? 'FAVORITO' : 'no favorito'}`);
       }
     }
-    
-    console.log('✅ Verificación de favoritos completada (optimizada)');
-    
+
   } catch (error) {
-    console.error('❌ Error obteniendo favoritos:', error);
-    
     // Fallback: marcar todos como no favoritos
     for (const title of titles) {
       const heartIcon = document.getElementById(`heart-icon-${title.id}`);

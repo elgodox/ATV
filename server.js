@@ -39,10 +39,6 @@ function filterAdultContent(results, adultFilter) {
   return results;
 }
 
-// Debug: Verificar si la API_KEY se está cargando correctamente
-console.log('🔑 API_KEY cargada:', API_KEY ? 'SÍ (longitud: ' + API_KEY.length + ')' : 'NO');
-console.log('🔑 VIMEO_ACCESS_TOKEN cargado:', VIMEO_ACCESS_TOKEN ? 'SÍ' : 'NO');
-console.log('🔑 OPENSUBTITLES_API_KEY cargado:', OPENSUBTITLES_API_KEY ? 'SÍ' : 'NO');
 
 // Crear cliente de WebTorrent
 const client = new WebTorrent();
@@ -55,24 +51,23 @@ const torrentSearch = require('torrent-search-api');
 
 // Función para configurar proveedores de torrent de forma segura
 function setupTorrentProviders() {
-  console.log('🔧 Configurando proveedores de torrents...');
+  // ...
   
   try {
     // Usar enablePublicProviders() como en la búsqueda manual exitosa
     torrentSearch.enablePublicProviders();
-    console.log('✅ Habilitados todos los proveedores públicos');
+    // ...
     
     const activeProviders = torrentSearch.getActiveProviders();
-    console.log(`🎯 Total proveedores activos: ${activeProviders.length}`);
-    activeProviders.forEach(p => console.log(`   - ${p.name}`));
+    // ...
     
     return activeProviders.length > 0;
   } catch (error) {
-    console.log(`❌ Error configurando proveedores públicos: ${error.message}`);
+    // ...
     
     // Fallback al método anterior si falla
     const availableProviders = torrentSearch.getProviders().map(p => p.name);
-    console.log('📋 Proveedores disponibles:', availableProviders);
+    // ...
     
     // Lista de proveedores a habilitar (en orden de preferencia)
     const preferredProviders = [
@@ -90,19 +85,18 @@ function setupTorrentProviders() {
       try {
         if (availableProviders.includes(provider)) {
           torrentSearch.enableProvider(provider);
-          console.log(`✅ Proveedor habilitado: ${provider}`);
+          // ...
           enabledCount++;
         } else {
-          console.log(`⚠️  Proveedor no disponible: ${provider}`);
+          // ...
         }
       } catch (error) {
-        console.log(`❌ Error habilitando ${provider}:`, error.message);
+        // ...
       }
     }
     
     const activeProviders = torrentSearch.getActiveProviders();
-    console.log(`🎯 Total proveedores activos: ${activeProviders.length}`);
-    activeProviders.forEach(p => console.log(`   - ${p.name}`));
+    // ...
     
     return enabledCount > 0;
   }
@@ -119,16 +113,16 @@ app.get('/api/torrent-status', async (req, res) => {
     let testError = null;
     
     try {
-      console.log('🧪 Testing torrent search functionality...');
+      // ...
       const testResults = await Promise.race([
         torrentSearch.search('test', 'TV', 1),
         new Promise((resolve) => setTimeout(() => resolve([]), 5000))
       ]);
       searchWorking = true;
-      console.log(`✅ Search test completed, found ${testResults ? testResults.length : 0} results`);
+      // ...
     } catch (error) {
       testError = error.message;
-      console.log(`❌ Search test failed: ${error.message}`);
+      // ...
     }
     
     const status = {
@@ -149,7 +143,7 @@ app.get('/api/torrent-status', async (req, res) => {
     res.json(status);
     
   } catch (error) {
-    console.error('❌ Error checking torrent status:', error);
+    // ...
     res.status(500).json({
       error: 'Error checking torrent status',
       message: error.message,
@@ -230,7 +224,7 @@ const mockTorrentData = {
 
 // Función para generar datos mock personalizados basados en el título
 function generateMockTorrents(title, type = 'movie', season = null, episode = null) {
-  console.log(`🎭 Generando datos mock para: ${title} (${type})`);
+  // ...
   
   const baseTorrents = type === 'tv' ? mockTorrentData.tv : mockTorrentData.movies;
   const mockTorrents = [];
@@ -283,7 +277,7 @@ function generateMockTorrents(title, type = 'movie', season = null, episode = nu
     mockTorrents.push(mockTorrent);
   });
   
-  console.log(`✅ Generados ${mockTorrents.length} torrents mock`);
+  // ...
   return mockTorrents;
 }
 const additionalTrackers = [
@@ -346,7 +340,7 @@ app.get('/api/genres', async (req, res) => {
     const data = await response.json();
     res.json(data);
   } catch (error) {
-    console.error('Error fetching genres:', error);
+    // ...
     res.status(500).json({ message: 'Error fetching genres' });
   }
 });
@@ -367,7 +361,7 @@ app.get('/api/genres/:type', async (req, res) => {
     const data = await response.json();
     res.json(data.genres);  // Solo devolver la lista de géneros
   } catch (error) {
-    console.error('Error fetching genres:', error);
+    // ...
     res.status(500).json({ message: 'Error fetching genres' });
   }
 });
