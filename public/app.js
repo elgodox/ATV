@@ -1003,7 +1003,154 @@ async function updateGenreSelect() {
 }
 
 
+// Global function to create a movie element (reusable for trending sections and regular grid)
+function createMovieElement(title, defaultContentType = 'movie') {
+  const movieCard = document.createElement('div');
+  movieCard.id = `movie-card-${title.id}`;
+  movieCard.classList.add('movie-card');
+  
+  const contentType = title.content_type || title.media_type || defaultContentType;
+  movieCard.classList.add(`content-${contentType}`);
+  movieCard.setAttribute('data-type', contentType);
+  movieCard.setAttribute('data-id', title.id);
 
+  // Handle movie genres - need to ensure genreMap is available
+  let movieGenres = 'N/A';
+  if (title.genre_ids && window.genreMap) {
+    movieGenres = title.genre_ids.map(id => window.genreMap[id]).filter(Boolean).join(', ') || 'N/A';
+  } else if (title.genres) {
+    movieGenres = title.genres.map(genre => genre.name).join(', ') || 'N/A';
+  }
+
+  // Function to check for non-Latin characters  
+  const containsNonLatinChars = (str) => {
+    if (!str) return false;
+    return /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(str);
+  };
+
+  // Determine the best title to display
+  let titleName;
+  if (title.title && !containsNonLatinChars(title.title)) {
+    titleName = title.title;
+  } else if (title.name && !containsNonLatinChars(title.name)) {
+    titleName = title.name;
+  } else if (title.original_title && !containsNonLatinChars(title.original_title)) {
+    titleName = title.original_title;
+  } else if (title.original_name && !containsNonLatinChars(title.original_name)) {
+    titleName = title.original_name;
+  } else {
+    titleName = title.title || title.name || title.original_title || title.original_name || 'Título desconocido';
+  }
+
+  const releaseDate = title.release_date || title.first_air_date || 'Fecha desconocida';
+
+  // Handle TV show specific data
+  let seasons = '';
+  let status = '';
+  if (contentType === 'tv') {
+    // For demo data or when we can't fetch details, use placeholder
+    seasons = title.number_of_seasons ? `${title.number_of_seasons} Temporadas` : 'N/A';
+    status = title.status ? (title.status === 'Ended' ? 'Finalizada' : 'En emisión') : 'Estado desconocido';
+  }
+
+  const stars = renderStars(title.vote_average || 0);
+  const contentTypeTag = contentType === 'movie' ? 'Película' : 'Serie';
+  const contentTypeIcon = contentType === 'movie' ? '<i class="fas fa-film"></i>' : '<i class="fas fa-tv"></i>';
+  
+  // Build progress indicator for continue watching items
+  let progressInfo = '';
+  if (title.watch_progress) {
+    const progressPercent = title.watch_progress.progress_percentage || 0;
+    const resumeTime = formatTime(title.watch_progress.playback_position);
+    const episodeInfo = title.watch_progress.season_number && title.watch_progress.episode_number 
+      ? ` (T${title.watch_progress.season_number}E${title.watch_progress.episode_number})`
+      : '';
+    
+    progressInfo = `
+      <div class="progress-info" style="background: linear-gradient(135deg, #4CAF50, #45a049); color: white; padding: 8px; border-radius: 4px; margin: 8px 0; text-align: center;">
+        <i class="fas fa-play-circle"></i> Continuar desde ${resumeTime}${episodeInfo}
+        <div class="progress-bar" style="background: rgba(255,255,255,0.3); height: 4px; border-radius: 2px; margin-top: 4px;">
+          <div class="progress-fill" style="background: white; height: 100%; width: ${Math.min(progressPercent, 100)}%; border-radius: 2px; transition: width 0.3s ease;"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Handle poster image with fallback for demo data
+  let posterSrc;
+  if (title.poster_path && title.poster_path.startsWith('/')) {
+    // Real TMDB data
+    posterSrc = `https://image.tmdb.org/t/p/w500${title.poster_path}`;
+  } else if (title.poster_path && (title.poster_path.startsWith('http') || title.poster_path.startsWith('//'))) {
+    // Already a full URL
+    posterSrc = title.poster_path;
+  } else {
+    // Demo data or missing poster - use placeholder
+    const safeTitle = titleName.replace(/[<>"'&]/g, ' ').substring(0, 20);
+    const safeContentType = contentTypeTag.replace(/[<>"'&]/g, ' ');
+    const safeDate = releaseDate.replace(/[<>"'&]/g, ' ').substring(0, 10);
+    
+    posterSrc = `data:image/svg+xml;base64,${btoa(`
+      <svg width="500" height="750" viewBox="0 0 500 750" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="500" height="750" fill="#1a1a1a"/>
+        <circle cx="250" cy="300" r="60" fill="#333"/>
+        <path d="M220 280 L280 320 L220 360 Z" fill="#666"/>
+        <text x="250" y="450" fill="#666" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold">${safeTitle}</text>
+        <text x="250" y="490" fill="#555" text-anchor="middle" font-family="Arial, sans-serif" font-size="18">${safeContentType}</text>
+        <text x="250" y="530" fill="#444" text-anchor="middle" font-family="Arial, sans-serif" font-size="16">${safeDate}</text>
+      </svg>
+    `)}`;
+  }
+  
+  movieCard.innerHTML = `
+    <img src="${posterSrc}" alt="${titleName}" loading="lazy" onerror="this.src='data:image/svg+xml;base64,${btoa(`
+      <svg width="500" height="750" viewBox="0 0 500 750" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="500" height="750" fill="#333"/>
+        <text x="250" y="375" fill="#666" text-anchor="middle" font-family="Arial, sans-serif" font-size="20">Imagen no disponible</text>
+      </svg>
+    `)}'; this.onerror=null;">
+    <h3 class="title-with-icon ${contentType}">${contentTypeIcon}<span class="title-text">${titleName}</span></h3>
+    ${progressInfo}
+    <p><strong>Estreno:</strong> ${releaseDate}</p>
+    <p><strong>Género:</strong> ${movieGenres}</p>
+    ${seasons ? `<p><strong>Temporadas:</strong> ${seasons}</p>` : ''}
+    ${status ? `<p><strong>Estado:</strong> ${status}</p>` : ''}
+    <p><strong>Valoración:</strong> ${stars}</p>
+
+    <!-- Contenedor para los íconos alineados a la derecha -->
+    <div class="card-icons">
+      <i id="heart-icon-${title.id}" 
+         class="fas fa-heart" 
+         style="cursor: pointer; color: black;" 
+         onclick="toggleFavorite(${title.id}, '${contentType}', event)"></i>
+      <i id="eye-icon-${title.id}" 
+         class="fas fa-eye" 
+         style="cursor: pointer; color: ${isWatched(title.id, contentType) ? 'blue' : 'black'};" 
+         onclick="toggleWatched(${title.id}, '${contentType}', event)"></i>
+    </div>
+  `;
+
+  // Add watched class if applicable
+  if (isWatched(title.id, contentType)) {
+    movieCard.classList.add('watched');
+  } else {
+    movieCard.classList.remove('watched');
+  }
+
+  // Add click event listener
+  movieCard.addEventListener('click', () => {
+    // Check if this is a "continue watching" item with progress data
+    if (showingContinueWatching && title.watch_progress) {
+      // Resume playback directly using the torrent hash (automatic mode)
+      resumeFromProgress(title, true);
+    } else {
+      // Regular behavior: show details modal
+      showDetails(title.id, contentType, movieCard);
+    }
+  });
+
+  return movieCard;
+}
 
 async function getTitles(page = 1) {
   if (isLoading) return;
@@ -1276,140 +1423,16 @@ async function getTitles(page = 1) {
 
 
   const genreData = await fetchData('genres');
-  const genreMap = {};
+  window.genreMap = {};
   genreData.genres.forEach(genre => {
-    genreMap[genre.id] = genre.name;
+    window.genreMap[genre.id] = genre.name;
   });
 
-
+  // Use the global createMovieElement function for each title
   data.results.forEach(async (title) => {
-    const movieCard = document.createElement('div');
-    movieCard.id = `movie-card-${title.id}`;
-    movieCard.classList.add('movie-card');
-    
-
-    const contentType = title.content_type || defaultContentType;
-    movieCard.classList.add(`content-${contentType}`);
-    movieCard.setAttribute('data-type', contentType);
-    movieCard.setAttribute('data-id', title.id);
-
-
-    const movieGenres = title.genre_ids ? title.genre_ids.map(id => genreMap[id]).join(', ') : title.genres ? title.genres.map(genre => genre.name).join(', ') : 'N/A';
-
-
-    const providers = await fetchProvider(title.id, contentType);
-    const providerNames = providers ? providers.join(', ') : 'No disponible';
-
-
-    const containsNonLatinChars = (str) => {
-      if (!str) return false;
-
-      return /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(str);
-    };
-
-
-    let titleName;
-    if (title.title && !containsNonLatinChars(title.title)) {
-
-      titleName = title.title;
-    } else if (title.name && !containsNonLatinChars(title.name)) {
-
-      titleName = title.name;
-    } else if (title.original_title && !containsNonLatinChars(title.original_title)) {
-
-      titleName = title.original_title;
-    } else if (title.original_name && !containsNonLatinChars(title.original_name)) {
-
-      titleName = title.original_name;
-    } else {
-
-      titleName = title.title || title.name || title.original_title || title.original_name || 'Título desconocido';
-    }
-
-
-    const releaseDate = title.release_date || title.first_air_date || 'Fecha desconocida';
-
-    let seasons = '';
-    let status = '';
-
-    if (contentType === 'tv') {
-      const tvDetails = await fetchTVDetails(title.id);
-      seasons = tvDetails ? `${tvDetails.number_of_seasons} Temporadas` : 'N/A';
-      status = tvDetails ? (tvDetails.status === 'Ended' ? 'Finalizada' : 'En emisión') : 'Estado desconocido';
-    }
-
-    const stars = renderStars(title.vote_average);
-
-
-    const contentTypeTag = contentType === 'movie' ? 'Película' : 'Serie';
-
-    const contentTypeIcon = contentType === 'movie' ? '<i class="fas fa-film"></i>' : '<i class="fas fa-tv"></i>';
-    
-    // Build progress indicator for continue watching items
-    let progressInfo = '';
-    if (title.watch_progress) {
-      const progressPercent = title.watch_progress.progress_percentage || 0;
-      const resumeTime = formatTime(title.watch_progress.playback_position);
-      const episodeInfo = title.watch_progress.season_number && title.watch_progress.episode_number 
-        ? ` (T${title.watch_progress.season_number}E${title.watch_progress.episode_number})`
-        : '';
-      
-      progressInfo = `
-        <div class="progress-info" style="background: linear-gradient(135deg, #4CAF50, #45a049); color: white; padding: 8px; border-radius: 4px; margin: 8px 0; text-align: center;">
-          <i class="fas fa-play-circle"></i> Continuar desde ${resumeTime}${episodeInfo}
-          <div class="progress-bar" style="background: rgba(255,255,255,0.3); height: 4px; border-radius: 2px; margin-top: 4px;">
-            <div class="progress-fill" style="background: white; height: 100%; width: ${Math.min(progressPercent, 100)}%; border-radius: 2px; transition: width 0.3s ease;"></div>
-          </div>
-        </div>
-      `;
-    }
-    
-    movieCard.innerHTML = `
-    <!-- Integrar icono inline junto al título -->
-    <img src="https://image.tmdb.org/t/p/w500${title.poster_path}" alt="${titleName}">
-    <h3 class="title-with-icon ${contentType}">${contentTypeIcon}<span class="title-text">${titleName}</span></h3>
-    ${progressInfo}
-    <p><strong>Estreno:</strong> ${releaseDate}</p>
-    <p><strong>Género:</strong> ${movieGenres}</p>
-    ${seasons ? `<p><strong>Temporadas:</strong> ${seasons}</p>` : ''}
-    ${status ? `<p><strong>Estado:</strong> ${status}</p>` : ''}
-    <p><strong>Plataformas:</strong> ${providerNames}</p>
-    <p><strong>Valoración:</strong> ${stars}</p>
-  
-    <!-- Contenedor para los íconos alineados a la derecha -->
-    <div class="card-icons">
-      <i id="heart-icon-${title.id}" 
-         class="fas fa-heart" 
-         style="cursor: pointer; color: black;" 
-         onclick="toggleFavorite(${title.id}, '${contentType}', event)"></i>
-      <i id="eye-icon-${title.id}" 
-         class="fas fa-eye" 
-         style="cursor: pointer; color: ${isWatched(title.id, contentType) ? 'blue' : 'black'};" 
-         onclick="toggleWatched(${title.id}, '${contentType}', event)"></i>
-    </div>
-  `;
-  
-
-    if (isWatched(title.id, contentType)) {
-      movieCard.classList.add('watched');
-    } else {
-      movieCard.classList.remove('watched');
-    }
-
-    movieCard.addEventListener('click', () => {
-      // Check if this is a "continue watching" item with progress data
-      if (showingContinueWatching && title.watch_progress) {
-        // Resume playback directly using the torrent hash (automatic mode)
-        resumeFromProgress(title, true);
-      } else {
-        // Regular behavior: show details modal
-        showDetails(title.id, contentType, movieCard);
-      }
-    });
-
+    const movieCard = createMovieElement(title, defaultContentType);
     elements.movieGrid.appendChild(movieCard);
   });
-
 
   updateFavoriteColors(data.results, defaultContentType);
 
