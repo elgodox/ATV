@@ -1444,15 +1444,6 @@ async function resumeFromProgress(movie, autoResume = false) {
   try {
     console.log('🔄 Resumiendo reproducción desde progreso guardado:', movie);
     
-    // Set up current content data for progress tracking
-    currentContentData = {
-      id: movie.id,
-      title: movie.title || movie.name,
-      content_type: movie.content_type,
-      season_number: movie.watch_progress.season_number,
-      episode_number: movie.watch_progress.episode_number
-    };
-    
     // Check if we have torrent hash to resume exact torrent
     if (movie.watch_progress.torrent_hash) {
       console.log(`🎬 Resumiendo torrent: ${movie.watch_progress.torrent_hash}`);
@@ -1496,7 +1487,16 @@ async function resumeFromProgress(movie, autoResume = false) {
               magnetURI: movie.watch_progress.torrent_magnet_uri // Incluir el magnet link
             };
             
-            // Set up watch data with saved progress
+            // Set up current content data for progress tracking with proper season/episode info
+            currentContentData = {
+              id: movie.id,
+              title: movie.title || movie.name,
+              content_type: movie.content_type,
+              season_number: movie.watch_progress.season_number,
+              episode_number: movie.watch_progress.episode_number
+            };
+            
+            // Set up watch data with the resume progress information
             setupWatchData(
               movie.content_type,
               movie.id,
@@ -1510,6 +1510,14 @@ async function resumeFromProgress(movie, autoResume = false) {
             // Set global torrent info and start playback
             currentTorrentInfo = torrentInfo;
             playVideoFileWithStats(0);
+            
+            // Initialize subtitle functionality for resumed content
+            setTimeout(() => {
+              clearSubtitles();
+              loadTorrentSubtitles();
+              setupSubtitleControls();
+              console.log('✅ Subtítulos inicializados para contenido resumido');
+            }, 500);
             
             // Set the video time to saved position once it loads with multiple fallbacks
             const videoPlayer = document.getElementById('video-player');
