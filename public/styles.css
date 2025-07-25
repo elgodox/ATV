@@ -4499,13 +4499,111 @@ h1 {
   padding: 0 24px;
 }
 
-/* Grid de trending */
+/* Grid de trending - Netflix style horizontal scroll */
 .trending-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 20px;
-  padding: 0;
-  min-height: 300px;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 16px;
+  padding: 0 0 20px 0;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: #555 transparent;
+}
+
+.trending-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.trending-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.trending-grid::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+.trending-grid::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+/* Trending card styles - smaller and different from normal movie cards */
+.trending-grid .movie-card {
+  flex: 0 0 auto;
+  width: 140px;
+  height: 280px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 106, 53, 0.3);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+  position: relative;
+}
+
+.trending-grid .movie-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  border-color: rgba(255, 106, 53, 0.6);
+  background: rgba(255, 106, 53, 0.1);
+  box-shadow: 0 8px 25px rgba(255, 106, 53, 0.2);
+}
+
+.trending-grid .movie-card img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.trending-grid .movie-card h3 {
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+  color: #ffffff;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.trending-grid .movie-card p {
+  font-size: 0.75rem;
+  color: #b0b0b0;
+  margin: 2px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trending-grid .movie-card strong {
+  color: #FF6B35;
+  font-size: 0.7rem;
+}
+
+/* Trending section title style enhancement */
+.trending-section h2 {
+  color: #ffffff;
+  font-size: 1.4em;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.trending-section h2 .provider-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.trending-section h2 i {
+  color: #FF6B35;
+  font-size: 1em;
 }
 
 /* Sección de trending por país */
@@ -4568,10 +4666,7 @@ h1 {
 .trending-sections.search-hidden,
 .country-trending-section.search-hidden,
 .continue-watching-section.search-hidden {
-  opacity: 0 !important;
-  transform: translateY(-20px) !important;
-  pointer-events: none !important;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: none !important;
 }
 
 .trending-sections.search-visible,
@@ -4631,9 +4726,13 @@ h1 {
 
 /* Responsive para trending sections */
 @media (max-width: 1200px) {
-  .trending-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 16px;
+  .trending-grid .movie-card {
+    width: 130px;
+    height: 260px;
+  }
+  
+  .trending-grid .movie-card img {
+    height: 170px;
   }
 }
 
@@ -4647,14 +4746,18 @@ h1 {
     padding: 0 16px;
   }
   
-  .trending-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 12px;
+  .trending-grid .movie-card {
+    width: 120px;
+    height: 240px;
+  }
+  
+  .trending-grid .movie-card img {
+    height: 160px;
   }
   
   .trending-section h2,
   .country-trending-section h2 {
-    font-size: 1.5em;
+    font-size: 1.3em;
   }
   
   .trending-skeleton {
@@ -4663,14 +4766,26 @@ h1 {
 }
 
 @media (max-width: 480px) {
-  .trending-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
+  .trending-grid .movie-card {
+    width: 110px;
+    height: 220px;
+  }
+  
+  .trending-grid .movie-card img {
+    height: 140px;
+  }
+  
+  .trending-grid .movie-card h3 {
+    font-size: 0.8rem;
+  }
+  
+  .trending-grid .movie-card p {
+    font-size: 0.7rem;
   }
   
   .trending-section h2,
   .country-trending-section h2 {
-    font-size: 1.3em;
+    font-size: 1.2em;
   }
   
   .skeleton-item {
