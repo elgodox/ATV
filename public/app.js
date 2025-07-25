@@ -1003,7 +1003,141 @@ async function updateGenreSelect() {
 }
 
 
-// Global function to create a movie element (reusable for trending sections and regular grid)
+// Function to create trending cards with photo-style design and hover effects
+function createTrendingCard(title, defaultContentType = 'movie') {
+  const movieCard = document.createElement('div');
+  movieCard.id = `trending-card-${title.id}`;
+  movieCard.classList.add('trending-card');
+  
+  const contentType = title.content_type || title.media_type || defaultContentType;
+  movieCard.classList.add(`content-${contentType}`);
+  movieCard.setAttribute('data-type', contentType);
+  movieCard.setAttribute('data-id', title.id);
+
+  // Handle movie genres - need to ensure genreMap is available
+  let movieGenres = 'N/A';
+  if (title.genre_ids && window.genreMap) {
+    movieGenres = title.genre_ids.map(id => window.genreMap[id]).filter(Boolean).join(', ') || 'N/A';
+  } else if (title.genres) {
+    movieGenres = title.genres.map(genre => genre.name).join(', ') || 'N/A';
+  }
+
+  // Function to check for non-Latin characters  
+  const containsNonLatinChars = (str) => {
+    if (!str) return false;
+    return /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(str);
+  };
+
+  // Determine the best title to display
+  let titleName;
+  if (title.title && !containsNonLatinChars(title.title)) {
+    titleName = title.title;
+  } else if (title.name && !containsNonLatinChars(title.name)) {
+    titleName = title.name;
+  } else if (title.original_title && !containsNonLatinChars(title.original_title)) {
+    titleName = title.original_title;
+  } else if (title.original_name && !containsNonLatinChars(title.original_name)) {
+    titleName = title.original_name;
+  } else {
+    titleName = title.title || title.name || title.original_title || title.original_name || 'Título desconocido';
+  }
+
+  const releaseDate = title.release_date || title.first_air_date || 'Fecha desconocida';
+  const year = releaseDate.split('-')[0];
+
+  // Handle TV show specific data
+  let seasons = '';
+  let status = '';
+  if (contentType === 'tv') {
+    seasons = title.number_of_seasons ? `${title.number_of_seasons} Temporadas` : 'N/A';
+    status = title.status ? (title.status === 'Ended' ? 'Finalizada' : 'En emisión') : 'Estado desconocido';
+  }
+
+  const contentTypeTag = contentType === 'movie' ? 'Película' : 'Serie';
+  const contentTypeIcon = contentType === 'movie' ? '<i class="fas fa-film"></i>' : '<i class="fas fa-tv"></i>';
+  const rating = title.vote_average ? (title.vote_average / 2).toFixed(1) : 'N/A';
+
+  // Handle poster image with fallback for demo data
+  let posterSrc;
+  if (title.poster_path && title.poster_path.startsWith('/')) {
+    // Real TMDB data
+    posterSrc = `https://image.tmdb.org/t/p/w500${title.poster_path}`;
+  } else if (title.poster_path && (title.poster_path.startsWith('http') || title.poster_path.startsWith('//'))) {
+    // Already a full URL
+    posterSrc = title.poster_path;
+  } else {
+    // Demo data or missing poster - use placeholder
+    const safeTitle = titleName.replace(/[<>"'&]/g, ' ').substring(0, 20);
+    const safeContentType = contentTypeTag.replace(/[<>"'&]/g, ' ');
+    const safeDate = year.replace(/[<>"'&]/g, ' ').substring(0, 4);
+    
+    posterSrc = `data:image/svg+xml;base64,${btoa(`
+      <svg width="300" height="450" viewBox="0 0 300 450" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#FF6B35;stop-opacity:0.8" />
+            <stop offset="100%" style="stop-color:#1a1a1a;stop-opacity:1" />
+          </linearGradient>
+        </defs>
+        <rect width="300" height="450" fill="url(#grad1)"/>
+        <circle cx="150" cy="180" r="40" fill="rgba(255,255,255,0.1)"/>
+        <path d="M130 165 L170 190 L130 215 Z" fill="rgba(255,255,255,0.3)"/>
+        <text x="150" y="280" fill="#fff" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold">${safeTitle}</text>
+        <text x="150" y="310" fill="#FFB366" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">${safeContentType}</text>
+        <text x="150" y="330" fill="rgba(255,255,255,0.7)" text-anchor="middle" font-family="Arial, sans-serif" font-size="11">${safeDate}</text>
+      </svg>
+    `)}`;
+  }
+  
+  movieCard.innerHTML = `
+    <div class="trending-card-image">
+      <img src="${posterSrc}" alt="${titleName}" loading="lazy" onerror="this.src='data:image/svg+xml;base64,${btoa(`
+        <svg width="300" height="450" viewBox="0 0 300 450" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="450" fill="#333"/>
+          <text x="150" y="225" fill="#666" text-anchor="middle" font-family="Arial, sans-serif" font-size="14">Imagen no disponible</text>
+        </svg>
+      `)}'; this.onerror=null;">
+      
+      <!-- Content type indicator overlay -->
+      <div class="content-type-indicator">
+        ${contentTypeIcon}
+        <span>${contentTypeTag}</span>
+      </div>
+      
+      <!-- Hover overlay with additional information -->
+      <div class="trending-hover-overlay">
+        <div class="hover-content">
+          <h4>${titleName}</h4>
+          <div class="hover-details">
+            <p><i class="fas fa-calendar"></i> ${year}</p>
+            <p><i class="fas fa-star"></i> ${rating}/5</p>
+            ${contentType === 'tv' && seasons !== 'N/A' ? `<p><i class="fas fa-list"></i> ${seasons}</p>` : ''}
+            <p><i class="fas fa-tags"></i> ${movieGenres}</p>
+          </div>
+          ${title.overview ? `<p class="hover-overview">${title.overview.substring(0, 120)}...</p>` : ''}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Simple title and type below image -->
+    <div class="trending-card-info">
+      <h3 class="trending-title">${titleName}</h3>
+      <div class="trending-meta">
+        <span class="trending-type">${contentTypeIcon} ${contentTypeTag}</span>
+        <span class="trending-year">${year}</span>
+      </div>
+    </div>
+  `;
+
+  // Add click event listener
+  movieCard.addEventListener('click', () => {
+    showDetails(title.id, contentType, movieCard);
+  });
+
+  return movieCard;
+}
+
+// Global function to create a movie element (reusable for regular grid)
 function createMovieElement(title, defaultContentType = 'movie') {
   const movieCard = document.createElement('div');
   movieCard.id = `movie-card-${title.id}`;
@@ -5008,9 +5142,9 @@ async function loadProviderTrendingSection(provider, container, index) {
       const items = data.results.slice(0, 12);
       
       items.forEach((item, itemIndex) => {
-        const movieElement = createMovieElement(item);
-        movieElement.style.animationDelay = `${itemIndex * 50}ms`;
-        grid.appendChild(movieElement);
+        const trendingElement = createTrendingCard(item);
+        trendingElement.style.animationDelay = `${itemIndex * 50}ms`;
+        grid.appendChild(trendingElement);
       });
 
       // Mark section as loaded
@@ -5054,9 +5188,9 @@ async function loadCountryTrendingSection() {
       const items = data.results.slice(0, 12);
       
       items.forEach((item, index) => {
-        const movieElement = createMovieElement(item);
-        movieElement.style.animationDelay = `${index * 50}ms`;
-        countryGrid.appendChild(movieElement);
+        const trendingElement = createTrendingCard(item);
+        trendingElement.style.animationDelay = `${index * 50}ms`;
+        countryGrid.appendChild(trendingElement);
       });
 
       // Show section with animation
