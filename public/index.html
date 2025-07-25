@@ -87,14 +87,7 @@
             </label>
           </div>
           
-          <!-- Toggle de continuar viendo -->
-          <div class="filter-chip continue-watching-chip">
-            <input type="checkbox" id="continue-watching-checkbox" onchange="toggleContinueWatchingFilter()">
-            <label for="continue-watching-checkbox" class="chip-label">
-              <i class="fas fa-play"></i>
-              <span>Continuar viendo</span>
-            </label>
-          </div>
+
           
           <!-- Botón de limpiar filtros -->
           <button id="clear-filters-btn" class="filter-chip clear-chip" title="Limpiar todos los filtros">
@@ -221,8 +214,32 @@
     </div>
   </div>
 
+  <!-- Sección Continuar Viendo -->
+  <div id="continue-watching-section" class="continue-watching-section hidden">
+    <div class="section-header">
+      <h2>
+        <i class="fas fa-play-circle"></i>
+        Continuar viendo
+      </h2>
+      <button id="continue-watching-see-all" class="see-all-btn">
+        Ver todo
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+    <div id="continue-watching-container" class="continue-watching-container">
+      <div id="continue-watching-grid" class="continue-watching-grid">
+        <!-- Los elementos de continuar viendo se cargarán aquí -->
+      </div>
+    </div>
+  </div>
+
   <!-- Resultados -->
   <div id="movie-grid"></div>
+
+  <!-- Botón flotante para volver al inicio -->
+  <button id="back-to-top" class="back-to-top-btn hidden" title="Volver al inicio">
+    <i class="fas fa-chevron-up"></i>
+  </button>
 
   <!-- Modal para mostrar detalles completos y tráiler -->
   <div id="modal" class="modal hidden">

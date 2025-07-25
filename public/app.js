@@ -108,6 +108,14 @@ async function saveWatchProgress(currentTime, totalDuration = null) {
     if (response.ok) {
       lastSavedTime = currentTime;
       console.log(`💾 Progress saved: ${currentTime}s for ${currentWatchData.title}`);
+      
+      // Refresh continue watching section (debounced to avoid too many updates)
+      if (typeof refreshContinueWatchingSection === 'function') {
+        clearTimeout(window.continueWatchingRefreshTimeout);
+        window.continueWatchingRefreshTimeout = setTimeout(() => {
+          refreshContinueWatchingSection();
+        }, 2000);
+      }
     } else {
       console.error('Failed to save watch progress:', await response.text());
     }
@@ -476,16 +484,23 @@ function clearAllFilters() {
   
 
   const favoritesCheckbox = document.getElementById('favorites-checkbox');
-  const continueWatchingCheckbox = document.getElementById('continue-watching-checkbox');
   if (favoritesCheckbox) {
     favoritesCheckbox.checked = false;
     showingFavorites = false;
     updateFavoritesChip();
   }
-  if (continueWatchingCheckbox) {
-    continueWatchingCheckbox.checked = false;
-    showingContinueWatching = false;
-    updateContinueWatchingChip();
+  
+  // Reset continue watching mode (no checkbox anymore)
+  showingContinueWatching = false;
+  
+  // Reset continue watching button text
+  const seeAllBtn = document.getElementById('continue-watching-see-all');
+  if (seeAllBtn) {
+    seeAllBtn.innerHTML = `
+      Ver todo
+      <i class="fas fa-chevron-right"></i>
+    `;
+    seeAllBtn.classList.remove('active');
   }
   
 
@@ -531,8 +546,8 @@ function hasActiveFilters() {
 
   if (favoritesCheckbox && favoritesCheckbox.checked) return true;
   
-  const continueWatchingCheckbox = document.getElementById('continue-watching-checkbox');
-  if (continueWatchingCheckbox && continueWatchingCheckbox.checked) return true;
+  // Check continue watching mode (no checkbox anymore, just check the flag)
+  if (showingContinueWatching) return true;
   
   return false;
 }
@@ -630,8 +645,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
   updateClearButtonVisibility();
   
+  // Add back to top button functionality
+  const backToTopBtn = document.getElementById('back-to-top');
+  if (backToTopBtn) {
+    backToTopBtn.addEventListener('click', () => {
+      // Smooth scroll to top
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+      
+      // Also reset to normal view if in continue watching mode
+      if (showingContinueWatching) {
+        showAllContinueWatching(); // This will toggle back to compact view
+      }
+    });
+  }
+  
 
   getTitles(1);
+  
+  // Initialize continue watching section
+  loadContinueWatchingSection();
 });
 
 function initializeNewInterface() {
@@ -2159,15 +2194,30 @@ function updateMovieGrid() {
 
 
 
-window.addEventListener('scroll', () => {
-  if (showingFavorites || showingContinueWatching) {
+let lastScrollTop = 0;
 
+window.addEventListener('scroll', () => {
+  // Handle back to top button visibility
+  const backToTopBtn = document.getElementById('back-to-top');
+  if (backToTopBtn) {
+    if (window.scrollY > 300) { // Show button after scrolling down 300px
+      backToTopBtn.classList.remove('hidden');
+    } else {
+      backToTopBtn.classList.add('hidden');
+    }
+  }
+  
+  // Handle infinite scroll for regular content (not favorites or continue watching)
+  if (showingFavorites || showingContinueWatching) {
+    // Don't load more content when showing favorites or continue watching
     return;
-}
+  }
   if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500 && !isLoading) {
     currentPage++;
     getTitles(currentPage);
   }
+  
+  lastScrollTop = window.scrollY;
 });
 
 
@@ -4101,6 +4151,12 @@ function updateAuthUI(user) {
 
     preloadUserFavorites();
     
+    // Load continue watching section
+    loadContinueWatchingSection();
+    
+    // Reset continue watching mode when user logs in
+    showingContinueWatching = false;
+    
 
     getTitles();
   } else {
@@ -4116,6 +4172,9 @@ function updateAuthUI(user) {
     if (favoriteFilterGroup) {
       favoriteFilterGroup.style.display = 'none';
     }
+    
+    // Hide continue watching section
+    hideContinueWatchingSection();
   }
 }
 
@@ -4378,21 +4437,6 @@ function toggleFavoritesFilter() {
   getTitles();
 }
 
-function toggleContinueWatchingFilter() {
-  showingContinueWatching = !showingContinueWatching;
-  
-  // If enabling continue watching, disable favorites
-  if (showingContinueWatching) {
-    showingFavorites = false;
-    updateFavoritesChip();
-  }
-  
-  console.log(`🔄 Toggle continuar viendo: ${showingContinueWatching ? 'ACTIVADO' : 'DESACTIVADO'}`);
-  updateContinueWatchingChip();
-  updateClearButtonVisibility();
-  getTitles();
-}
-
 function updateContinueWatchingChip() {
   const continueWatchingChip = document.querySelector('.continue-watching-chip');
   const continueWatchingCheckbox = document.getElementById('continue-watching-checkbox');
@@ -4403,6 +4447,442 @@ function updateContinueWatchingChip() {
     } else {
       continueWatchingChip.classList.remove('active');
     }
+  }
+}
+
+// ===== NUEVAS FUNCIONES PARA SECCIÓN CONTINUAR VIENDO =====
+
+// Function to load and display continue watching section
+async function loadContinueWatchingSection() {
+  const continueWatchingSection = document.getElementById('continue-watching-section');
+  const continueWatchingGrid = document.getElementById('continue-watching-grid');
+  
+  if (!continueWatchingSection || !continueWatchingGrid) {
+    return;
+  }
+
+  // Check if user is logged in
+  if (!currentUser) {
+    continueWatchingSection.classList.add('hidden');
+    return;
+  }
+
+  try {
+    const token = await getAuthToken();
+    if (!token) {
+      continueWatchingSection.classList.add('hidden');
+      return;
+    }
+
+    // Fetch recent watch progress
+    const response = await fetch(`/api/watch-progress?limit=10`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Error al cargar el progreso de visualización');
+    }
+
+    const watchProgress = await response.json();
+
+    if (watchProgress.length === 0) {
+      continueWatchingSection.classList.add('hidden');
+      return;
+    }
+
+    // Show section and populate grid
+    continueWatchingSection.classList.remove('hidden');
+    continueWatchingGrid.innerHTML = '';
+
+    // Create items for continue watching
+    for (let progress of watchProgress.slice(0, 10)) { // Limit to 10 items for horizontal scroll
+      const item = await createContinueWatchingItem(progress);
+      if (item) {
+        continueWatchingGrid.appendChild(item);
+      }
+    }
+
+    // Add event listeners
+    setupContinueWatchingEvents();
+    
+    // Only update button state if we're not in the middle of a toggle operation
+    // This prevents loadContinueWatchingSection from overriding button state during collapse
+    const seeAllBtn = document.getElementById('continue-watching-see-all');
+    if (seeAllBtn && !seeAllBtn.classList.contains('transitioning')) {
+      if (showingContinueWatching) {
+        seeAllBtn.innerHTML = `
+          Mostrar menos
+          <i class="fas fa-chevron-up"></i>
+        `;
+        seeAllBtn.classList.add('active');
+      } else {
+        seeAllBtn.innerHTML = `
+          Ver todo
+          <i class="fas fa-chevron-down"></i>
+        `;
+        seeAllBtn.classList.remove('active');
+      }
+    }
+
+  } catch (error) {
+    console.error('Error loading continue watching section:', error);
+    continueWatchingSection.classList.add('hidden');
+  }
+}
+
+// Function to create a continue watching item
+async function createContinueWatchingItem(progressData) {
+  try {
+    // Fetch detailed info from TMDb for the item
+    const detailsResponse = await fetch(`/api/titles/details?id=${progressData.tmdb_id}&type=${progressData.content_type}&language=en`);
+    let movieDetails = null;
+    
+    if (detailsResponse.ok) {
+      movieDetails = await detailsResponse.json();
+    }
+
+    const title = movieDetails?.title || movieDetails?.name || progressData.title;
+    const posterPath = movieDetails?.poster_path;
+    const progressPercent = progressData.progress_percentage || 0;
+    const resumeTime = formatTime(progressData.playback_position);
+    
+    // Create episode info for TV shows
+    let episodeInfo = '';
+    if (progressData.content_type === 'tv' && progressData.season_number && progressData.episode_number) {
+      episodeInfo = `T${progressData.season_number}:E${progressData.episode_number}`;
+    }
+
+    // Create the item element
+    const item = document.createElement('div');
+    item.className = 'continue-watching-item';
+    item.setAttribute('data-id', progressData.tmdb_id);
+    item.setAttribute('data-type', progressData.content_type);
+    
+    item.innerHTML = `
+      <div class="poster-container">
+        <img src="https://image.tmdb.org/t/p/w500${posterPath}" alt="${title}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDMwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjE1MCIgeT0iMjI1IiBmaWxsPSIjNjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiPkltYWdlbiBubyBkaXNwb25pYmxlPC90ZXh0Pgo8L3N2Zz4='">
+        <div class="content-type-badge ${progressData.content_type}">
+          ${progressData.content_type === 'movie' ? 'Película' : 'Serie'}
+        </div>
+        <div class="progress-overlay">
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${Math.min(progressPercent, 100)}%"></div>
+          </div>
+          <div class="progress-text">
+            <span>${Math.round(progressPercent)}%</span>
+            <span>${resumeTime}</span>
+          </div>
+        </div>
+      </div>
+      <div class="content-info">
+        <div class="title">${title}</div>
+        ${episodeInfo ? `<div class="subtitle">${episodeInfo}</div>` : ''}
+        <div class="resume-info">
+          <i class="fas fa-play"></i>
+          <span>Continuar viendo</span>
+        </div>
+      </div>
+    `;
+
+    // Add click event to resume playback
+    item.addEventListener('click', () => {
+      const movieData = {
+        id: progressData.tmdb_id,
+        title: title,
+        content_type: progressData.content_type,
+        watch_progress: {
+          playback_position: progressData.playback_position,
+          total_duration: progressData.total_duration,
+          progress_percentage: progressData.progress_percentage,
+          last_watched: progressData.last_watched,
+          season_number: progressData.season_number,
+          episode_number: progressData.episode_number,
+          torrent_hash: progressData.torrent_hash,
+          torrent_file_name: progressData.torrent_file_name,
+          torrent_magnet_uri: progressData.torrent_magnet_uri
+        }
+      };
+      
+      // Resume playback automatically
+      resumeFromProgress(movieData, true);
+    });
+
+    return item;
+
+  } catch (error) {
+    console.error('Error creando elemento de continuar viendo:', error);
+    return null;
+  }
+}
+
+// Function to setup events for continue watching section
+function setupContinueWatchingEvents() {
+  const seeAllBtn = document.getElementById('continue-watching-see-all');
+  
+  if (seeAllBtn) {
+    // Remove any existing event listeners
+    seeAllBtn.replaceWith(seeAllBtn.cloneNode(true));
+    const newSeeAllBtn = document.getElementById('continue-watching-see-all');
+    
+    newSeeAllBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      
+      // Prevent double clicks
+      if (newSeeAllBtn.classList.contains('processing')) {
+        return;
+      }
+      
+      newSeeAllBtn.classList.add('processing');
+      
+      console.log('🔄 Toggle continue watching. Current state:', showingContinueWatching);
+      
+      // Show all continue watching items in expanded section
+      showAllContinueWatching();
+      
+      // Remove processing class after a short delay
+      setTimeout(() => {
+        newSeeAllBtn.classList.remove('processing');
+      }, 300);
+    });
+  }
+}
+
+// Function to show all continue watching items in expanded section below
+function showAllContinueWatching() {
+  const seeAllBtn = document.getElementById('continue-watching-see-all');
+  
+  console.log('🎬 showAllContinueWatching called. Current showingContinueWatching:', showingContinueWatching);
+  
+  if (showingContinueWatching) {
+    console.log('📤 Collapsing expanded view...');
+    // Currently expanded, so collapse back to horizontal view
+    showingContinueWatching = false;
+    
+    // Add transitioning class to prevent state override
+    if (seeAllBtn) {
+      seeAllBtn.classList.add('transitioning');
+    }
+    
+    // Remove expanded section and separator
+    const expandedSection = document.getElementById('continue-watching-expanded');
+    const separator = document.getElementById('content-separator');
+    if (expandedSection) {
+      expandedSection.remove();
+      console.log('✅ Removed expanded section');
+    }
+    if (separator) {
+      separator.remove();
+      console.log('✅ Removed separator');
+    }
+    
+    // Update button text and style
+    if (seeAllBtn) {
+      seeAllBtn.innerHTML = `
+        Ver todo
+        <i class="fas fa-chevron-down"></i>
+      `;
+      seeAllBtn.classList.remove('active');
+      console.log('✅ Button updated to "Ver todo"');
+      
+      // Remove transitioning class after a short delay
+      setTimeout(() => {
+        seeAllBtn.classList.remove('transitioning');
+      }, 100);
+    }
+    
+  } else {
+    console.log('📥 Expanding to show all...');
+    // Currently in horizontal view, so expand below
+    showingContinueWatching = true;
+    
+    // Update button text and style
+    if (seeAllBtn) {
+      seeAllBtn.innerHTML = `
+        Mostrar menos
+        <i class="fas fa-chevron-up"></i>
+      `;
+      seeAllBtn.classList.add('active');
+      console.log('✅ Button updated to "Mostrar menos"');
+    }
+    
+    // Create expanded section below
+    createExpandedContinueWatchingSection();
+  }
+  
+  console.log('🎬 showAllContinueWatching finished. New showingContinueWatching:', showingContinueWatching);
+}
+
+// Function to hide continue watching section
+function hideContinueWatchingSection() {
+  const continueWatchingSection = document.getElementById('continue-watching-section');
+  if (continueWatchingSection) {
+    continueWatchingSection.classList.add('hidden');
+  }
+}
+
+// Function to create expanded continue watching section below the horizontal one
+async function createExpandedContinueWatchingSection() {
+  try {
+    if (!currentUser) return;
+
+    // Remove existing expanded section if it exists
+    const existingExpanded = document.getElementById('continue-watching-expanded');
+    const existingSeparator = document.getElementById('content-separator');
+    if (existingExpanded) existingExpanded.remove();
+    if (existingSeparator) existingSeparator.remove();
+
+    // Get continue watching data
+    const token = await getAuthToken();
+    const response = await fetch('/api/watch-progress', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) return;
+
+    const watchProgressData = await response.json();
+    if (!watchProgressData || watchProgressData.length === 0) return;
+
+    // Create content separator
+    const continueWatchingSection = document.getElementById('continue-watching-section');
+    const separator = document.createElement('div');
+    separator.id = 'content-separator';
+    separator.innerHTML = `
+      <div class="separator-line"></div>
+      <div class="separator-text">
+        <i class="fas fa-grip-lines"></i>
+        <span>Más contenido disponible</span>
+        <i class="fas fa-grip-lines"></i>
+      </div>
+      <div class="separator-line"></div>
+    `;
+    
+    // Insert separator after continue watching section
+    continueWatchingSection.insertAdjacentElement('afterend', separator);
+
+    // Create expanded section
+    const expandedSection = document.createElement('div');
+    expandedSection.id = 'continue-watching-expanded';
+    expandedSection.innerHTML = `
+      <div class="expanded-header">
+        <h3><i class="fas fa-play-circle"></i> Todo tu contenido para continuar viendo</h3>
+        <p>Selecciona cualquier título para continuar desde donde lo dejaste</p>
+      </div>
+      <div class="expanded-grid" id="expanded-continue-grid"></div>
+    `;
+    
+    // Insert expanded section after separator
+    separator.insertAdjacentElement('afterend', expandedSection);
+
+    // Populate expanded grid with all continue watching items
+    const expandedGrid = document.getElementById('expanded-continue-grid');
+    
+    for (const progressItem of watchProgressData) {
+      const itemElement = await createExpandedContinueWatchingItem(progressItem);
+      if (itemElement) {
+        expandedGrid.appendChild(itemElement);
+      }
+    }
+
+    // Smooth scroll to show the expanded section
+    setTimeout(() => {
+      separator.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }, 100);
+
+  } catch (error) {
+    console.error('Error creating expanded continue watching section:', error);
+  }
+}
+
+// Function to create individual items for expanded continue watching section
+async function createExpandedContinueWatchingItem(progressItem) {
+  try {
+    // Fetch movie/TV details
+    const detailsResponse = await fetch(`/api/titles/details?id=${progressItem.tmdb_id}&type=${progressItem.content_type}&language=es`);
+    if (!detailsResponse.ok) return null;
+    
+    const details = await detailsResponse.json();
+    const title = details.title || details.name || 'Título desconocido';
+    
+    // Calculate progress percentage
+    const progressPercent = progressItem.progress_percentage || 0;
+    const resumeTime = formatTime(progressItem.playback_position);
+    
+    // Episode info for TV shows
+    let episodeInfo = '';
+    if (progressItem.content_type === 'tv' && progressItem.season_number && progressItem.episode_number) {
+      episodeInfo = `T${progressItem.season_number}E${progressItem.episode_number}`;
+    }
+    
+    // Create item element
+    const itemElement = document.createElement('div');
+    itemElement.className = 'expanded-continue-item';
+    itemElement.setAttribute('data-id', progressItem.tmdb_id);
+    itemElement.setAttribute('data-type', progressItem.content_type);
+    
+    itemElement.innerHTML = `
+      <div class="expanded-item-poster">
+        <img src="https://image.tmdb.org/t/p/w300${details.poster_path}" 
+             alt="${title}" 
+             onerror="this.src='/placeholder-poster.jpg'">
+        <div class="expanded-progress-overlay">
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${Math.min(progressPercent, 100)}%"></div>
+          </div>
+          <div class="progress-text">${Math.round(progressPercent)}%</div>
+        </div>
+      </div>
+      <div class="expanded-item-info">
+        <h4 class="expanded-item-title">${title}</h4>
+        <div class="expanded-item-meta">
+          <span class="content-type-badge ${progressItem.content_type}">
+            <i class="fas fa-${progressItem.content_type === 'movie' ? 'film' : 'tv'}"></i>
+            ${progressItem.content_type === 'movie' ? 'Película' : 'Serie'}
+          </span>
+          ${episodeInfo ? `<span class="episode-badge">${episodeInfo}</span>` : ''}
+        </div>
+        <div class="expanded-resume-info">
+          <i class="fas fa-play-circle"></i>
+          <span>Continuar desde ${resumeTime}</span>
+        </div>
+        <div class="expanded-item-description">
+          ${(details.overview || 'Sin descripción disponible').substring(0, 150)}${details.overview && details.overview.length > 150 ? '...' : ''}
+        </div>
+      </div>
+    `;
+    
+    // Add click handler to resume playback
+    itemElement.addEventListener('click', () => {
+      const movieData = {
+        id: progressItem.tmdb_id,
+        title: title,
+        content_type: progressItem.content_type,
+        watch_progress: progressItem
+      };
+      resumeFromProgress(movieData, true); // Auto-resume from progress
+    });
+    
+    return itemElement;
+    
+  } catch (error) {
+    console.error('Error creating expanded continue watching item:', error);
+    return null;
+  }
+}
+
+// Function to refresh continue watching section
+async function refreshContinueWatchingSection() {
+  if (currentUser) {
+    await loadContinueWatchingSection();
+  } else {
+    hideContinueWatchingSection();
   }
 }
 
