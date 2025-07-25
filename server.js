@@ -975,6 +975,163 @@ app.get('/api/providers', async (req, res) => {
     }
   });  
 
+// New endpoint for trending content by streaming provider
+app.get('/api/trending/provider/:providerId', async (req, res) => {
+  const { providerId } = req.params;
+  const { type = 'movie', page = 1, region = 'US' } = req.query;
+  
+  try {
+    if (!API_KEY) {
+      // Return demo data when API key is not configured
+      const demoData = {
+        results: [
+          {
+            id: 1001,
+            title: "Demo Movie 1",
+            overview: "Esta es una película de demostración para mostrar la funcionalidad.",
+            poster_path: "/demo1.jpg",
+            backdrop_path: "/demo1_backdrop.jpg",
+            release_date: "2024-01-01",
+            vote_average: 8.5,
+            popularity: 1000,
+            adult: false
+          },
+          {
+            id: 1002,
+            title: "Demo Movie 2", 
+            overview: "Otra película de demostración con contenido interesante.",
+            poster_path: "/demo2.jpg",
+            backdrop_path: "/demo2_backdrop.jpg",
+            release_date: "2024-02-01",
+            vote_average: 7.8,
+            popularity: 900,
+            adult: false
+          },
+          {
+            id: 1003,
+            title: "Demo Movie 3",
+            overview: "Tercera película de demostración para completar la vista.",
+            poster_path: "/demo3.jpg",
+            backdrop_path: "/demo3_backdrop.jpg", 
+            release_date: "2024-03-01",
+            vote_average: 8.2,
+            popularity: 850,
+            adult: false
+          }
+        ],
+        total_pages: 1,
+        total_results: 3
+      };
+      return res.json(demoData);
+    }
+    
+    // Get popular content filtered by provider
+    const url = `https://api.themoviedb.org/3/discover/${type}?api_key=${API_KEY}&with_watch_providers=${providerId}&watch_region=${region}&sort_by=popularity.desc&page=${page}&language=es-ES&include_adult=false`;
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    // Filter out items without poster
+    if (data.results) {
+      data.results = data.results.filter(item => item.poster_path);
+    }
+    
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching trending content by provider:", error);
+    res.status(500).json({ message: "Error fetching trending content" });
+  }
+});
+
+// New endpoint for trending content by country
+app.get('/api/trending/country/:region', async (req, res) => {
+  const { region } = req.params;
+  const { type = 'all', time_window = 'week', page = 1 } = req.query;
+  
+  try {
+    if (!API_KEY) {
+      // Return demo data when API key is not configured
+      const demoData = {
+        results: [
+          {
+            id: 2001,
+            title: "Trending Demo 1",
+            name: "Trending Demo Series 1",
+            overview: "Contenido trending de demostración para mostrar las tendencias.",
+            poster_path: "/trending1.jpg",
+            backdrop_path: "/trending1_backdrop.jpg",
+            release_date: "2024-01-15",
+            first_air_date: "2024-01-15",
+            vote_average: 9.1,
+            popularity: 1500,
+            adult: false,
+            media_type: "movie"
+          },
+          {
+            id: 2002,
+            title: "Trending Demo 2",
+            name: "Trending Demo Series 2", 
+            overview: "Segundo contenido trending para demostrar la funcionalidad.",
+            poster_path: "/trending2.jpg",
+            backdrop_path: "/trending2_backdrop.jpg",
+            release_date: "2024-02-15",
+            first_air_date: "2024-02-15",
+            vote_average: 8.7,
+            popularity: 1400,
+            adult: false,
+            media_type: "tv"
+          }
+        ],
+        total_pages: 1,
+        total_results: 2
+      };
+      return res.json(demoData);
+    }
+    
+    // Get trending content by region
+    const url = `https://api.themoviedb.org/3/trending/${type}/${time_window}?api_key=${API_KEY}&region=${region}&page=${page}&language=es-ES`;
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    // Filter out items without poster
+    if (data.results) {
+      data.results = data.results.filter(item => item.poster_path);
+    }
+    
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching trending content by country:", error);
+    res.status(500).json({ message: "Error fetching trending content" });
+  }
+});
+
+// New endpoint for popular streaming providers
+app.get('/api/popular-providers', async (req, res) => {
+  try {
+    if (!API_KEY) {
+      return res.status(503).json({ 
+        message: 'API key is required. Please configure TMDb API key in environment variables.' 
+      });
+    }
+    
+    // Return popular streaming providers with their IDs
+    const popularProviders = [
+      { provider_id: 8, provider_name: 'Netflix', logo_path: '/t2yyOv40HZeVlLjYsCsPHnWLk4W.jpg' },
+      { provider_id: 118, provider_name: 'HBO Max', logo_path: '/Ajqyt5aNxNGjmF9uOfxArGrdf3X.jpg' },
+      { provider_id: 350, provider_name: 'Apple TV Plus', logo_path: '/6uhKBfmtzFqOcLousHwZuzcrScK.jpg' },
+      { provider_id: 337, provider_name: 'Disney Plus', logo_path: '/7rwgEs15tFwyR9NPQ5vpzxTj19Q.jpg' },
+      { provider_id: 531, provider_name: 'Paramount Plus', logo_path: '/h5DcR0J2EESLitnhR8xLG1QymTE.jpg' },
+      { provider_id: 384, provider_name: 'HBO Go', logo_path: '/aS2zvJWn9mwiCOeaVQwEtqGiVPY.jpg' },
+      { provider_id: 15, provider_name: 'Hulu', logo_path: '/giwM8XX4V2AQb9vsoN7yti82tKK.jpg' },
+      { provider_id: 9, provider_name: 'Amazon Prime Video', logo_path: '/emthp39XA2YScoYL1p0sdbAH2WA.jpg' }
+    ];
+    
+    res.json({ results: popularProviders });
+  } catch (error) {
+    console.error("Error fetching popular providers:", error);
+    res.status(500).json({ message: "Error fetching popular providers" });
+  }
+});
+
  
   app.get('/api/:type/:id/watch/providers', async (req, res) => {
     const { type, id } = req.params;

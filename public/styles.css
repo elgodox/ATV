@@ -4435,3 +4435,241 @@ h1 {
     font-size: 1em;
   }
 }
+
+/* ===== TRENDING SECTIONS STYLES ===== */
+
+/* Contenedor principal de secciones de trending */
+.trending-sections {
+  margin-bottom: 40px;
+}
+
+/* Sección individual de trending por proveedor */
+.trending-section {
+  margin-bottom: 40px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.trending-section.fade-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.trending-section.fade-out {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+/* Header de cada sección de trending */
+.trending-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 24px;
+}
+
+.trending-section h2 {
+  color: #ffffff;
+  font-size: 1.8em;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.trending-section h2 .provider-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.trending-section h2 i {
+  color: #FF6B35;
+  font-size: 1.1em;
+}
+
+/* Contenedor de trending */
+.trending-container {
+  position: relative;
+  overflow: hidden;
+  padding: 0 24px;
+}
+
+/* Grid de trending */
+.trending-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+  padding: 0;
+  min-height: 300px;
+}
+
+/* Sección de trending por país */
+.country-trending-section {
+  margin-bottom: 40px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.country-trending-section.fade-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.country-trending-section.fade-out {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.country-trending-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 24px;
+}
+
+.country-trending-section h2 {
+  color: #ffffff;
+  font-size: 1.8em;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.country-trending-section h2 i {
+  color: #FF4444;
+  font-size: 1.1em;
+}
+
+/* ===== GLOBAL FADE ANIMATIONS ===== */
+
+/* Animaciones generales para transiciones suaves */
+.section-loading {
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.4s ease;
+}
+
+.section-loaded {
+  opacity: 1;
+  pointer-events: auto;
+  transition: all 0.4s ease;
+}
+
+/* Animación para cuando se ocultan las secciones durante búsqueda */
+.search-hidden {
+  opacity: 0;
+  transform: translateY(-20px);
+  pointer-events: none;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Animación para el grid de resultados */
+#movie-grid {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#movie-grid.fade-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#movie-grid.fade-out {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+/* Loading skeleton para trending sections */
+.trending-skeleton {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+  padding: 0 24px;
+}
+
+.skeleton-item {
+  width: 100%;
+  height: 270px;
+  background: linear-gradient(90deg, 
+    rgba(255,255,255,0.1) 0%, 
+    rgba(255,255,255,0.2) 50%, 
+    rgba(255,255,255,0.1) 100%);
+  background-size: 200% 100%;
+  border-radius: 12px;
+  animation: skeleton-loading 2s infinite ease-in-out;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Responsive para trending sections */
+@media (max-width: 1200px) {
+  .trending-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .trending-section .section-header,
+  .country-trending-section .section-header {
+    padding: 0 16px;
+  }
+  
+  .trending-container {
+    padding: 0 16px;
+  }
+  
+  .trending-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  
+  .trending-section h2,
+  .country-trending-section h2 {
+    font-size: 1.5em;
+  }
+  
+  .trending-skeleton {
+    padding: 0 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .trending-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  
+  .trending-section h2,
+  .country-trending-section h2 {
+    font-size: 1.3em;
+  }
+  
+  .skeleton-item {
+    height: 200px;
+  }
+}

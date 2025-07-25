@@ -3940,14 +3940,22 @@ document.getElementById("search-bar").addEventListener("input", (e) => {
 
   if (searchQuery === '') {
     hideSearchResultsInfo();
+    
+    // Show trending sections when search is cleared
+    toggleTrendingSectionsVisibility(false);
+    
     currentPage = 1;
+    animateMovieGrid();
     getTitles(currentPage);
     return;
   }
   
+  // Hide trending sections when searching
+  toggleTrendingSectionsVisibility(true);
 
   searchTimeout = setTimeout(() => {
     currentPage = 1;
+    animateMovieGrid();
     getTitles(currentPage);
   }, 300);
 });
@@ -4886,6 +4894,224 @@ async function refreshContinueWatchingSection() {
   }
 }
 
+// ===== TRENDING SECTIONS FUNCTIONALITY =====
+
+// Function to load popular streaming providers and their trending content
+async function loadTrendingSections() {
+  const trendingSectionsContainer = document.getElementById('trending-sections');
+  if (!trendingSectionsContainer) return;
+
+  try {
+    // Show loading skeleton
+    showTrendingSkeletons(trendingSectionsContainer);
+
+    // Fetch popular streaming providers
+    const providersResponse = await fetch('/api/popular-providers');
+    if (!providersResponse.ok) throw new Error('Failed to fetch providers');
+    
+    const providersData = await providersResponse.json();
+    const providers = providersData.results.slice(0, 6); // Limit to 6 providers
+
+    // Clear container
+    trendingSectionsContainer.innerHTML = '';
+
+    // Load content for each provider
+    for (let i = 0; i < providers.length; i++) {
+      const provider = providers[i];
+      await loadProviderTrendingSection(provider, trendingSectionsContainer, i);
+    }
+
+    // Also load country trending section
+    await loadCountryTrendingSection();
+
+  } catch (error) {
+    console.error('Error loading trending sections:', error);
+    trendingSectionsContainer.innerHTML = '';
+  }
+}
+
+// Function to load trending content for a specific provider
+async function loadProviderTrendingSection(provider, container, index) {
+  try {
+    const sectionElement = document.createElement('div');
+    sectionElement.className = 'trending-section section-loading';
+    sectionElement.id = `trending-provider-${provider.provider_id}`;
+
+    sectionElement.innerHTML = `
+      <div class="section-header">
+        <h2>
+          <img src="https://image.tmdb.org/t/p/w92${provider.logo_path}" 
+               alt="${provider.provider_name}" 
+               class="provider-logo"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+          <i class="fas fa-play-circle" style="display: none;"></i>
+          Popular en ${provider.provider_name}
+        </h2>
+      </div>
+      <div class="trending-container">
+        <div class="trending-grid" id="trending-grid-${provider.provider_id}">
+          <!-- Loading content... -->
+        </div>
+      </div>
+    `;
+
+    container.appendChild(sectionElement);
+
+    // Add staggered animation delay
+    setTimeout(() => {
+      sectionElement.classList.add('fade-in');
+      sectionElement.classList.remove('section-loading');
+    }, index * 200);
+
+    // Fetch trending content for this provider
+    const response = await fetch(`/api/trending/provider/${provider.provider_id}?type=movie&page=1`);
+    if (!response.ok) throw new Error(`Failed to fetch trending for ${provider.provider_name}`);
+    
+    const data = await response.json();
+    const grid = document.getElementById(`trending-grid-${provider.provider_id}`);
+    
+    if (data.results && data.results.length > 0) {
+      grid.innerHTML = '';
+      
+      // Limit to 12 items for better performance
+      const items = data.results.slice(0, 12);
+      
+      items.forEach((item, itemIndex) => {
+        const movieElement = createMovieElement(item);
+        movieElement.style.animationDelay = `${itemIndex * 50}ms`;
+        grid.appendChild(movieElement);
+      });
+
+      // Mark section as loaded
+      setTimeout(() => {
+        sectionElement.classList.add('section-loaded');
+      }, 300);
+    } else {
+      // If no content, hide the section
+      sectionElement.style.display = 'none';
+    }
+
+  } catch (error) {
+    console.error(`Error loading trending content for ${provider.provider_name}:`, error);
+  }
+}
+
+// Function to load trending content by country
+async function loadCountryTrendingSection() {
+  const countrySection = document.getElementById('country-trending-section');
+  const countryGrid = document.getElementById('country-trending-grid');
+  
+  if (!countrySection || !countryGrid) return;
+
+  try {
+    // Show loading state
+    countrySection.classList.add('section-loading');
+    countryGrid.innerHTML = createSkeletonItems(12);
+
+    // Fetch trending content for user's region (default to US)
+    const region = 'US'; // Could be dynamic based on user location
+    const response = await fetch(`/api/trending/country/${region}?type=all&time_window=week&page=1`);
+    
+    if (!response.ok) throw new Error('Failed to fetch country trending');
+    
+    const data = await response.json();
+    
+    if (data.results && data.results.length > 0) {
+      countryGrid.innerHTML = '';
+      
+      // Limit to 12 items
+      const items = data.results.slice(0, 12);
+      
+      items.forEach((item, index) => {
+        const movieElement = createMovieElement(item);
+        movieElement.style.animationDelay = `${index * 50}ms`;
+        countryGrid.appendChild(movieElement);
+      });
+
+      // Show section with animation
+      setTimeout(() => {
+        countrySection.classList.remove('hidden', 'section-loading');
+        countrySection.classList.add('fade-in', 'section-loaded');
+      }, 300);
+    } else {
+      countrySection.classList.add('hidden');
+    }
+
+  } catch (error) {
+    console.error('Error loading country trending section:', error);
+    countrySection.classList.add('hidden');
+  }
+}
+
+// Function to show skeleton loading for trending sections
+function showTrendingSkeletons(container) {
+  container.innerHTML = `
+    <div class="trending-skeleton">
+      ${createSkeletonItems(6)}
+    </div>
+  `;
+}
+
+// Function to create skeleton items
+function createSkeletonItems(count) {
+  let items = '';
+  for (let i = 0; i < count; i++) {
+    items += '<div class="skeleton-item"></div>';
+  }
+  return items;
+}
+
+// Function to toggle trending sections visibility during search
+function toggleTrendingSectionsVisibility(isSearching) {
+  const trendingSections = document.getElementById('trending-sections');
+  const countryTrendingSection = document.getElementById('country-trending-section');
+  const continueWatchingSection = document.getElementById('continue-watching-section');
+
+  if (isSearching) {
+    // Hide trending sections during search
+    if (trendingSections) {
+      trendingSections.classList.remove('search-visible');
+      trendingSections.classList.add('search-hidden');
+    }
+    if (countryTrendingSection) {
+      countryTrendingSection.classList.remove('search-visible');
+      countryTrendingSection.classList.add('search-hidden');
+    }
+    if (continueWatchingSection) {
+      continueWatchingSection.classList.remove('search-visible');
+      continueWatchingSection.classList.add('search-hidden');
+    }
+  } else {
+    // Show trending sections when not searching
+    if (trendingSections) {
+      trendingSections.classList.remove('search-hidden');
+      trendingSections.classList.add('search-visible');
+    }
+    if (countryTrendingSection && !countryTrendingSection.classList.contains('hidden')) {
+      countryTrendingSection.classList.remove('search-hidden');
+      countryTrendingSection.classList.add('search-visible');
+    }
+    if (continueWatchingSection && !continueWatchingSection.classList.contains('hidden')) {
+      continueWatchingSection.classList.remove('search-hidden');
+      continueWatchingSection.classList.add('search-visible');
+    }
+  }
+}
+
+// Function to apply fade animation to movie grid
+function animateMovieGrid() {
+  const movieGrid = document.getElementById('movie-grid');
+  if (movieGrid) {
+    movieGrid.classList.remove('fade-in');
+    movieGrid.classList.add('fade-out');
+    
+    setTimeout(() => {
+      movieGrid.classList.remove('fade-out');
+      movieGrid.classList.add('fade-in');
+    }, 200);
+  }
+}
+
 
 
 fetchGenres();
@@ -4895,6 +5121,13 @@ window.onload = async function () {
 
   await initAuth();
   updateGenreSelect();
+  
+  // Load trending sections after authentication is initialized
+  setTimeout(async () => {
+    if (!document.getElementById('search-bar').value.trim()) {
+      await loadTrendingSections();
+    }
+  }, 1000);
 };
 
 
