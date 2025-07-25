@@ -1629,6 +1629,10 @@ async function resumeFromProgress(movie, autoResume = false) {
               season_number: movie.watch_progress.season_number,
               episode_number: movie.watch_progress.episode_number
             };
+
+            // Set originalTitle for subtitle search functionality
+            originalTitle = movie.title || movie.name || 'Unknown Movie';
+            console.log('🎬 originalTitle configurado en resumeFromProgress:', originalTitle);
             
             // Set up watch data with the resume progress information
             setupWatchData(
@@ -2899,9 +2903,12 @@ async function showDetails(id, type, movieCard) {
 
       originalTitle = dataOriginal.original_name;
     } else {
-
+      // Fallback to any available title
       originalTitle = dataOriginal.title || dataOriginal.name || dataOriginal.original_title || dataOriginal.original_name || "No Title";
     }
+    
+    console.log('🎬 originalTitle configurado como:', originalTitle);
+    
     spanishTitle = dataSpanish.title || dataSpanish.name || originalTitle;
     originalDescription = dataOriginal.overview || "No description available in English.";
     spanishDescription = dataSpanish.overview || "No hay descripción disponible en español.";
@@ -5735,6 +5742,10 @@ function playVideoFileWithStats(fileIndex) {
   // Set up watch progress tracking
   const currentMovie = getCurrentMovieData();
   if (currentMovie) {
+    // Set originalTitle for subtitle search functionality
+    originalTitle = currentMovie.title || currentMovie.name || 'Unknown Movie';
+    console.log('🎬 originalTitle configurado en playVideoFileWithStats:', originalTitle);
+    
     setupWatchData(
       currentMovie.content_type || 'movie',
       currentMovie.id,
@@ -5864,6 +5875,26 @@ function loadTorrentSubtitles() {
 
 
 function setupSubtitleControls() {
+  // Debug: Check if all subtitle elements exist
+  const requiredElements = [
+    'search-subtitles-btn',
+    'language-select', 
+    'torrent-subtitle-select',
+    'online-subtitle-select',
+    'select-file-btn',
+    'subtitle-file',
+    'upload-subtitle-btn',
+    'uploaded-subtitle-select'
+  ];
+  
+  const missingElements = requiredElements.filter(id => !document.getElementById(id));
+  if (missingElements.length > 0) {
+    console.error('⚠️ Elementos de subtítulos faltantes:', missingElements);
+    showNotification(`Elementos de subtítulos faltantes: ${missingElements.join(', ')}`, 'error');
+    return;
+  } else {
+    console.log('✅ Todos los elementos de subtítulos están presentes');
+  }
 
   document.getElementById('search-subtitles-btn').onclick = async function() {
     const language = document.getElementById('language-select').value;
@@ -5936,33 +5967,71 @@ async function loadTorrentSubtitle(subtitleIndex) {
 
 
 async function searchOnlineSubtitles(language) {
+  console.log('🔍 searchOnlineSubtitles llamada con idioma:', language);
+  
   const searchBtn = document.getElementById('search-subtitles-btn');
   const originalText = searchBtn.textContent;
   
   try {
-
+    // Set loading state
     searchBtn.textContent = 'Buscando...';
     searchBtn.disabled = true;
     showNotification('Buscando subtítulos online...', 'info', 2000);
-    
 
-    const movieTitle = originalTitle || 'Unknown Movie';
+    // Debug: Check all possible sources for movie title
+    console.log('🎬 originalTitle:', originalTitle);
+    console.log('🎬 currentContentData:', currentContentData);
+    console.log('🎬 currentWatchData:', currentWatchData);
+
+    let movieTitle = originalTitle || 'Unknown Movie';
+
+    // Try to get title from currentContentData if originalTitle is not set
+    if (movieTitle === 'Unknown Movie' && currentContentData) {
+      movieTitle = currentContentData.title || currentContentData.name || movieTitle;
+      console.log('🎬 Usando título de currentContentData:', movieTitle);
+    }
+    
+    // Try to get title from currentWatchData if still unknown
+    if (movieTitle === 'Unknown Movie' && currentWatchData) {
+      movieTitle = currentWatchData.title || movieTitle;
+      console.log('🎬 Usando título de currentWatchData:', movieTitle);
+    }
+    
+    console.log('🎬 Título final para búsqueda:', movieTitle);
+
     const imdbId = currentImdbId || null;
     
-
+    // Get season and episode info from multiple sources
     const seasonSelector = document.getElementById('season-selector');
     const episodeSelector = document.getElementById('episode-selector');
     let season = null;
     let episode = null;
-    
+
+    // First try to get from selectors (when user manually selected)
     if (seasonSelector && seasonSelector.value) {
       season = seasonSelector.value;
       if (episodeSelector && episodeSelector.value) {
         episode = episodeSelector.value;
       }
     }
-    
 
+    // If not found in selectors, try to get from currentContentData
+    if (!season && currentContentData && currentContentData.content_type === 'tv') {
+      season = currentContentData.season_number;
+      episode = currentContentData.episode_number;
+      console.log('🎬 Usando temporada/episodio de currentContentData:', { season, episode });
+    }
+    
+    // If still not found, try to get from currentWatchData
+    if (!season && currentWatchData && currentWatchData.content_type === 'tv') {
+      season = currentWatchData.season_number;
+      episode = currentWatchData.episode_number;
+      console.log('🎬 Usando temporada/episodio de currentWatchData:', { season, episode });
+    }
+    
+    console.log('🎬 Temporada y episodio final para búsqueda:', { season, episode });
+    
+    // Build search URL
     let searchUrl = `/api/subtitles/search?movieTitle=${encodeURIComponent(movieTitle)}&language=${language}`;
     if (imdbId) {
       searchUrl += `&imdbId=${encodeURIComponent(imdbId)}`;
@@ -5973,14 +6042,21 @@ async function searchOnlineSubtitles(language) {
         searchUrl += `&episode=${encodeURIComponent(episode)}`;
       }
     }
+
+    console.log('🌐 Haciendo petición a:', searchUrl);
+    console.log('🔍 Buscando subtítulos para:', { movieTitle, imdbId, language, season, episode });
     
     const response = await fetch(searchUrl);
+
+    console.log('📡 Respuesta de API recibida:', response.status, response.statusText);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
     const subtitles = await response.json();
+    
+    console.log('🎬 Subtítulos encontrados:', subtitles.length, subtitles);
 
     const select = document.getElementById('online-subtitle-select');
     select.innerHTML = '<option value="">Seleccionar subtítulo online</option>';
@@ -5992,6 +6068,7 @@ async function searchOnlineSubtitles(language) {
         
         option.textContent = `${subtitle.languageName} - ${subtitle.filename} (${subtitle.rating || 'N/A'})`;
         select.appendChild(option);
+        console.log('📎 Agregado subtítulo:', subtitle.filename, 'URL:', subtitle.downloadUrl);
       });
       
       if (subtitles.length > 0) {
@@ -6013,10 +6090,12 @@ async function searchOnlineSubtitles(language) {
 
 
 async function loadOnlineSubtitle(subtitleUrl) {
+  console.log('📥 loadOnlineSubtitle llamada con URL:', subtitleUrl);
+  
   try {
     showNotification('Cargando subtítulo online...', 'info', 2000);
     
-
+    // Validate subtitle URL
     if (!subtitleUrl || subtitleUrl.includes('undefined')) {
       throw new Error('URL de subtítulo inválida. Por favor, selecciona otro subtítulo.');
     }
@@ -6133,6 +6212,8 @@ function loadUploadedSubtitle(subtitlePath) {
 
 
 function addSubtitleTrack(src, label, language) {
+  console.log('🎬 addSubtitleTrack llamada:', { src, label, language });
+  
   const videoPlayer = document.getElementById('video-player');
   
   if (!videoPlayer) {
