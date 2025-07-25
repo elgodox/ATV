@@ -17,12 +17,12 @@ dotenv.config();
 
 // Initialize Supabase client for server-side operations
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 let supabase = null;
 
-if (supabaseUrl && supabaseServiceKey && supabaseUrl !== 'demo_url' && supabaseServiceKey !== 'demo_key') {
+if (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'demo_url' && supabaseAnonKey !== 'demo_key') {
   try {
-    supabase = createClient(supabaseUrl, supabaseServiceKey);
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
     console.log('✅ Supabase client initialized for watch progress tracking');
   } catch (error) {
     console.warn('⚠️ Failed to initialize Supabase client:', error.message);

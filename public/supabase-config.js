@@ -23,6 +23,11 @@ let supabaseClient = null;
 async function initializeSupabase() {
   const config = await getSupabaseConfig();
   
+  // Check if Supabase library is available
+  if (!window.supabase) {
+    console.error('Error inicializando Supabase: biblioteca no disponible');
+    throw new Error('Supabase library not available');
+  }
 
   const options = {
     auth: {

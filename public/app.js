@@ -33,12 +33,18 @@ let lastSavedTime = 0;
 const SAVE_INTERVAL = 10; // Save progress every 10 seconds
 
 // Function to get authentication token
-function getAuthToken() {
-  const user = currentUser;
-  if (!user || !user.access_token) {
+async function getAuthToken() {
+  try {
+    if (!auth) {
+      console.log('Auth no disponible');
+      return null;
+    }
+    const token = await auth.getAccessToken();
+    return token;
+  } catch (error) {
+    console.error('Error obteniendo token de acceso:', error);
     return null;
   }
-  return user.access_token;
 }
 
 // Function to save watch progress
