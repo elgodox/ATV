@@ -4495,17 +4495,18 @@ h1 {
 /* Contenedor de trending */
 .trending-container {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   padding: 0 24px;
+  margin: 20px 0;
 }
 
 /* Grid de trending - Netflix style horizontal scroll */
 .trending-grid {
   display: flex;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   gap: 16px;
-  padding: 0 0 20px 0;
+  padding: 20px 0 40px 0;
   scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: #555 transparent;
@@ -4537,7 +4538,7 @@ h1 {
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  margin-bottom: 10px;
+  margin: 10px 5px 15px 5px;
 }
 
 .trending-card:hover {
@@ -4926,10 +4927,12 @@ h1 {
   
   .trending-container {
     padding: 0 12px;
+    margin: 15px 0;
   }
   
   .trending-grid {
     gap: 12px;
+    padding: 15px 0 30px 0;
   }
   
   /* On very small screens, show hover info on tap and hold */
