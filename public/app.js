@@ -89,7 +89,11 @@ async function saveWatchProgress(currentTime, totalDuration = null) {
       torrent_file_index: currentWatchData.torrent_file_index,
       torrent_file_name: currentWatchData.torrent_file_name,
       torrent_file_size: currentWatchData.torrent_file_size,
-      torrent_quality: currentWatchData.torrent_quality
+      torrent_quality: currentWatchData.torrent_quality,
+      // Asegurar que guardamos información completa del torrent para poder recargarlo
+      torrent_name: currentWatchData.torrent_name || currentWatchData.title,
+      torrent_seeds: currentWatchData.torrent_seeds || 0,
+      torrent_size: currentWatchData.torrent_size || currentWatchData.torrent_file_size
     };
 
     const response = await fetch('/api/watch-progress', {
@@ -219,7 +223,11 @@ function setupWatchData(content_type, tmdb_id, title, season_number = null, epis
     torrent_file_index: fileIndex,
     torrent_file_name: torrentInfo?.videoFiles?.[fileIndex]?.name || null,
     torrent_file_size: torrentInfo?.videoFiles?.[fileIndex]?.length || null,
-    torrent_quality: extractQualityFromTorrentName(torrentInfo?.name) || null
+    torrent_quality: extractQualityFromTorrentName(torrentInfo?.name) || null,
+    // Información adicional del torrent para poder recargarlo
+    torrent_name: torrentInfo?.name || title,
+    torrent_seeds: torrentInfo?.seeds || torrentInfo?.numPeers || 0,
+    torrent_size: torrentInfo?.length || null
   };
 }
 
@@ -1402,8 +1410,17 @@ async function resumeFromProgress(movie, autoResume = false) {
       if (shouldResume) {
         // First, try to resume the exact torrent if it's still available
         try {
-          // Check if the torrent is still active on the server
-          const torrentStatusResponse = await fetch(`/api/torrent/status/${movie.watch_progress.torrent_hash}`);
+          console.log(`🔍 Verificando estado del torrent: ${movie.watch_progress.torrent_hash}`);
+          
+          // Check if the torrent is still active on the server with timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          
+          const torrentStatusResponse = await fetch(`/api/torrent/status/${movie.watch_progress.torrent_hash}`, {
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
           
           if (torrentStatusResponse.ok) {
             // Torrent is still active, we can resume directly
@@ -1417,7 +1434,8 @@ async function resumeFromProgress(movie, autoResume = false) {
                 index: 0, 
                 name: movie.watch_progress.torrent_file_name,
                 size: movie.watch_progress.torrent_file_size
-              }]
+              }],
+              magnetURI: movie.watch_progress.torrent_magnet_uri // Incluir el magnet link
             };
             
             // Set up watch data with saved progress
@@ -1477,37 +1495,415 @@ async function resumeFromProgress(movie, autoResume = false) {
               }
             }
           } else {
-            // Torrent not active, need to restart it or show details
-            throw new Error('Torrent no disponible en el servidor');
+            // Torrent not active, pero tenemos magnet link - recargar torrent
+            console.log('🔄 Torrent no activo en servidor, recargando desde magnet link...');
+            throw new Error('TORRENT_RELOAD_NEEDED');
           }
         } catch (torrentError) {
           console.warn('⚠️ No se pudo reanudar torrent exacto:', torrentError);
-          if (autoResume) {
-            showNotification('🔍 Torrent original no disponible. Buscando alternativas...', 'warning', 4000);
-          } else {
-            showNotification('El torrent original no está disponible. Abriendo opciones de torrents.', 'warning', 4000);
+          
+          // Si tenemos magnet link, intentar recargar el torrent
+          if (torrentError.message === 'TORRENT_RELOAD_NEEDED' && movie.watch_progress.torrent_magnet_uri) {
+            console.log('🚀 Recargando torrent desde magnet link guardado...');
+            
+            if (autoResume) {
+              showNotification('🔄 Recargando torrent para continuar reproducción...', 'info', 3000);
+            } else {
+              showNotification(`Recargando torrent para reanudar desde ${resumeTime}...`, 'info', 3000);
+            }
+            
+            // Usar el magnet link guardado para recargar el torrent
+            await watchOnlineWithStats(movie.watch_progress.torrent_magnet_uri, movie.title || movie.name);
+            
+            // Una vez que se cargue el torrent, configurar el tiempo de reproducción
+            setTimeout(() => {
+              const videoPlayer = document.getElementById('video-player');
+              if (videoPlayer && movie.watch_progress.playback_position > 30) {
+                const targetTime = movie.watch_progress.playback_position;
+                
+                const setVideoTime = () => {
+                  if (videoPlayer.readyState >= 2) {
+                    videoPlayer.currentTime = targetTime;
+                    console.log(`✅ Video tiempo establecido a: ${formatTime(targetTime)} (desde magnet recargado)`);
+                    
+                    // Actualizar los datos de seguimiento con el torrent recargado
+                    if (currentTorrentInfo) {
+                      setupWatchData(
+                        movie.content_type,
+                        movie.id,
+                        movie.title || movie.name,
+                        movie.watch_progress.season_number,
+                        movie.watch_progress.episode_number,
+                        currentTorrentInfo,
+                        0
+                      );
+                    }
+                    
+                    if (autoResume) {
+                      showNotification(`▶️ Continuando automáticamente desde ${resumeTime}`, 'success', 3000);
+                    } else {
+                      showNotification(`Resumiendo desde ${resumeTime}`, 'info', 3000);
+                    }
+                    return true;
+                  }
+                  return false;
+                };
+                
+                // Intentar establecer el tiempo inmediatamente
+                if (!setVideoTime()) {
+                  // Si no está listo, esperar a los eventos apropiados
+                  const events = ['loadeddata', 'canplay', 'loadedmetadata'];
+                  let eventHandled = false;
+                  
+                  events.forEach(eventName => {
+                    videoPlayer.addEventListener(eventName, () => {
+                      if (!eventHandled && setVideoTime()) {
+                        eventHandled = true;
+                      }
+                    }, { once: true });
+                  });
+                  
+                  // Timeout de respaldo
+                  setTimeout(() => {
+                    if (!eventHandled) {
+                      setVideoTime();
+                    }
+                  }, 5000);
+                }
+              }
+            }, 3000); // Dar tiempo para que el torrent se cargue
+            
+            return; // Salir aquí ya que estamos manejando la recarga
           }
-          showDetails(movie.id, movie.content_type, document.querySelector(`#movie-card-${movie.id}`));
+          
+          // For auto-resume with movies, try automatic recovery first
+          if (autoResume && movie.content_type === 'movie') {
+            console.log('🤖 Intentando recuperación automática para película...');
+            
+            const recoverySuccessful = await attemptTorrentRecovery(movie, movie.watch_progress.torrent_hash);
+            
+            if (recoverySuccessful) {
+              // Recovery was successful, no need to show details modal
+              return;
+            }
+          }
+          
+          // Provide more specific error messages based on the error type
+          let userMessage = '';
+          let notificationType = 'warning';
+          
+          if (torrentError.name === 'AbortError') {
+            if (autoResume) {
+              userMessage = '⏱️ Verificación de torrent tardó demasiado. Buscando alternativas...';
+            } else {
+              userMessage = 'La verificación del torrent tardó demasiado. Abriendo opciones disponibles.';
+            }
+          } else if (torrentError.message.includes('404') || torrentError.message.includes('no está activo')) {
+            if (autoResume) {
+              userMessage = '🔄 El torrent original expiró. Abriendo opciones de torrents...';
+            } else {
+              userMessage = 'El torrent original ya no está disponible. Te ayudaremos a encontrar uno nuevo.';
+            }
+          } else if (torrentError.message.includes('500') || torrentError.message.includes('servidor')) {
+            userMessage = '⚠️ Problema con el servidor. Reintentando con nuevos torrents...';
+            notificationType = 'error';
+          } else if (torrentError.name === 'TypeError' || torrentError.message.includes('fetch')) {
+            userMessage = '🌐 Problema de conexión. Verificando torrents disponibles...';
+          } else {
+            if (autoResume) {
+              userMessage = '🔍 Torrent original no disponible. Abriendo opciones de torrents...';
+            } else {
+              userMessage = 'El torrent original no está disponible. Abriendo opciones de torrents.';
+            }
+          }
+          
+          showNotification(userMessage, notificationType, 4000);
+          
+          // Try to find the movie card more reliably
+          let movieCard = document.querySelector(`#movie-card-${movie.id}`);
+          if (!movieCard) {
+            // If we can't find the specific card, create a temporary one or open modal directly
+            movieCard = null;
+          }
+          
+          showDetails(movie.id, movie.content_type, movieCard);
         }
       }
     } else {
-      // No torrent hash available, open details modal to select torrent
+      // No torrent hash available, check if we have magnet link
+      if (movie.watch_progress && movie.watch_progress.torrent_magnet_uri) {
+        console.log('🔗 No hay hash de torrent, pero tenemos magnet link - recargando...');
+        
+        if (autoResume) {
+          showNotification('🔄 Recargando torrent para continuar reproducción...', 'info', 3000);
+        } else {
+          const resumeTime = formatTime(movie.watch_progress.playback_position);
+          const shouldResume = confirm(
+            `¿Quieres continuar "${movie.title || movie.name}" desde donde lo dejaste? (${resumeTime})`
+          );
+          
+          if (!shouldResume) {
+            return;
+          }
+          
+          showNotification(`Recargando torrent para reanudar desde ${resumeTime}...`, 'info', 3000);
+        }
+        
+        // Usar el magnet link guardado para recargar el torrent
+        await watchOnlineWithStats(movie.watch_progress.torrent_magnet_uri, movie.title || movie.name);
+        
+        // Una vez que se cargue el torrent, configurar el tiempo de reproducción
+        setTimeout(() => {
+          const videoPlayer = document.getElementById('video-player');
+          if (videoPlayer && movie.watch_progress.playback_position > 30) {
+            const targetTime = movie.watch_progress.playback_position;
+            const resumeTime = formatTime(targetTime);
+            
+            const setVideoTime = () => {
+              if (videoPlayer.readyState >= 2) {
+                videoPlayer.currentTime = targetTime;
+                console.log(`✅ Video tiempo establecido a: ${resumeTime} (desde magnet sin hash)`);
+                
+                // Actualizar los datos de seguimiento con el torrent recargado
+                if (currentTorrentInfo) {
+                  setupWatchData(
+                    movie.content_type,
+                    movie.id,
+                    movie.title || movie.name,
+                    movie.watch_progress.season_number,
+                    movie.watch_progress.episode_number,
+                    currentTorrentInfo,
+                    0
+                  );
+                }
+                
+                if (autoResume) {
+                  showNotification(`▶️ Continuando automáticamente desde ${resumeTime}`, 'success', 3000);
+                } else {
+                  showNotification(`Resumiendo desde ${resumeTime}`, 'info', 3000);
+                }
+                return true;
+              }
+              return false;
+            };
+            
+            // Intentar establecer el tiempo inmediatamente
+            if (!setVideoTime()) {
+              // Si no está listo, esperar a los eventos apropiados
+              const events = ['loadeddata', 'canplay', 'loadedmetadata'];
+              let eventHandled = false;
+              
+              events.forEach(eventName => {
+                videoPlayer.addEventListener(eventName, () => {
+                  if (!eventHandled && setVideoTime()) {
+                    eventHandled = true;
+                  }
+                }, { once: true });
+              });
+              
+              // Timeout de respaldo
+              setTimeout(() => {
+                if (!eventHandled) {
+                  setVideoTime();
+                }
+              }, 5000);
+            }
+          }
+        }, 3000); // Dar tiempo para que el torrent se cargue
+        
+        return; // Salir aquí ya que estamos manejando la recarga
+      }
+      
+      // No torrent hash or magnet link available, open details modal to select torrent
       if (autoResume) {
         showNotification('🔍 Buscando torrents para continuar reproducción...', 'info', 3000);
       } else {
         showNotification('No se encontró información de torrent. Abriendo detalles para seleccionar torrent.', 'info', 3000);
       }
-      showDetails(movie.id, movie.content_type, document.querySelector(`#movie-card-${movie.id}`));
+      
+      // Try to find the movie card more reliably
+      let movieCard = document.querySelector(`#movie-card-${movie.id}`);
+      if (!movieCard) {
+        movieCard = null;
+      }
+      
+      showDetails(movie.id, movie.content_type, movieCard);
     }
     
   } catch (error) {
     console.error('Error resumiendo reproducción:', error);
-    if (autoResume) {
-      showNotification('❌ Error al continuar automáticamente. Abriendo opciones.', 'error', 3000);
+    
+    // Provide more specific error messages based on error type
+    let userMessage = '';
+    let notificationType = 'error';
+    
+    if (error.message.includes('network') || error.message.includes('fetch')) {
+      if (autoResume) {
+        userMessage = '🌐 Problema de conexión al reanudar. Abriendo opciones disponibles.';
+      } else {
+        userMessage = 'Problema de conexión. Verifica tu internet e intenta nuevamente.';
+      }
+    } else if (error.message.includes('data') || error.message.includes('progress')) {
+      if (autoResume) {
+        userMessage = '📊 Datos de progreso corruptos. Abriendo opciones para ver desde el inicio.';
+      } else {
+        userMessage = 'Problema con los datos de progreso guardados. Abriendo detalles.';
+      }
     } else {
-      showNotification('Error al reanudar reproducción. Abriendo detalles.', 'error', 3000);
+      if (autoResume) {
+        userMessage = '❌ Error al continuar automáticamente. Abriendo opciones manuales.';
+      } else {
+        userMessage = 'Error al reanudar reproducción. Abriendo detalles para seleccionar nueva fuente.';
+      }
     }
-    showDetails(movie.id, movie.content_type, document.querySelector(`#movie-card-${movie.id}`));
+    
+    showNotification(userMessage, notificationType, 4000);
+    
+    // Try to find the movie card more reliably, or pass null if not found
+    let movieCard = document.querySelector(`#movie-card-${movie.id}`);
+    if (!movieCard) {
+      movieCard = null;
+    }
+    
+    showDetails(movie.id, movie.content_type, movieCard);
+  }
+}
+
+// Function to clean up expired or invalid watch progress data
+async function cleanupExpiredProgress(contentType, tmdbId, seasonNumber = null, episodeNumber = null) {
+  try {
+    if (!currentUser) return;
+    
+    console.log('🧹 Limpiando progreso de reproducción expirado...');
+    
+    const progressData = await loadWatchProgress(contentType, tmdbId, seasonNumber, episodeNumber);
+    
+    if (progressData && progressData.torrent_hash) {
+      // Check if the torrent is still valid
+      try {
+        const response = await fetch(`/api/torrent/status/${progressData.torrent_hash}`);
+        if (!response.ok) {
+          // Torrent is no longer available, clear the progress data
+          console.log('🗑️ Eliminando datos de progreso para torrent expirado:', progressData.torrent_hash);
+          
+          // You could implement a function to remove specific progress data here
+          // For now, we'll just log it
+          showNotification('Se eliminaron datos de progreso obsoletos', 'info', 2000);
+        }
+      } catch (error) {
+        console.warn('Error verificando torrent para limpieza:', error);
+      }
+    }
+  } catch (error) {
+    console.error('Error limpiando progreso expirado:', error);
+  }
+}
+
+// Function to attempt automatic torrent recovery when original is not available
+async function attemptTorrentRecovery(movie, originalTorrentHash) {
+  try {
+    console.log('🔄 Intentando recuperación automática de torrent para:', movie.title || movie.name);
+    
+    const title = movie.title || movie.name;
+    const contentType = movie.content_type || 'movie';
+    
+    // Show loading notification
+    showNotification('🔍 Buscando torrent alternativo para continuar reproducción...', 'info', 4000);
+    
+    // For TV shows, include season and episode info if available
+    let searchTitle = title;
+    if (contentType === 'tv' && movie.watch_progress) {
+      if (movie.watch_progress.season_number && movie.watch_progress.episode_number) {
+        searchTitle += ` S${String(movie.watch_progress.season_number).padStart(2, '0')}E${String(movie.watch_progress.episode_number).padStart(2, '0')}`;
+      }
+    }
+    
+    // Try to fetch torrents for this content
+    let torrents = [];
+    if (contentType === 'tv') {
+      // For TV shows, we'd need the full TV details to search properly
+      console.log('🎬 Recuperación de TV shows requiere búsqueda manual');
+      return false;
+    } else {
+      // For movies, try to fetch torrents using the same API as the app
+      try {
+        const response = await fetch(`/api/torrents?movieTitle=${encodeURIComponent(title)}`);
+        if (response.ok) {
+          const data = await response.json();
+          torrents = data.results || data || [];
+        } else {
+          console.warn('❌ Error buscando torrents alternativos:', response.status);
+          return false;
+        }
+      } catch (fetchError) {
+        console.warn('❌ Error de red buscando torrents alternativos:', fetchError);
+        return false;
+      }
+    }
+    
+    if (torrents.length > 0) {
+      // Filter out the original failed torrent and find the best alternative
+      const alternativeTorrents = torrents.filter(torrent => {
+        // Handle different torrent object structures
+        const magnetLink = torrent.magnet || torrent.magnetUrl || torrent.download;
+        if (!magnetLink) return false;
+        
+        const torrentHash = magnetLink.match(/xt=urn:btih:([^&]+)/i)?.[1];
+        return torrentHash && torrentHash.toLowerCase() !== originalTorrentHash.toLowerCase();
+      });
+      
+      if (alternativeTorrents.length > 0) {
+        // Sort by quality and seeds to find the best alternative
+        alternativeTorrents.sort((a, b) => {
+          const seedsA = parseInt(a.seeds) || parseInt(a.seeders) || 0;
+          const seedsB = parseInt(b.seeds) || parseInt(b.seeders) || 0;
+          return seedsB - seedsA; // Higher seeds first
+        });
+        
+        const bestAlternative = alternativeTorrents[0];
+        const magnetLink = bestAlternative.magnet || bestAlternative.magnetUrl || bestAlternative.download;
+        
+        showNotification(`✅ Torrent alternativo encontrado: ${bestAlternative.quality || bestAlternative.title || 'Calidad desconocida'}`, 'success', 3000);
+        
+        // Try to start the alternative torrent with saved progress
+        setTimeout(() => {
+          watchOnlineWithStats(magnetLink, title);
+          
+          // Try to set the saved time once video loads
+          setTimeout(() => {
+            const videoPlayer = document.getElementById('video-player');
+            if (videoPlayer && movie.watch_progress.playback_position > 30) {
+              const setTime = () => {
+                if (videoPlayer.readyState >= 2) {
+                  videoPlayer.currentTime = movie.watch_progress.playback_position;
+                  const resumeTime = formatTime(movie.watch_progress.playback_position);
+                  showNotification(`⏭️ Saltando automáticamente a ${resumeTime}`, 'info', 3000);
+                }
+              };
+              
+              if (videoPlayer.readyState >= 2) {
+                setTime();
+              } else {
+                videoPlayer.addEventListener('loadeddata', setTime, { once: true });
+              }
+            }
+          }, 3000);
+        }, 1000);
+        
+        return true;
+      } else {
+        console.log('❌ No se encontraron torrents alternativos diferentes al original');
+      }
+    } else {
+      console.log('❌ No se encontraron torrents para el título:', title);
+    }
+    
+    console.log('❌ No se encontraron torrents alternativos');
+    return false;
+    
+  } catch (error) {
+    console.error('Error en recuperación automática de torrent:', error);
+    return false;
   }
 }
 
@@ -4267,6 +4663,8 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
       }
 
       const torrentInfo = await response.json();
+      // Añadir el magnet link al torrent info para poder guardarlo y reutilizarlo
+      torrentInfo.magnetURI = magnetURI;
       currentTorrentInfo = torrentInfo;
 
 
