@@ -6373,21 +6373,29 @@ function disableSubtitles() {
 
 
 async function closeVideoModal() {
+  // Stop watch progress tracking first
+  stopWatchProgressTracking();
+  
   const videoModal = document.getElementById('video-modal');
   videoModal.classList.add('hidden');
   videoModal.style.display = 'none';
   
-
+  // Remove video player event listeners to prevent errors during cleanup
   const videoPlayer = document.getElementById('video-player');
   if (videoPlayer) {
-    videoPlayer.pause();
-    videoPlayer.src = '';
-    videoPlayer.load();
+    // Remove all event listeners by cloning the element
+    const newVideoPlayer = videoPlayer.cloneNode(true);
+    videoPlayer.parentNode.replaceChild(newVideoPlayer, videoPlayer);
+    
+    // Now safely clean up the new player
+    newVideoPlayer.pause();
+    newVideoPlayer.src = '';
+    newVideoPlayer.load();
     
 
-    const tracks = videoPlayer.getElementsByTagName('track');
+    const tracks = newVideoPlayer.getElementsByTagName('track');
     while (tracks.length > 0) {
-      videoPlayer.removeChild(tracks[0]);
+      newVideoPlayer.removeChild(tracks[0]);
     }
   }
   
@@ -6648,6 +6656,16 @@ function setupVideoPlayerEvents() {
   });
 
   videoPlayer.addEventListener('error', (e) => {
+    // Check if video modal is still visible to avoid unnecessary errors during cleanup
+    const videoModal = document.getElementById('video-modal');
+    const isModalVisible = videoModal && videoModal.style.display !== 'none' && !videoModal.classList.contains('hidden');
+    
+    if (!isModalVisible) {
+      // Modal is closing/closed, ignore the error
+      console.log('Video error during modal close (expected)');
+      return;
+    }
+    
     if (playerLoadingIndicator) {
       playerLoadingIndicator.style.display = 'none';
     }
