@@ -33,6 +33,7 @@ let currentWatchData = null;
 let currentContentData = null; // Store current movie/show data for streaming
 let lastSavedTime = 0;
 const SAVE_INTERVAL = 10; // Save progress every 10 seconds
+let continueWatchingLoaded = false; // Flag to prevent multiple loads
 
 // Function to get authentication token
 async function getAuthToken() {
@@ -665,8 +666,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   getTitles(1);
   
-  // Initialize continue watching section
-  loadContinueWatchingSection();
+  // Initialize continue watching section only once during page load
+  // Remove this call since it's already being handled in window.onload
+  // loadContinueWatchingSection();
 });
 
 function initializeNewInterface() {
@@ -1003,7 +1005,288 @@ async function updateGenreSelect() {
 }
 
 
+// Function to create trending cards with photo-style design and hover effects
+function createTrendingCard(title, defaultContentType = 'movie') {
+  const movieCard = document.createElement('div');
+  movieCard.id = `trending-card-${title.id}`;
+  movieCard.classList.add('trending-card');
+  
+  const contentType = title.content_type || title.media_type || defaultContentType;
+  movieCard.classList.add(`content-${contentType}`);
+  movieCard.setAttribute('data-type', contentType);
+  movieCard.setAttribute('data-id', title.id);
 
+  // Handle movie genres - need to ensure genreMap is available
+  let movieGenres = 'N/A';
+  if (title.genre_ids && window.genreMap) {
+    movieGenres = title.genre_ids.map(id => window.genreMap[id]).filter(Boolean).join(', ') || 'N/A';
+  } else if (title.genres) {
+    movieGenres = title.genres.map(genre => genre.name).join(', ') || 'N/A';
+  }
+
+  // Function to check for non-Latin characters  
+  const containsNonLatinChars = (str) => {
+    if (!str) return false;
+    return /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(str);
+  };
+
+  // Determine the best title to display
+  let titleName;
+  if (title.title && !containsNonLatinChars(title.title)) {
+    titleName = title.title;
+  } else if (title.name && !containsNonLatinChars(title.name)) {
+    titleName = title.name;
+  } else if (title.original_title && !containsNonLatinChars(title.original_title)) {
+    titleName = title.original_title;
+  } else if (title.original_name && !containsNonLatinChars(title.original_name)) {
+    titleName = title.original_name;
+  } else {
+    titleName = title.title || title.name || title.original_title || title.original_name || 'Título desconocido';
+  }
+
+  const releaseDate = title.release_date || title.first_air_date || 'Fecha desconocida';
+  const year = releaseDate.split('-')[0];
+
+  // Handle TV show specific data
+  let seasons = '';
+  let status = '';
+  if (contentType === 'tv') {
+    seasons = title.number_of_seasons ? `${title.number_of_seasons} Temporadas` : 'N/A';
+    status = title.status ? (title.status === 'Ended' ? 'Finalizada' : 'En emisión') : 'Estado desconocido';
+  }
+
+  const contentTypeTag = contentType === 'movie' ? 'Película' : 'Serie';
+  const contentTypeIcon = contentType === 'movie' ? '<i class="fas fa-film"></i>' : '<i class="fas fa-tv"></i>';
+  const rating = title.vote_average ? (title.vote_average / 2).toFixed(1) : 'N/A';
+
+  // Handle poster image with fallback for demo data
+  let posterSrc;
+  if (title.poster_path && title.poster_path.startsWith('/')) {
+    // Real TMDB data
+    posterSrc = `https://image.tmdb.org/t/p/w500${title.poster_path}`;
+  } else if (title.poster_path && (title.poster_path.startsWith('http') || title.poster_path.startsWith('//'))) {
+    // Already a full URL
+    posterSrc = title.poster_path;
+  } else {
+    // Demo data or missing poster - use placeholder
+    const safeTitle = titleName.replace(/[<>"'&]/g, ' ').substring(0, 20);
+    const safeContentType = contentTypeTag.replace(/[<>"'&]/g, ' ');
+    const safeDate = year.replace(/[<>"'&]/g, ' ').substring(0, 4);
+    
+    posterSrc = `data:image/svg+xml;base64,${btoa(`
+      <svg width="300" height="450" viewBox="0 0 300 450" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#FF6B35;stop-opacity:0.8" />
+            <stop offset="100%" style="stop-color:#1a1a1a;stop-opacity:1" />
+          </linearGradient>
+        </defs>
+        <rect width="300" height="450" fill="url(#grad1)"/>
+        <circle cx="150" cy="180" r="40" fill="rgba(255,255,255,0.1)"/>
+        <path d="M130 165 L170 190 L130 215 Z" fill="rgba(255,255,255,0.3)"/>
+        <text x="150" y="280" fill="#fff" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold">${safeTitle}</text>
+        <text x="150" y="310" fill="#FFB366" text-anchor="middle" font-family="Arial, sans-serif" font-size="12">${safeContentType}</text>
+        <text x="150" y="330" fill="rgba(255,255,255,0.7)" text-anchor="middle" font-family="Arial, sans-serif" font-size="11">${safeDate}</text>
+      </svg>
+    `)}`;
+  }
+  
+  movieCard.innerHTML = `
+    <div class="trending-card-image">
+      <img src="${posterSrc}" alt="${titleName}" loading="lazy" onerror="this.src='data:image/svg+xml;base64,${btoa(`
+        <svg width="300" height="450" viewBox="0 0 300 450" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="300" height="450" fill="#333"/>
+          <text x="150" y="225" fill="#666" text-anchor="middle" font-family="Arial, sans-serif" font-size="14">Imagen no disponible</text>
+        </svg>
+      `)}'; this.onerror=null;">
+      
+      <!-- Content type indicator overlay -->
+      <div class="content-type-indicator">
+        ${contentTypeIcon}
+        <span>${contentTypeTag}</span>
+      </div>
+      
+      <!-- Hover overlay with additional information -->
+      <div class="trending-hover-overlay">
+        <div class="hover-content">
+          <h4>${titleName}</h4>
+          <div class="hover-details">
+            <p><i class="fas fa-calendar"></i> ${year}</p>
+            <p><i class="fas fa-star"></i> ${rating}/5</p>
+            ${contentType === 'tv' && seasons !== 'N/A' ? `<p><i class="fas fa-list"></i> ${seasons}</p>` : ''}
+            <p><i class="fas fa-tags"></i> ${movieGenres}</p>
+          </div>
+          ${title.overview ? `<p class="hover-overview">${title.overview.substring(0, 120)}...</p>` : ''}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Simple title and type below image -->
+    <div class="trending-card-info">
+      <h3 class="trending-title">${titleName}</h3>
+      <div class="trending-meta">
+        <span class="trending-type">${contentTypeIcon} ${contentTypeTag}</span>
+        <span class="trending-year">${year}</span>
+      </div>
+    </div>
+  `;
+
+  // Add click event listener
+  movieCard.addEventListener('click', () => {
+    showDetails(title.id, contentType, movieCard);
+  });
+
+  return movieCard;
+}
+
+// Global function to create a movie element (reusable for regular grid)
+function createMovieElement(title, defaultContentType = 'movie') {
+  const movieCard = document.createElement('div');
+  movieCard.id = `movie-card-${title.id}`;
+  movieCard.classList.add('movie-card');
+  
+  const contentType = title.content_type || title.media_type || defaultContentType;
+  movieCard.classList.add(`content-${contentType}`);
+  movieCard.setAttribute('data-type', contentType);
+  movieCard.setAttribute('data-id', title.id);
+
+  // Handle movie genres - need to ensure genreMap is available
+  let movieGenres = 'N/A';
+  if (title.genre_ids && window.genreMap) {
+    movieGenres = title.genre_ids.map(id => window.genreMap[id]).filter(Boolean).join(', ') || 'N/A';
+  } else if (title.genres) {
+    movieGenres = title.genres.map(genre => genre.name).join(', ') || 'N/A';
+  }
+
+  // Function to check for non-Latin characters  
+  const containsNonLatinChars = (str) => {
+    if (!str) return false;
+    return /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(str);
+  };
+
+  // Determine the best title to display
+  let titleName;
+  if (title.title && !containsNonLatinChars(title.title)) {
+    titleName = title.title;
+  } else if (title.name && !containsNonLatinChars(title.name)) {
+    titleName = title.name;
+  } else if (title.original_title && !containsNonLatinChars(title.original_title)) {
+    titleName = title.original_title;
+  } else if (title.original_name && !containsNonLatinChars(title.original_name)) {
+    titleName = title.original_name;
+  } else {
+    titleName = title.title || title.name || title.original_title || title.original_name || 'Título desconocido';
+  }
+
+  const releaseDate = title.release_date || title.first_air_date || 'Fecha desconocida';
+
+  // Handle TV show specific data
+  let seasons = '';
+  let status = '';
+  if (contentType === 'tv') {
+    // For demo data or when we can't fetch details, use placeholder
+    seasons = title.number_of_seasons ? `${title.number_of_seasons} Temporadas` : 'N/A';
+    status = title.status ? (title.status === 'Ended' ? 'Finalizada' : 'En emisión') : 'Estado desconocido';
+  }
+
+  const stars = renderStars(title.vote_average || 0);
+  const contentTypeTag = contentType === 'movie' ? 'Película' : 'Serie';
+  const contentTypeIcon = contentType === 'movie' ? '<i class="fas fa-film"></i>' : '<i class="fas fa-tv"></i>';
+  
+  // Build progress indicator for continue watching items
+  let progressInfo = '';
+  if (title.watch_progress) {
+    const progressPercent = title.watch_progress.progress_percentage || 0;
+    const resumeTime = formatTime(title.watch_progress.playback_position);
+    const episodeInfo = title.watch_progress.season_number && title.watch_progress.episode_number 
+      ? ` (T${title.watch_progress.season_number}E${title.watch_progress.episode_number})`
+      : '';
+    
+    progressInfo = `
+      <div class="progress-info" style="background: linear-gradient(135deg, #4CAF50, #45a049); color: white; padding: 8px; border-radius: 4px; margin: 8px 0; text-align: center;">
+        <i class="fas fa-play-circle"></i> Continuar desde ${resumeTime}${episodeInfo}
+        <div class="progress-bar" style="background: rgba(255,255,255,0.3); height: 4px; border-radius: 2px; margin-top: 4px;">
+          <div class="progress-fill" style="background: white; height: 100%; width: ${Math.min(progressPercent, 100)}%; border-radius: 2px; transition: width 0.3s ease;"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Handle poster image with fallback for demo data
+  let posterSrc;
+  if (title.poster_path && title.poster_path.startsWith('/')) {
+    // Real TMDB data
+    posterSrc = `https://image.tmdb.org/t/p/w500${title.poster_path}`;
+  } else if (title.poster_path && (title.poster_path.startsWith('http') || title.poster_path.startsWith('//'))) {
+    // Already a full URL
+    posterSrc = title.poster_path;
+  } else {
+    // Demo data or missing poster - use placeholder
+    const safeTitle = titleName.replace(/[<>"'&]/g, ' ').substring(0, 20);
+    const safeContentType = contentTypeTag.replace(/[<>"'&]/g, ' ');
+    const safeDate = releaseDate.replace(/[<>"'&]/g, ' ').substring(0, 10);
+    
+    posterSrc = `data:image/svg+xml;base64,${btoa(`
+      <svg width="500" height="750" viewBox="0 0 500 750" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="500" height="750" fill="#1a1a1a"/>
+        <circle cx="250" cy="300" r="60" fill="#333"/>
+        <path d="M220 280 L280 320 L220 360 Z" fill="#666"/>
+        <text x="250" y="450" fill="#666" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold">${safeTitle}</text>
+        <text x="250" y="490" fill="#555" text-anchor="middle" font-family="Arial, sans-serif" font-size="18">${safeContentType}</text>
+        <text x="250" y="530" fill="#444" text-anchor="middle" font-family="Arial, sans-serif" font-size="16">${safeDate}</text>
+      </svg>
+    `)}`;
+  }
+  
+  movieCard.innerHTML = `
+    <img src="${posterSrc}" alt="${titleName}" loading="lazy" onerror="this.src='data:image/svg+xml;base64,${btoa(`
+      <svg width="500" height="750" viewBox="0 0 500 750" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="500" height="750" fill="#333"/>
+        <text x="250" y="375" fill="#666" text-anchor="middle" font-family="Arial, sans-serif" font-size="20">Imagen no disponible</text>
+      </svg>
+    `)}'; this.onerror=null;">
+    <h3 class="title-with-icon ${contentType}">${contentTypeIcon}<span class="title-text">${titleName}</span></h3>
+    ${progressInfo}
+    <p><strong>Estreno:</strong> ${releaseDate}</p>
+    <p><strong>Género:</strong> ${movieGenres}</p>
+    ${seasons ? `<p><strong>Temporadas:</strong> ${seasons}</p>` : ''}
+    ${status ? `<p><strong>Estado:</strong> ${status}</p>` : ''}
+    <p><strong>Valoración:</strong> ${stars}</p>
+
+    <!-- Contenedor para los íconos alineados a la derecha -->
+    <div class="card-icons">
+      <i id="heart-icon-${title.id}" 
+         class="fas fa-heart" 
+         style="cursor: pointer; color: black;" 
+         onclick="toggleFavorite(${title.id}, '${contentType}', event)"></i>
+      <i id="eye-icon-${title.id}" 
+         class="fas fa-eye" 
+         style="cursor: pointer; color: ${isWatched(title.id, contentType) ? 'blue' : 'black'};" 
+         onclick="toggleWatched(${title.id}, '${contentType}', event)"></i>
+    </div>
+  `;
+
+  // Add watched class if applicable
+  if (isWatched(title.id, contentType)) {
+    movieCard.classList.add('watched');
+  } else {
+    movieCard.classList.remove('watched');
+  }
+
+  // Add click event listener
+  movieCard.addEventListener('click', () => {
+    // Check if this is a "continue watching" item with progress data
+    if (showingContinueWatching && title.watch_progress) {
+      // Resume playback directly using the torrent hash (automatic mode)
+      resumeFromProgress(title, true);
+    } else {
+      // Regular behavior: show details modal
+      showDetails(title.id, contentType, movieCard);
+    }
+  });
+
+  return movieCard;
+}
 
 async function getTitles(page = 1) {
   if (isLoading) return;
@@ -1276,140 +1559,16 @@ async function getTitles(page = 1) {
 
 
   const genreData = await fetchData('genres');
-  const genreMap = {};
+  window.genreMap = {};
   genreData.genres.forEach(genre => {
-    genreMap[genre.id] = genre.name;
+    window.genreMap[genre.id] = genre.name;
   });
 
-
+  // Use the global createMovieElement function for each title
   data.results.forEach(async (title) => {
-    const movieCard = document.createElement('div');
-    movieCard.id = `movie-card-${title.id}`;
-    movieCard.classList.add('movie-card');
-    
-
-    const contentType = title.content_type || defaultContentType;
-    movieCard.classList.add(`content-${contentType}`);
-    movieCard.setAttribute('data-type', contentType);
-    movieCard.setAttribute('data-id', title.id);
-
-
-    const movieGenres = title.genre_ids ? title.genre_ids.map(id => genreMap[id]).join(', ') : title.genres ? title.genres.map(genre => genre.name).join(', ') : 'N/A';
-
-
-    const providers = await fetchProvider(title.id, contentType);
-    const providerNames = providers ? providers.join(', ') : 'No disponible';
-
-
-    const containsNonLatinChars = (str) => {
-      if (!str) return false;
-
-      return /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(str);
-    };
-
-
-    let titleName;
-    if (title.title && !containsNonLatinChars(title.title)) {
-
-      titleName = title.title;
-    } else if (title.name && !containsNonLatinChars(title.name)) {
-
-      titleName = title.name;
-    } else if (title.original_title && !containsNonLatinChars(title.original_title)) {
-
-      titleName = title.original_title;
-    } else if (title.original_name && !containsNonLatinChars(title.original_name)) {
-
-      titleName = title.original_name;
-    } else {
-
-      titleName = title.title || title.name || title.original_title || title.original_name || 'Título desconocido';
-    }
-
-
-    const releaseDate = title.release_date || title.first_air_date || 'Fecha desconocida';
-
-    let seasons = '';
-    let status = '';
-
-    if (contentType === 'tv') {
-      const tvDetails = await fetchTVDetails(title.id);
-      seasons = tvDetails ? `${tvDetails.number_of_seasons} Temporadas` : 'N/A';
-      status = tvDetails ? (tvDetails.status === 'Ended' ? 'Finalizada' : 'En emisión') : 'Estado desconocido';
-    }
-
-    const stars = renderStars(title.vote_average);
-
-
-    const contentTypeTag = contentType === 'movie' ? 'Película' : 'Serie';
-
-    const contentTypeIcon = contentType === 'movie' ? '<i class="fas fa-film"></i>' : '<i class="fas fa-tv"></i>';
-    
-    // Build progress indicator for continue watching items
-    let progressInfo = '';
-    if (title.watch_progress) {
-      const progressPercent = title.watch_progress.progress_percentage || 0;
-      const resumeTime = formatTime(title.watch_progress.playback_position);
-      const episodeInfo = title.watch_progress.season_number && title.watch_progress.episode_number 
-        ? ` (T${title.watch_progress.season_number}E${title.watch_progress.episode_number})`
-        : '';
-      
-      progressInfo = `
-        <div class="progress-info" style="background: linear-gradient(135deg, #4CAF50, #45a049); color: white; padding: 8px; border-radius: 4px; margin: 8px 0; text-align: center;">
-          <i class="fas fa-play-circle"></i> Continuar desde ${resumeTime}${episodeInfo}
-          <div class="progress-bar" style="background: rgba(255,255,255,0.3); height: 4px; border-radius: 2px; margin-top: 4px;">
-            <div class="progress-fill" style="background: white; height: 100%; width: ${Math.min(progressPercent, 100)}%; border-radius: 2px; transition: width 0.3s ease;"></div>
-          </div>
-        </div>
-      `;
-    }
-    
-    movieCard.innerHTML = `
-    <!-- Integrar icono inline junto al título -->
-    <img src="https://image.tmdb.org/t/p/w500${title.poster_path}" alt="${titleName}">
-    <h3 class="title-with-icon ${contentType}">${contentTypeIcon}<span class="title-text">${titleName}</span></h3>
-    ${progressInfo}
-    <p><strong>Estreno:</strong> ${releaseDate}</p>
-    <p><strong>Género:</strong> ${movieGenres}</p>
-    ${seasons ? `<p><strong>Temporadas:</strong> ${seasons}</p>` : ''}
-    ${status ? `<p><strong>Estado:</strong> ${status}</p>` : ''}
-    <p><strong>Plataformas:</strong> ${providerNames}</p>
-    <p><strong>Valoración:</strong> ${stars}</p>
-  
-    <!-- Contenedor para los íconos alineados a la derecha -->
-    <div class="card-icons">
-      <i id="heart-icon-${title.id}" 
-         class="fas fa-heart" 
-         style="cursor: pointer; color: black;" 
-         onclick="toggleFavorite(${title.id}, '${contentType}', event)"></i>
-      <i id="eye-icon-${title.id}" 
-         class="fas fa-eye" 
-         style="cursor: pointer; color: ${isWatched(title.id, contentType) ? 'blue' : 'black'};" 
-         onclick="toggleWatched(${title.id}, '${contentType}', event)"></i>
-    </div>
-  `;
-  
-
-    if (isWatched(title.id, contentType)) {
-      movieCard.classList.add('watched');
-    } else {
-      movieCard.classList.remove('watched');
-    }
-
-    movieCard.addEventListener('click', () => {
-      // Check if this is a "continue watching" item with progress data
-      if (showingContinueWatching && title.watch_progress) {
-        // Resume playback directly using the torrent hash (automatic mode)
-        resumeFromProgress(title, true);
-      } else {
-        // Regular behavior: show details modal
-        showDetails(title.id, contentType, movieCard);
-      }
-    });
-
+    const movieCard = createMovieElement(title, defaultContentType);
     elements.movieGrid.appendChild(movieCard);
   });
-
 
   updateFavoriteColors(data.results, defaultContentType);
 
@@ -1420,19 +1579,6 @@ async function getTitles(page = 1) {
 async function resumeFromProgress(movie, autoResume = false) {
   try {
     console.log('🔄 Resumiendo reproducción desde progreso guardado:', movie);
-    
-    // Set up current content data for progress tracking
-    currentContentData = {
-      id: movie.id,
-      title: movie.title || movie.name,
-      content_type: movie.content_type,
-      season_number: movie.watch_progress.season_number,
-      episode_number: movie.watch_progress.episode_number
-    };
-    
-    // Set originalTitle for subtitle search functionality
-    originalTitle = movie.title || movie.name || 'Unknown Movie';
-    console.log('🎯 originalTitle configurado en resumeFromProgress:', originalTitle);
     
     // Check if we have torrent hash to resume exact torrent
     if (movie.watch_progress.torrent_hash) {
@@ -1477,7 +1623,20 @@ async function resumeFromProgress(movie, autoResume = false) {
               magnetURI: movie.watch_progress.torrent_magnet_uri // Incluir el magnet link
             };
             
-            // Set up watch data with saved progress
+            // Set up current content data for progress tracking with proper season/episode info
+            currentContentData = {
+              id: movie.id,
+              title: movie.title || movie.name,
+              content_type: movie.content_type,
+              season_number: movie.watch_progress.season_number,
+              episode_number: movie.watch_progress.episode_number
+            };
+
+            // Set originalTitle for subtitle search functionality
+            originalTitle = movie.title || movie.name || 'Unknown Movie';
+            console.log('🎬 originalTitle configurado en resumeFromProgress:', originalTitle);
+            
+            // Set up watch data with the resume progress information
             setupWatchData(
               movie.content_type,
               movie.id,
@@ -1491,6 +1650,14 @@ async function resumeFromProgress(movie, autoResume = false) {
             // Set global torrent info and start playback
             currentTorrentInfo = torrentInfo;
             playVideoFileWithStats(0);
+            
+            // Initialize subtitle functionality for resumed content
+            setTimeout(() => {
+              clearSubtitles();
+              loadTorrentSubtitles();
+              setupSubtitleControls();
+              console.log('✅ Subtítulos inicializados para contenido resumido');
+            }, 500);
             
             // Set the video time to saved position once it loads with multiple fallbacks
             const videoPlayer = document.getElementById('video-player');
@@ -2738,11 +2905,11 @@ async function showDetails(id, type, movieCard) {
 
       originalTitle = dataOriginal.original_name;
     } else {
-
+      // Fallback to any available title
       originalTitle = dataOriginal.title || dataOriginal.name || dataOriginal.original_title || dataOriginal.original_name || "No Title";
     }
     
-    console.log('📽️ originalTitle configurado como:', originalTitle);
+    console.log('🎬 originalTitle configurado como:', originalTitle);
     
     spanishTitle = dataSpanish.title || dataSpanish.name || originalTitle;
     originalDescription = dataOriginal.overview || "No description available in English.";
@@ -3947,14 +4114,24 @@ document.getElementById("search-bar").addEventListener("input", (e) => {
 
   if (searchQuery === '') {
     hideSearchResultsInfo();
+    
+    // Show trending sections when search is cleared, but only if favorites are not active
+    if (!showingFavorites) {
+      toggleTrendingSectionsVisibility(false);
+    }
+    
     currentPage = 1;
+    animateMovieGrid();
     getTitles(currentPage);
     return;
   }
   
+  // Hide trending sections when searching
+  toggleTrendingSectionsVisibility(true);
 
   searchTimeout = setTimeout(() => {
     currentPage = 1;
+    animateMovieGrid();
     getTitles(currentPage);
   }, 300);
 });
@@ -4158,8 +4335,11 @@ function updateAuthUI(user) {
 
     preloadUserFavorites();
     
-    // Load continue watching section
-    loadContinueWatchingSection();
+    // Load continue watching section only if not already loaded
+    if (!continueWatchingLoaded) {
+      loadContinueWatchingSection();
+      continueWatchingLoaded = true;
+    }
     
     // Reset continue watching mode when user logs in
     showingContinueWatching = false;
@@ -4432,16 +4612,96 @@ async function loadFavorites() {
 function toggleFavoritesFilter() {
   showingFavorites = !showingFavorites;
   
-  // If enabling favorites, disable continue watching
+  // If enabling favorites, disable continue watching and hide all sections
   if (showingFavorites) {
     showingContinueWatching = false;
     updateContinueWatchingChip();
+    
+    // Hide trending sections when showing favorites
+    hideTrendingSections();
+  } else {
+    // Show trending sections when disabling favorites
+    showTrendingSections();
   }
   
   console.log(`🔄 Toggle favoritos: ${showingFavorites ? 'ACTIVADO' : 'DESACTIVADO'}`);
   updateFavoritesChip();
   updateClearButtonVisibility();
   getTitles();
+}
+
+// Function to hide trending sections when showing favorites
+function hideTrendingSections() {
+  console.log('🚫 Ocultando todas las secciones trending...');
+  
+  const trendingSections = document.getElementById('trending-sections');
+  const countryTrendingSection = document.getElementById('country-trending-section');
+  const continueWatchingSection = document.getElementById('continue-watching-section');
+
+  if (trendingSections) {
+    trendingSections.classList.add('hidden');
+    trendingSections.style.display = 'none'; // Force hide
+    console.log('✅ trending-sections ocultada');
+  }
+  if (countryTrendingSection) {
+    countryTrendingSection.classList.add('hidden');
+    countryTrendingSection.style.display = 'none'; // Force hide
+    console.log('✅ country-trending-section ocultada');
+  }
+  if (continueWatchingSection) {
+    continueWatchingSection.classList.add('hidden');
+    continueWatchingSection.style.display = 'none'; // Force hide
+    console.log('✅ continue-watching-section ocultada');
+  }
+  
+  // Also hide any dynamically created trending provider sections
+  const allTrendingSections = document.querySelectorAll('[id^="trending-provider-"]');
+  allTrendingSections.forEach(section => {
+    section.classList.add('hidden');
+    section.style.display = 'none';
+  });
+  
+  console.log(`✅ ${allTrendingSections.length} secciones de proveedores ocultadas`);
+}
+
+// Function to show trending sections when not showing favorites
+function showTrendingSections() {
+  // Don't show sections if favorites are still active
+  if (showingFavorites) {
+    console.log('⚠️ No se muestran secciones: favoritos activos');
+    return;
+  }
+
+  console.log('✅ Mostrando secciones trending...');
+
+  const trendingSections = document.getElementById('trending-sections');
+  const countryTrendingSection = document.getElementById('country-trending-section');
+  const continueWatchingSection = document.getElementById('continue-watching-section');
+
+  if (trendingSections) {
+    trendingSections.classList.remove('hidden');
+    trendingSections.style.display = ''; // Remove forced hide
+    console.log('✅ trending-sections mostrada');
+  }
+  if (countryTrendingSection) {
+    countryTrendingSection.classList.remove('hidden');
+    countryTrendingSection.style.display = ''; // Remove forced hide
+    console.log('✅ country-trending-section mostrada');
+  }
+  if (continueWatchingSection && currentUser) {
+    continueWatchingSection.classList.remove('hidden');
+    continueWatchingSection.style.display = ''; // Remove forced hide
+    console.log('✅ continue-watching-section mostrada');
+  }
+  
+  // Also show any dynamically created trending provider sections
+  const allTrendingSections = document.querySelectorAll('[id^="trending-provider-"]');
+  allTrendingSections.forEach(section => {
+    section.classList.remove('hidden');
+    section.style.display = '';
+  });
+  
+  console.log(`✅ ${allTrendingSections.length} secciones de proveedores mostradas`);
 }
 
 function updateContinueWatchingChip() {
@@ -4468,16 +4728,26 @@ async function loadContinueWatchingSection() {
     return;
   }
 
+  // Don't show section if favorites are currently being displayed
+  if (showingFavorites) {
+    continueWatchingSection.classList.add('hidden');
+    return;
+  }
+
   // Check if user is logged in
   if (!currentUser) {
     continueWatchingSection.classList.add('hidden');
     return;
   }
 
+  // Add loading state to prevent flickering
+  continueWatchingSection.style.opacity = '0.5';
+
   try {
     const token = await getAuthToken();
     if (!token) {
       continueWatchingSection.classList.add('hidden');
+      continueWatchingSection.style.opacity = '';
       return;
     }
 
@@ -4496,11 +4766,11 @@ async function loadContinueWatchingSection() {
 
     if (watchProgress.length === 0) {
       continueWatchingSection.classList.add('hidden');
+      continueWatchingSection.style.opacity = '';
       return;
     }
 
-    // Show section and populate grid
-    continueWatchingSection.classList.remove('hidden');
+    // Clear grid before populating
     continueWatchingGrid.innerHTML = '';
 
     // Create items for continue watching
@@ -4510,6 +4780,12 @@ async function loadContinueWatchingSection() {
         continueWatchingGrid.appendChild(item);
       }
     }
+
+    // Show section only after content is loaded, but only if favorites are not active
+    if (!showingFavorites) {
+      continueWatchingSection.classList.remove('hidden');
+    }
+    continueWatchingSection.style.opacity = '';
 
     // Add event listeners
     setupContinueWatchingEvents();
@@ -4536,6 +4812,7 @@ async function loadContinueWatchingSection() {
   } catch (error) {
     console.error('Error loading continue watching section:', error);
     continueWatchingSection.classList.add('hidden');
+    continueWatchingSection.style.opacity = '';
   }
 }
 
@@ -4887,9 +5164,247 @@ async function createExpandedContinueWatchingItem(progressItem) {
 // Function to refresh continue watching section
 async function refreshContinueWatchingSection() {
   if (currentUser) {
+    continueWatchingLoaded = false; // Reset flag to allow refresh
     await loadContinueWatchingSection();
+    continueWatchingLoaded = true;
   } else {
     hideContinueWatchingSection();
+    continueWatchingLoaded = false;
+  }
+}
+
+// ===== TRENDING SECTIONS FUNCTIONALITY =====
+
+// Function to load popular streaming providers and their trending content
+async function loadTrendingSections() {
+  const trendingSectionsContainer = document.getElementById('trending-sections');
+  if (!trendingSectionsContainer) return;
+
+  // Don't load trending sections if favorites are currently active
+  if (showingFavorites) {
+    trendingSectionsContainer.classList.add('hidden');
+    return;
+  }
+
+  try {
+    // Show loading skeleton
+    showTrendingSkeletons(trendingSectionsContainer);
+
+    // Fetch popular streaming providers
+    const providersResponse = await fetch('/api/popular-providers');
+    if (!providersResponse.ok) throw new Error('Failed to fetch providers');
+    
+    const providersData = await providersResponse.json();
+    const providers = providersData.results.slice(0, 6); // Limit to 6 providers
+
+    // Clear container
+    trendingSectionsContainer.innerHTML = '';
+
+    // Load content for each provider
+    for (let i = 0; i < providers.length; i++) {
+      const provider = providers[i];
+      await loadProviderTrendingSection(provider, trendingSectionsContainer, i);
+    }
+
+    // Also load country trending section
+    await loadCountryTrendingSection();
+
+  } catch (error) {
+    console.error('Error loading trending sections:', error);
+    trendingSectionsContainer.innerHTML = '';
+  }
+}
+
+// Function to load trending content for a specific provider
+async function loadProviderTrendingSection(provider, container, index) {
+  try {
+    const sectionElement = document.createElement('div');
+    sectionElement.className = 'trending-section section-loading';
+    sectionElement.id = `trending-provider-${provider.provider_id}`;
+
+    sectionElement.innerHTML = `
+      <div class="section-header">
+        <h2>
+          <img src="https://image.tmdb.org/t/p/w92${provider.logo_path}" 
+               alt="${provider.provider_name}" 
+               class="provider-logo"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+          <i class="fas fa-play-circle" style="display: none;"></i>
+          Popular en ${provider.provider_name}
+        </h2>
+      </div>
+      <div class="trending-container">
+        <div class="trending-grid" id="trending-grid-${provider.provider_id}">
+          <!-- Loading content... -->
+        </div>
+      </div>
+    `;
+
+    container.appendChild(sectionElement);
+
+    // Add staggered animation delay
+    setTimeout(() => {
+      sectionElement.classList.add('fade-in');
+      sectionElement.classList.remove('section-loading');
+    }, index * 200);
+
+    // Fetch trending content for this provider
+    const response = await fetch(`/api/trending/provider/${provider.provider_id}?type=movie&page=1`);
+    if (!response.ok) throw new Error(`Failed to fetch trending for ${provider.provider_name}`);
+    
+    const data = await response.json();
+    const grid = document.getElementById(`trending-grid-${provider.provider_id}`);
+    
+    if (data.results && data.results.length > 0) {
+      grid.innerHTML = '';
+      
+      // Limit to 12 items for better performance
+      const items = data.results.slice(0, 12);
+      
+      items.forEach((item, itemIndex) => {
+        const trendingElement = createTrendingCard(item);
+        trendingElement.style.animationDelay = `${itemIndex * 50}ms`;
+        grid.appendChild(trendingElement);
+      });
+
+      // Mark section as loaded
+      setTimeout(() => {
+        sectionElement.classList.add('section-loaded');
+      }, 300);
+    } else {
+      // If no content, hide the section
+      sectionElement.style.display = 'none';
+    }
+
+  } catch (error) {
+    console.error(`Error loading trending content for ${provider.provider_name}:`, error);
+  }
+}
+
+// Function to load trending content by country
+async function loadCountryTrendingSection() {
+  const countrySection = document.getElementById('country-trending-section');
+  const countryGrid = document.getElementById('country-trending-grid');
+  
+  if (!countrySection || !countryGrid) return;
+
+  // Don't load country trending section if favorites are currently active
+  if (showingFavorites) {
+    countrySection.classList.add('hidden');
+    return;
+  }
+
+  try {
+    // Show loading state
+    countrySection.classList.add('section-loading');
+    countryGrid.innerHTML = createSkeletonItems(12);
+
+    // Fetch trending content for user's region (default to US)
+    const region = 'US'; // Could be dynamic based on user location
+    const response = await fetch(`/api/trending/country/${region}?type=all&time_window=week&page=1`);
+    
+    if (!response.ok) throw new Error('Failed to fetch country trending');
+    
+    const data = await response.json();
+    
+    if (data.results && data.results.length > 0) {
+      countryGrid.innerHTML = '';
+      
+      // Limit to 12 items
+      const items = data.results.slice(0, 12);
+      
+      items.forEach((item, index) => {
+        const trendingElement = createTrendingCard(item);
+        trendingElement.style.animationDelay = `${index * 50}ms`;
+        countryGrid.appendChild(trendingElement);
+      });
+
+      // Show section with animation
+      setTimeout(() => {
+        countrySection.classList.remove('hidden', 'section-loading');
+        countrySection.classList.add('fade-in', 'section-loaded');
+      }, 300);
+    } else {
+      countrySection.classList.add('hidden');
+    }
+
+  } catch (error) {
+    console.error('Error loading country trending section:', error);
+    countrySection.classList.add('hidden');
+  }
+}
+
+// Function to show skeleton loading for trending sections
+function showTrendingSkeletons(container) {
+  container.innerHTML = `
+    <div class="trending-skeleton">
+      ${createSkeletonItems(6)}
+    </div>
+  `;
+}
+
+// Function to create skeleton items
+function createSkeletonItems(count) {
+  let items = '';
+  for (let i = 0; i < count; i++) {
+    items += '<div class="skeleton-item"></div>';
+  }
+  return items;
+}
+
+// Function to toggle trending sections visibility during search
+function toggleTrendingSectionsVisibility(isSearching) {
+  // Don't show sections if favorites are active
+  if (showingFavorites && !isSearching) {
+    return;
+  }
+
+  const trendingSections = document.getElementById('trending-sections');
+  const countryTrendingSection = document.getElementById('country-trending-section');
+  const continueWatchingSection = document.getElementById('continue-watching-section');
+
+  if (isSearching) {
+    // Hide trending sections during search
+    if (trendingSections) {
+      trendingSections.classList.remove('search-visible');
+      trendingSections.classList.add('search-hidden');
+    }
+    if (countryTrendingSection) {
+      countryTrendingSection.classList.remove('search-visible');
+      countryTrendingSection.classList.add('search-hidden');
+    }
+    if (continueWatchingSection) {
+      continueWatchingSection.classList.remove('search-visible');
+      continueWatchingSection.classList.add('search-hidden');
+    }
+  } else {
+    // Show trending sections when not searching (and favorites are not active)
+    if (trendingSections) {
+      trendingSections.classList.remove('search-hidden');
+      trendingSections.classList.add('search-visible');
+    }
+    if (countryTrendingSection && !countryTrendingSection.classList.contains('hidden')) {
+      countryTrendingSection.classList.remove('search-hidden');
+      countryTrendingSection.classList.add('search-visible');
+    }
+    if (continueWatchingSection && !continueWatchingSection.classList.contains('hidden')) {
+      continueWatchingSection.classList.remove('search-hidden');
+      continueWatchingSection.classList.add('search-visible');
+    }
+  }
+}
+
+// Function to apply fade animation to movie grid
+function animateMovieGrid() {
+  const movieGrid = document.getElementById('movie-grid');
+  if (movieGrid) {
+    movieGrid.classList.remove('fade-in');
+    movieGrid.classList.add('fade-out');
+    
+    setTimeout(() => {
+      movieGrid.classList.remove('fade-out');
+      movieGrid.classList.add('fade-in');
+    }, 200);
   }
 }
 
@@ -4902,6 +5417,18 @@ window.onload = async function () {
 
   await initAuth();
   updateGenreSelect();
+  
+  // Load trending sections and continue watching after authentication is initialized
+  setTimeout(async () => {
+    if (!document.getElementById('search-bar').value.trim() && !showingFavorites) {
+      await loadTrendingSections();
+      // Load continue watching section after trending sections to prevent flickering
+      if (!continueWatchingLoaded) {
+        await loadContinueWatchingSection();
+        continueWatchingLoaded = true;
+      }
+    }
+  }, 1000);
 };
 
 
@@ -5344,6 +5871,10 @@ function playVideoFileWithStats(fileIndex) {
   // Set up watch progress tracking
   const currentMovie = getCurrentMovieData();
   if (currentMovie) {
+    // Set originalTitle for subtitle search functionality
+    originalTitle = currentMovie.title || currentMovie.name || 'Unknown Movie';
+    console.log('🎬 originalTitle configurado en playVideoFileWithStats:', originalTitle);
+    
     setupWatchData(
       currentMovie.content_type || 'movie',
       currentMovie.id,
@@ -5487,7 +6018,7 @@ function setupSubtitleControls() {
   
   const missingElements = requiredElements.filter(id => !document.getElementById(id));
   if (missingElements.length > 0) {
-    console.error('❌ Elementos de subtítulos faltantes:', missingElements);
+    console.error('⚠️ Elementos de subtítulos faltantes:', missingElements);
     showNotification(`Elementos de subtítulos faltantes: ${missingElements.join(', ')}`, 'error');
     return;
   } else {
@@ -5571,31 +6102,31 @@ async function searchOnlineSubtitles(language) {
   const originalText = searchBtn.textContent;
   
   try {
-
+    // Set loading state
     searchBtn.textContent = 'Buscando...';
     searchBtn.disabled = true;
     showNotification('Buscando subtítulos online...', 'info', 2000);
-    
+
     // Debug: Check all possible sources for movie title
-    console.log('🎯 originalTitle:', originalTitle);
-    console.log('🎯 currentContentData:', currentContentData);
-    console.log('🎯 currentWatchData:', currentWatchData);
+    console.log('🎬 originalTitle:', originalTitle);
+    console.log('🎬 currentContentData:', currentContentData);
+    console.log('🎬 currentWatchData:', currentWatchData);
 
     let movieTitle = originalTitle || 'Unknown Movie';
-    
+
     // Try to get title from currentContentData if originalTitle is not set
     if (movieTitle === 'Unknown Movie' && currentContentData) {
       movieTitle = currentContentData.title || currentContentData.name || movieTitle;
-      console.log('🎯 Usando título de currentContentData:', movieTitle);
+      console.log('🎬 Usando título de currentContentData:', movieTitle);
     }
     
     // Try to get title from currentWatchData if still unknown
     if (movieTitle === 'Unknown Movie' && currentWatchData) {
       movieTitle = currentWatchData.title || movieTitle;
-      console.log('🎯 Usando título de currentWatchData:', movieTitle);
+      console.log('🎬 Usando título de currentWatchData:', movieTitle);
     }
     
-    console.log('🎯 Título final para búsqueda:', movieTitle);
+    console.log('🎬 Título final para búsqueda:', movieTitle);
 
     const imdbId = currentImdbId || null;
     
@@ -5604,7 +6135,7 @@ async function searchOnlineSubtitles(language) {
     const episodeSelector = document.getElementById('episode-selector');
     let season = null;
     let episode = null;
-    
+
     // First try to get from selectors (when user manually selected)
     if (seasonSelector && seasonSelector.value) {
       season = seasonSelector.value;
@@ -5612,24 +6143,24 @@ async function searchOnlineSubtitles(language) {
         episode = episodeSelector.value;
       }
     }
-    
+
     // If not found in selectors, try to get from currentContentData
     if (!season && currentContentData && currentContentData.content_type === 'tv') {
       season = currentContentData.season_number;
       episode = currentContentData.episode_number;
-      console.log('🎯 Usando temporada/episodio de currentContentData:', { season, episode });
+      console.log('🎬 Usando temporada/episodio de currentContentData:', { season, episode });
     }
     
     // If still not found, try to get from currentWatchData
     if (!season && currentWatchData && currentWatchData.content_type === 'tv') {
       season = currentWatchData.season_number;
       episode = currentWatchData.episode_number;
-      console.log('🎯 Usando temporada/episodio de currentWatchData:', { season, episode });
+      console.log('🎬 Usando temporada/episodio de currentWatchData:', { season, episode });
     }
     
-    console.log('🎯 Temporada y episodio final para búsqueda:', { season, episode });
+    console.log('🎬 Temporada y episodio final para búsqueda:', { season, episode });
     
-
+    // Build search URL
     let searchUrl = `/api/subtitles/search?movieTitle=${encodeURIComponent(movieTitle)}&language=${language}`;
     if (imdbId) {
       searchUrl += `&imdbId=${encodeURIComponent(imdbId)}`;
@@ -5640,12 +6171,12 @@ async function searchOnlineSubtitles(language) {
         searchUrl += `&episode=${encodeURIComponent(episode)}`;
       }
     }
-    
+
     console.log('🌐 Haciendo petición a:', searchUrl);
-    console.log('📽️ Buscando subtítulos para:', { movieTitle, imdbId, language, season, episode });
+    console.log('🔍 Buscando subtítulos para:', { movieTitle, imdbId, language, season, episode });
     
     const response = await fetch(searchUrl);
-    
+
     console.log('📡 Respuesta de API recibida:', response.status, response.statusText);
     
     if (!response.ok) {
@@ -5666,7 +6197,7 @@ async function searchOnlineSubtitles(language) {
         
         option.textContent = `${subtitle.languageName} - ${subtitle.filename} (${subtitle.rating || 'N/A'})`;
         select.appendChild(option);
-        console.log('📋 Agregado subtítulo:', subtitle.filename, 'URL:', subtitle.downloadUrl);
+        console.log('📎 Agregado subtítulo:', subtitle.filename, 'URL:', subtitle.downloadUrl);
       });
       
       if (subtitles.length > 0) {
@@ -5693,7 +6224,7 @@ async function loadOnlineSubtitle(subtitleUrl) {
   try {
     showNotification('Cargando subtítulo online...', 'info', 2000);
     
-
+    // Validate subtitle URL
     if (!subtitleUrl || subtitleUrl.includes('undefined')) {
       throw new Error('URL de subtítulo inválida. Por favor, selecciona otro subtítulo.');
     }
@@ -5971,21 +6502,29 @@ function disableSubtitles() {
 
 
 async function closeVideoModal() {
+  // Stop watch progress tracking first
+  stopWatchProgressTracking();
+  
   const videoModal = document.getElementById('video-modal');
   videoModal.classList.add('hidden');
   videoModal.style.display = 'none';
   
-
+  // Remove video player event listeners to prevent errors during cleanup
   const videoPlayer = document.getElementById('video-player');
   if (videoPlayer) {
-    videoPlayer.pause();
-    videoPlayer.src = '';
-    videoPlayer.load();
+    // Remove all event listeners by cloning the element
+    const newVideoPlayer = videoPlayer.cloneNode(true);
+    videoPlayer.parentNode.replaceChild(newVideoPlayer, videoPlayer);
+    
+    // Now safely clean up the new player
+    newVideoPlayer.pause();
+    newVideoPlayer.src = '';
+    newVideoPlayer.load();
     
 
-    const tracks = videoPlayer.getElementsByTagName('track');
+    const tracks = newVideoPlayer.getElementsByTagName('track');
     while (tracks.length > 0) {
-      videoPlayer.removeChild(tracks[0]);
+      newVideoPlayer.removeChild(tracks[0]);
     }
   }
   
@@ -6246,6 +6785,16 @@ function setupVideoPlayerEvents() {
   });
 
   videoPlayer.addEventListener('error', (e) => {
+    // Check if video modal is still visible to avoid unnecessary errors during cleanup
+    const videoModal = document.getElementById('video-modal');
+    const isModalVisible = videoModal && videoModal.style.display !== 'none' && !videoModal.classList.contains('hidden');
+    
+    if (!isModalVisible) {
+      // Modal is closing/closed, ignore the error
+      console.log('Video error during modal close (expected)');
+      return;
+    }
+    
     if (playerLoadingIndicator) {
       playerLoadingIndicator.style.display = 'none';
     }

@@ -4435,3 +4435,523 @@ h1 {
     font-size: 1em;
   }
 }
+
+/* ===== TRENDING SECTIONS STYLES ===== */
+
+/* Contenedor principal de secciones de trending */
+.trending-sections {
+  margin-bottom: 40px;
+}
+
+/* Sección individual de trending por proveedor */
+.trending-section {
+  margin-bottom: 40px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.trending-section.fade-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.trending-section.fade-out {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+/* Header de cada sección de trending */
+.trending-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 24px;
+}
+
+.trending-section h2 {
+  color: #ffffff;
+  font-size: 1.8em;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.trending-section h2 .provider-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.trending-section h2 i {
+  color: #FF6B35;
+  font-size: 1.1em;
+}
+
+/* Contenedor de trending */
+.trending-container {
+  position: relative;
+  overflow: visible;
+  padding: 0 24px;
+  margin: 20px 0;
+}
+
+/* Grid de trending - Netflix style horizontal scroll */
+.trending-grid {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: visible;
+  gap: 16px;
+  padding: 20px 0 40px 0;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: #555 transparent;
+}
+
+.trending-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.trending-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.trending-grid::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+.trending-grid::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+/* ===== PHOTO-STYLE TRENDING CARDS ===== */
+
+/* Trending card - Photo style with minimal info */
+.trending-card {
+  flex: 0 0 auto;
+  width: 180px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  margin: 10px 5px 15px 5px;
+}
+
+.trending-card:hover {
+  transform: translateY(-8px) scale(1.03);
+  z-index: 10;
+}
+
+/* Image container with overlay elements */
+.trending-card-image {
+  position: relative;
+  width: 100%;
+  height: 270px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(0, 0, 0, 0.8));
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.trending-card:hover .trending-card-image {
+  box-shadow: 0 12px 40px rgba(255, 107, 53, 0.3);
+}
+
+.trending-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.trending-card:hover .trending-card-image img {
+  transform: scale(1.05);
+}
+
+/* Content type indicator - top right corner */
+.content-type-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 107, 53, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 15px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  backdrop-filter: blur(10px);
+  z-index: 2;
+}
+
+.content-type-indicator i {
+  font-size: 0.6rem;
+}
+
+/* Hover overlay with detailed information */
+.trending-hover-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.5) 50%,
+    rgba(0, 0, 0, 0.9) 100%
+  );
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: flex-end;
+  padding: 16px;
+  z-index: 1;
+}
+
+.trending-card:hover .trending-hover-overlay {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hover-content {
+  color: white;
+  width: 100%;
+}
+
+.hover-content h4 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #fff;
+}
+
+.hover-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.hover-details p {
+  margin: 0;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hover-details i {
+  color: #FF6B35;
+  font-size: 0.6rem;
+  width: 8px;
+}
+
+.hover-overview {
+  font-size: 0.65rem !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  line-height: 1.3 !important;
+  margin-top: 8px !important;
+}
+
+/* Info section below image */
+.trending-card-info {
+  padding: 12px 4px 0 4px;
+  text-align: center;
+}
+
+.trending-title {
+  margin: 0 0 6px 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+  min-height: 2.6rem;
+}
+
+.trending-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: #b0b0b0;
+}
+
+.trending-type {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #FF6B35;
+  font-weight: 500;
+}
+
+.trending-type i {
+  font-size: 0.7rem;
+}
+
+.trending-year {
+  color: #888;
+  font-weight: 400;
+}
+
+/* Legacy support for old trending grid movie cards */
+.trending-grid .movie-card {
+  display: none; /* Hide old style cards */
+}
+
+/* Sección de trending por país */
+.country-trending-section {
+  margin-bottom: 40px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.country-trending-section.fade-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.country-trending-section.fade-out {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.country-trending-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 24px;
+}
+
+.country-trending-section h2 {
+  color: #ffffff;
+  font-size: 1.8em;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.country-trending-section h2 i {
+  color: #FF4444;
+  font-size: 1.1em;
+}
+
+/* ===== GLOBAL FADE ANIMATIONS ===== */
+
+/* Animaciones generales para transiciones suaves */
+.section-loading {
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.4s ease;
+}
+
+.section-loaded {
+  opacity: 1;
+  pointer-events: auto;
+  transition: all 0.4s ease;
+}
+
+/* Animación para cuando se ocultan las secciones durante búsqueda */
+.trending-sections.search-hidden,
+.country-trending-section.search-hidden,
+.continue-watching-section.search-hidden {
+  display: none !important;
+}
+
+.trending-sections.search-visible,
+.country-trending-section.search-visible,
+.continue-watching-section.search-visible {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  pointer-events: auto !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Animación para el grid de resultados */
+#movie-grid {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#movie-grid.fade-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#movie-grid.fade-out {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+/* Loading skeleton para trending sections */
+.trending-skeleton {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+  padding: 0 24px;
+}
+
+.skeleton-item {
+  width: 100%;
+  height: 270px;
+  background: linear-gradient(90deg, 
+    rgba(255,255,255,0.1) 0%, 
+    rgba(255,255,255,0.2) 50%, 
+    rgba(255,255,255,0.1) 100%);
+  background-size: 200% 100%;
+  border-radius: 12px;
+  animation: skeleton-loading 2s infinite ease-in-out;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Responsive para trending sections */
+@media (max-width: 1200px) {
+  .trending-card {
+    width: 160px;
+  }
+  
+  .trending-card-image {
+    height: 240px;
+  }
+  
+  .trending-title {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .trending-section .section-header,
+  .country-trending-section .section-header {
+    padding: 0 16px;
+  }
+  
+  .trending-container {
+    padding: 0 16px;
+  }
+  
+  .trending-card {
+    width: 140px;
+  }
+  
+  .trending-card-image {
+    height: 210px;
+  }
+  
+  .trending-title {
+    font-size: 0.8rem;
+  }
+  
+  .trending-meta {
+    font-size: 0.7rem;
+  }
+  
+  .trending-section h2,
+  .country-trending-section h2 {
+    font-size: 1.3em;
+  }
+  
+  /* Improve hover on mobile - make it tap-friendly */
+  .trending-card:active .trending-hover-overlay {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .hover-content h4 {
+    font-size: 0.9rem;
+  }
+  
+  .hover-details p {
+    font-size: 0.65rem;
+  }
+  
+  .hover-overview {
+    font-size: 0.6rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .trending-card {
+    width: 120px;
+  }
+  
+  .trending-card-image {
+    height: 180px;
+  }
+  
+  .trending-title {
+    font-size: 0.75rem;
+    min-height: 2.25rem;
+  }
+  
+  .trending-meta {
+    font-size: 0.65rem;
+  }
+  
+  .content-type-indicator {
+    font-size: 0.6rem;
+    padding: 3px 6px;
+  }
+  
+  .trending-section h2,
+  .country-trending-section h2 {
+    font-size: 1.2em;
+  }
+  
+  .trending-container {
+    padding: 0 12px;
+    margin: 15px 0;
+  }
+  
+  .trending-grid {
+    gap: 12px;
+    padding: 15px 0 30px 0;
+  }
+  
+  /* On very small screens, show hover info on tap and hold */
+  .trending-card:focus .trending-hover-overlay,
+  .trending-card:active .trending-hover-overlay {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .hover-content h4 {
+    font-size: 0.8rem;
+  }
+  
+  .hover-details {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  
+  .hover-details p {
+    font-size: 0.6rem;
+  }
+}
