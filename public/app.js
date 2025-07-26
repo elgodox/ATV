@@ -33,6 +33,7 @@ let currentWatchData = null;
 let currentContentData = null; // Store current movie/show data for streaming
 let lastSavedTime = 0;
 const SAVE_INTERVAL = 10; // Save progress every 10 seconds
+let continueWatchingLoaded = false; // Flag to prevent multiple loads
 
 // Function to get authentication token
 async function getAuthToken() {
@@ -665,8 +666,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   getTitles(1);
   
-  // Initialize continue watching section
-  loadContinueWatchingSection();
+  // Initialize continue watching section only once during page load
+  // Remove this call since it's already being handled in window.onload
+  // loadContinueWatchingSection();
 });
 
 function initializeNewInterface() {
@@ -4113,8 +4115,10 @@ document.getElementById("search-bar").addEventListener("input", (e) => {
   if (searchQuery === '') {
     hideSearchResultsInfo();
     
-    // Show trending sections when search is cleared
-    toggleTrendingSectionsVisibility(false);
+    // Show trending sections when search is cleared, but only if favorites are not active
+    if (!showingFavorites) {
+      toggleTrendingSectionsVisibility(false);
+    }
     
     currentPage = 1;
     animateMovieGrid();
@@ -4331,8 +4335,11 @@ function updateAuthUI(user) {
 
     preloadUserFavorites();
     
-    // Load continue watching section
-    loadContinueWatchingSection();
+    // Load continue watching section only if not already loaded
+    if (!continueWatchingLoaded) {
+      loadContinueWatchingSection();
+      continueWatchingLoaded = true;
+    }
     
     // Reset continue watching mode when user logs in
     showingContinueWatching = false;
@@ -4605,16 +4612,96 @@ async function loadFavorites() {
 function toggleFavoritesFilter() {
   showingFavorites = !showingFavorites;
   
-  // If enabling favorites, disable continue watching
+  // If enabling favorites, disable continue watching and hide all sections
   if (showingFavorites) {
     showingContinueWatching = false;
     updateContinueWatchingChip();
+    
+    // Hide trending sections when showing favorites
+    hideTrendingSections();
+  } else {
+    // Show trending sections when disabling favorites
+    showTrendingSections();
   }
   
   console.log(`🔄 Toggle favoritos: ${showingFavorites ? 'ACTIVADO' : 'DESACTIVADO'}`);
   updateFavoritesChip();
   updateClearButtonVisibility();
   getTitles();
+}
+
+// Function to hide trending sections when showing favorites
+function hideTrendingSections() {
+  console.log('🚫 Ocultando todas las secciones trending...');
+  
+  const trendingSections = document.getElementById('trending-sections');
+  const countryTrendingSection = document.getElementById('country-trending-section');
+  const continueWatchingSection = document.getElementById('continue-watching-section');
+
+  if (trendingSections) {
+    trendingSections.classList.add('hidden');
+    trendingSections.style.display = 'none'; // Force hide
+    console.log('✅ trending-sections ocultada');
+  }
+  if (countryTrendingSection) {
+    countryTrendingSection.classList.add('hidden');
+    countryTrendingSection.style.display = 'none'; // Force hide
+    console.log('✅ country-trending-section ocultada');
+  }
+  if (continueWatchingSection) {
+    continueWatchingSection.classList.add('hidden');
+    continueWatchingSection.style.display = 'none'; // Force hide
+    console.log('✅ continue-watching-section ocultada');
+  }
+  
+  // Also hide any dynamically created trending provider sections
+  const allTrendingSections = document.querySelectorAll('[id^="trending-provider-"]');
+  allTrendingSections.forEach(section => {
+    section.classList.add('hidden');
+    section.style.display = 'none';
+  });
+  
+  console.log(`✅ ${allTrendingSections.length} secciones de proveedores ocultadas`);
+}
+
+// Function to show trending sections when not showing favorites
+function showTrendingSections() {
+  // Don't show sections if favorites are still active
+  if (showingFavorites) {
+    console.log('⚠️ No se muestran secciones: favoritos activos');
+    return;
+  }
+
+  console.log('✅ Mostrando secciones trending...');
+
+  const trendingSections = document.getElementById('trending-sections');
+  const countryTrendingSection = document.getElementById('country-trending-section');
+  const continueWatchingSection = document.getElementById('continue-watching-section');
+
+  if (trendingSections) {
+    trendingSections.classList.remove('hidden');
+    trendingSections.style.display = ''; // Remove forced hide
+    console.log('✅ trending-sections mostrada');
+  }
+  if (countryTrendingSection) {
+    countryTrendingSection.classList.remove('hidden');
+    countryTrendingSection.style.display = ''; // Remove forced hide
+    console.log('✅ country-trending-section mostrada');
+  }
+  if (continueWatchingSection && currentUser) {
+    continueWatchingSection.classList.remove('hidden');
+    continueWatchingSection.style.display = ''; // Remove forced hide
+    console.log('✅ continue-watching-section mostrada');
+  }
+  
+  // Also show any dynamically created trending provider sections
+  const allTrendingSections = document.querySelectorAll('[id^="trending-provider-"]');
+  allTrendingSections.forEach(section => {
+    section.classList.remove('hidden');
+    section.style.display = '';
+  });
+  
+  console.log(`✅ ${allTrendingSections.length} secciones de proveedores mostradas`);
 }
 
 function updateContinueWatchingChip() {
@@ -4641,16 +4728,26 @@ async function loadContinueWatchingSection() {
     return;
   }
 
+  // Don't show section if favorites are currently being displayed
+  if (showingFavorites) {
+    continueWatchingSection.classList.add('hidden');
+    return;
+  }
+
   // Check if user is logged in
   if (!currentUser) {
     continueWatchingSection.classList.add('hidden');
     return;
   }
 
+  // Add loading state to prevent flickering
+  continueWatchingSection.style.opacity = '0.5';
+
   try {
     const token = await getAuthToken();
     if (!token) {
       continueWatchingSection.classList.add('hidden');
+      continueWatchingSection.style.opacity = '';
       return;
     }
 
@@ -4669,11 +4766,11 @@ async function loadContinueWatchingSection() {
 
     if (watchProgress.length === 0) {
       continueWatchingSection.classList.add('hidden');
+      continueWatchingSection.style.opacity = '';
       return;
     }
 
-    // Show section and populate grid
-    continueWatchingSection.classList.remove('hidden');
+    // Clear grid before populating
     continueWatchingGrid.innerHTML = '';
 
     // Create items for continue watching
@@ -4683,6 +4780,12 @@ async function loadContinueWatchingSection() {
         continueWatchingGrid.appendChild(item);
       }
     }
+
+    // Show section only after content is loaded, but only if favorites are not active
+    if (!showingFavorites) {
+      continueWatchingSection.classList.remove('hidden');
+    }
+    continueWatchingSection.style.opacity = '';
 
     // Add event listeners
     setupContinueWatchingEvents();
@@ -4709,6 +4812,7 @@ async function loadContinueWatchingSection() {
   } catch (error) {
     console.error('Error loading continue watching section:', error);
     continueWatchingSection.classList.add('hidden');
+    continueWatchingSection.style.opacity = '';
   }
 }
 
@@ -5060,9 +5164,12 @@ async function createExpandedContinueWatchingItem(progressItem) {
 // Function to refresh continue watching section
 async function refreshContinueWatchingSection() {
   if (currentUser) {
+    continueWatchingLoaded = false; // Reset flag to allow refresh
     await loadContinueWatchingSection();
+    continueWatchingLoaded = true;
   } else {
     hideContinueWatchingSection();
+    continueWatchingLoaded = false;
   }
 }
 
@@ -5072,6 +5179,12 @@ async function refreshContinueWatchingSection() {
 async function loadTrendingSections() {
   const trendingSectionsContainer = document.getElementById('trending-sections');
   if (!trendingSectionsContainer) return;
+
+  // Don't load trending sections if favorites are currently active
+  if (showingFavorites) {
+    trendingSectionsContainer.classList.add('hidden');
+    return;
+  }
 
   try {
     // Show loading skeleton
@@ -5175,6 +5288,12 @@ async function loadCountryTrendingSection() {
   
   if (!countrySection || !countryGrid) return;
 
+  // Don't load country trending section if favorites are currently active
+  if (showingFavorites) {
+    countrySection.classList.add('hidden');
+    return;
+  }
+
   try {
     // Show loading state
     countrySection.classList.add('section-loading');
@@ -5235,6 +5354,11 @@ function createSkeletonItems(count) {
 
 // Function to toggle trending sections visibility during search
 function toggleTrendingSectionsVisibility(isSearching) {
+  // Don't show sections if favorites are active
+  if (showingFavorites && !isSearching) {
+    return;
+  }
+
   const trendingSections = document.getElementById('trending-sections');
   const countryTrendingSection = document.getElementById('country-trending-section');
   const continueWatchingSection = document.getElementById('continue-watching-section');
@@ -5254,7 +5378,7 @@ function toggleTrendingSectionsVisibility(isSearching) {
       continueWatchingSection.classList.add('search-hidden');
     }
   } else {
-    // Show trending sections when not searching
+    // Show trending sections when not searching (and favorites are not active)
     if (trendingSections) {
       trendingSections.classList.remove('search-hidden');
       trendingSections.classList.add('search-visible');
@@ -5294,10 +5418,15 @@ window.onload = async function () {
   await initAuth();
   updateGenreSelect();
   
-  // Load trending sections after authentication is initialized
+  // Load trending sections and continue watching after authentication is initialized
   setTimeout(async () => {
-    if (!document.getElementById('search-bar').value.trim()) {
+    if (!document.getElementById('search-bar').value.trim() && !showingFavorites) {
       await loadTrendingSections();
+      // Load continue watching section after trending sections to prevent flickering
+      if (!continueWatchingLoaded) {
+        await loadContinueWatchingSection();
+        continueWatchingLoaded = true;
+      }
     }
   }, 1000);
 };
