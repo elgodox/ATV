@@ -3999,6 +3999,68 @@ h1 {
   backdrop-filter: blur(4px);
 }
 
+/* Remove button for continue watching items */
+.continue-watching-item .remove-continue-watching-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(255, 69, 69, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+  z-index: 10;
+}
+
+.continue-watching-item:hover .remove-continue-watching-btn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.continue-watching-item .remove-continue-watching-btn:hover {
+  background: rgba(255, 69, 69, 1);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(255, 69, 69, 0.4);
+}
+
+.continue-watching-item .remove-continue-watching-btn.removing {
+  background: rgba(255, 152, 0, 0.9);
+  cursor: not-allowed;
+}
+
+.continue-watching-item .remove-continue-watching-btn i {
+  font-size: 0.8em;
+}
+
+/* Additional styling for resuming state */
+.continue-watching-item.resuming {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.continue-watching-item.resuming::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
 .continue-watching-item .content-type-badge.movie {
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);

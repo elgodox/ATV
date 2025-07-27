@@ -2613,6 +2613,102 @@ app.get('/api/watch-progress/by-torrent/:torrent_hash', async (req, res) => {
   }
 });
 
+// Cleanup duplicate watch progress entries
+app.post('/api/watch-progress/cleanup-duplicates', async (req, res) => {
+  try {
+    const user = await validateUser(req, res);
+    if (!user) return;
+
+    // Create a Supabase client with the user's token to respect RLS policies
+    const token = req.headers.authorization.substring(7);
+    const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    });
+
+    // Get all watch progress for the user
+    const { data: allProgress, error: fetchError } = await supabaseWithAuth
+      .from('watch_progress')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('last_watched', { ascending: false });
+
+    if (fetchError) {
+      console.error('Error fetching watch progress for cleanup:', fetchError);
+      return res.status(500).json({ error: 'Failed to fetch watch progress' });
+    }
+
+    if (!allProgress || allProgress.length === 0) {
+      return res.json({ 
+        success: true, 
+        message: 'No watch progress found',
+        duplicatesRemoved: 0 
+      });
+    }
+
+    // Group by unique identifier (tmdb_id, content_type, season, episode)
+    const progressMap = new Map();
+    const duplicatesToDelete = [];
+
+    allProgress.forEach(progress => {
+      const uniqueId = progress.content_type === 'tv'
+        ? `${progress.tmdb_id}-${progress.content_type}-${progress.season_number || 'null'}-${progress.episode_number || 'null'}`
+        : `${progress.tmdb_id}-${progress.content_type}`;
+
+      if (progressMap.has(uniqueId)) {
+        // This is a duplicate, mark the older one for deletion
+        const existing = progressMap.get(uniqueId);
+        const existingDate = new Date(existing.last_watched);
+        const currentDate = new Date(progress.last_watched);
+        
+        if (currentDate > existingDate) {
+          // Current is newer, delete the existing one
+          duplicatesToDelete.push(existing.id);
+          progressMap.set(uniqueId, progress);
+        } else {
+          // Existing is newer, delete the current one
+          duplicatesToDelete.push(progress.id);
+        }
+      } else {
+        // First occurrence, keep it
+        progressMap.set(uniqueId, progress);
+      }
+    });
+
+    let duplicatesRemoved = 0;
+    
+    // Delete duplicates in batches
+    if (duplicatesToDelete.length > 0) {
+      const { error: deleteError } = await supabaseWithAuth
+        .from('watch_progress')
+        .delete()
+        .in('id', duplicatesToDelete);
+
+      if (deleteError) {
+        console.error('Error deleting duplicate watch progress:', deleteError);
+        return res.status(500).json({ error: 'Failed to delete duplicates' });
+      }
+
+      duplicatesRemoved = duplicatesToDelete.length;
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Cleanup completed successfully`,
+      duplicatesRemoved: duplicatesRemoved,
+      totalProcessed: allProgress.length,
+      uniqueItems: progressMap.size
+    });
+
+  } catch (error) {
+    console.error('Error in cleanup duplicates:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

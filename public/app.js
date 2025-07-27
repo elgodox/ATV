@@ -26,6 +26,7 @@ let showingFavorites = false;
 let showingContinueWatching = false;
 let stallTimeoutId = null;
 let statsInterval = null;
+let currentTorrentInfo = null;
 window.localSubtitleBlobUrls = [];
 // Watch progress tracking variables
 let watchProgressInterval = null;
@@ -138,19 +139,20 @@ async function loadWatchProgress(content_type, tmdb_id, season_number = null, ep
       return null;
     }
 
-    let url = `/api/watch-progress/${content_type}/${tmdb_id}`;
-    const params = new URLSearchParams();
+    // Build URL with query parameters only
+    const params = new URLSearchParams({
+      content_type: content_type,
+      tmdb_id: tmdb_id.toString()
+    });
     
     if (season_number !== null) {
-      params.append('season_number', season_number);
+      params.append('season_number', season_number.toString());
     }
     if (episode_number !== null) {
-      params.append('episode_number', episode_number);
+      params.append('episode_number', episode_number.toString());
     }
     
-    if (params.toString()) {
-      url += '?' + params.toString();
-    }
+    const url = `/api/watch-progress?${params.toString()}`;
 
     const response = await fetch(url, {
       headers: {
@@ -180,9 +182,22 @@ async function loadWatchProgress(content_type, tmdb_id, season_number = null, ep
 function startWatchProgressTracking() {
   // Only start tracking if we have valid watch data and user
   if (!currentWatchData || !currentUser) {
-    console.log('⚠️ No se puede iniciar rastreo de progreso: datos insuficientes');
+    console.log('⚠️ No se puede iniciar rastreo de progreso: datos insuficientes', {
+      hasCurrentWatchData: !!currentWatchData,
+      hasCurrentUser: !!currentUser,
+      currentWatchData: currentWatchData,
+      currentUser: currentUser ? { id: currentUser.id, email: currentUser.email } : null
+    });
     return;
   }
+  
+  console.log('✅ Iniciando rastreo de progreso:', {
+    title: currentWatchData.title,
+    content_type: currentWatchData.content_type,
+    tmdb_id: currentWatchData.tmdb_id,
+    season: currentWatchData.season_number,
+    episode: currentWatchData.episode_number
+  });
   
   if (watchProgressInterval) {
     clearInterval(watchProgressInterval);
@@ -238,6 +253,16 @@ function setupWatchData(content_type, tmdb_id, title, season_number = null, epis
     torrent_seeds: torrentInfo?.seeds || torrentInfo?.numPeers || 0,
     torrent_size: torrentInfo?.length || null
   };
+  
+  console.log('📝 setupWatchData called:', {
+    content_type,
+    tmdb_id,
+    title,
+    season_number,
+    episode_number,
+    torrentHash: torrentInfo?.infoHash,
+    currentWatchData
+  });
 }
 
 // Helper function to extract quality from torrent name
@@ -1636,7 +1661,7 @@ async function resumeFromProgress(movie, autoResume = false) {
             originalTitle = movie.title || movie.name || 'Unknown Movie';
             console.log('🎬 originalTitle configurado en resumeFromProgress:', originalTitle);
             
-            // Set up watch data with the resume progress information
+            // Set up watch data with the resume progress information BEFORE starting playback
             setupWatchData(
               movie.content_type,
               movie.id,
@@ -1647,8 +1672,15 @@ async function resumeFromProgress(movie, autoResume = false) {
               0
             );
             
+            console.log('✅ Watch data configurado para resume:', currentWatchData);
+            
             // Set global torrent info and start playback
             currentTorrentInfo = torrentInfo;
+            
+            // Mark that we're resuming to avoid loading progress again
+            window.isResuming = true;
+            window.resumePosition = movie.watch_progress.playback_position;
+            
             playVideoFileWithStats(0);
             
             // Initialize subtitle functionality for resumed content
@@ -1718,6 +1750,19 @@ async function resumeFromProgress(movie, autoResume = false) {
               showNotification(`Recargando torrent para reanudar desde ${resumeTime}...`, 'info', 3000);
             }
             
+            // Set up current content data for progress tracking BEFORE reload
+            currentContentData = {
+              id: movie.id,
+              title: movie.title || movie.name,
+              content_type: movie.content_type,
+              season_number: movie.watch_progress.season_number,
+              episode_number: movie.watch_progress.episode_number
+            };
+            
+            // Set originalTitle for subtitle search functionality
+            originalTitle = movie.title || movie.name || 'Unknown Movie';
+            console.log('🎬 originalTitle configurado antes de reload:', originalTitle);
+            
             // Usar el magnet link guardado para recargar el torrent
             await watchOnlineWithStats(movie.watch_progress.torrent_magnet_uri, movie.title || movie.name);
             
@@ -1743,6 +1788,11 @@ async function resumeFromProgress(movie, autoResume = false) {
                         currentTorrentInfo,
                         0
                       );
+                      
+                      console.log('✅ Watch data actualizado después de reload:', currentWatchData);
+                      
+                      // Start watch progress tracking since we have valid data
+                      startWatchProgressTracking();
                     }
                     
                     if (autoResume) {
@@ -4770,11 +4820,31 @@ async function loadContinueWatchingSection() {
       return;
     }
 
-    // Clear grid before populating
+    // Clear grid before populating to avoid duplicates
     continueWatchingGrid.innerHTML = '';
 
-    // Create items for continue watching
-    for (let progress of watchProgress.slice(0, 10)) { // Limit to 10 items for horizontal scroll
+    // Create a Set to track unique items and prevent duplicates
+    const uniqueItems = new Set();
+    const processedItems = [];
+
+    // Filter out duplicates before creating DOM elements
+    for (let progress of watchProgress) {
+      const uniqueId = progress.content_type === 'tv' 
+        ? `${progress.tmdb_id}-${progress.content_type}-${progress.season_number}-${progress.episode_number}`
+        : `${progress.tmdb_id}-${progress.content_type}`;
+      
+      if (!uniqueItems.has(uniqueId)) {
+        uniqueItems.add(uniqueId);
+        processedItems.push(progress);
+      } else {
+        console.log(`🚫 Elemento duplicado filtrado: ${progress.title} (${uniqueId})`);
+      }
+    }
+
+    console.log(`📊 Elementos de progreso: ${watchProgress.length} total, ${processedItems.length} únicos`);
+
+    // Create items for continue watching (limit to 10 for horizontal scroll)
+    for (let progress of processedItems.slice(0, 10)) {
       const item = await createContinueWatchingItem(progress);
       if (item) {
         continueWatchingGrid.appendChild(item);
@@ -4838,11 +4908,19 @@ async function createContinueWatchingItem(progressData) {
       episodeInfo = `T${progressData.season_number}:E${progressData.episode_number}`;
     }
 
+    // Create unique identifier for duplicate detection
+    const uniqueId = progressData.content_type === 'tv' 
+      ? `${progressData.tmdb_id}-${progressData.content_type}-${progressData.season_number}-${progressData.episode_number}`
+      : `${progressData.tmdb_id}-${progressData.content_type}`;
+
     // Create the item element
     const item = document.createElement('div');
     item.className = 'continue-watching-item';
     item.setAttribute('data-id', progressData.tmdb_id);
     item.setAttribute('data-type', progressData.content_type);
+    item.setAttribute('data-unique-id', uniqueId);
+    if (progressData.season_number) item.setAttribute('data-season', progressData.season_number);
+    if (progressData.episode_number) item.setAttribute('data-episode', progressData.episode_number);
     
     item.innerHTML = `
       <div class="poster-container">
@@ -4850,6 +4928,9 @@ async function createContinueWatchingItem(progressData) {
         <div class="content-type-badge ${progressData.content_type}">
           ${progressData.content_type === 'movie' ? 'Película' : 'Serie'}
         </div>
+        <button class="remove-continue-watching-btn" title="Eliminar de continuar viendo">
+          <i class="fas fa-times"></i>
+        </button>
         <div class="progress-overlay">
           <div class="progress-bar">
             <div class="progress-fill" style="width: ${Math.min(progressPercent, 100)}%"></div>
@@ -4870,8 +4951,64 @@ async function createContinueWatchingItem(progressData) {
       </div>
     `;
 
-    // Add click event to resume playback
-    item.addEventListener('click', () => {
+    // Add event listener for remove button
+    const removeBtn = item.querySelector('.remove-continue-watching-btn');
+    removeBtn.addEventListener('click', async (event) => {
+      event.stopPropagation(); // Prevent triggering the resume
+      
+      if (removeBtn.classList.contains('removing')) {
+        return; // Prevent multiple clicks
+      }
+      
+      removeBtn.classList.add('removing');
+      removeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      
+      try {
+        await removeContinueWatchingItem(progressData);
+        
+        // Remove item from DOM with animation
+        item.style.transition = 'all 0.3s ease-out';
+        item.style.opacity = '0';
+        item.style.transform = 'scale(0.8)';
+        
+        setTimeout(() => {
+          if (item.parentNode) {
+            item.parentNode.removeChild(item);
+          }
+          
+          // Check if continue watching section is now empty
+          const continueWatchingGrid = document.getElementById('continue-watching-grid');
+          if (continueWatchingGrid && continueWatchingGrid.children.length === 0) {
+            const continueWatchingSection = document.getElementById('continue-watching-section');
+            if (continueWatchingSection) {
+              continueWatchingSection.classList.add('hidden');
+            }
+          }
+        }, 300);
+        
+        showNotification('Elemento eliminado de continuar viendo', 'success', 2000);
+      } catch (error) {
+        console.error('Error eliminando elemento:', error);
+        showNotification('Error al eliminar elemento', 'error');
+        removeBtn.classList.remove('removing');
+        removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+      }
+    });
+
+    // Add click event to resume playback (but not on remove button)
+    item.addEventListener('click', (event) => {
+      // Don't resume if clicking on remove button
+      if (event.target.closest('.remove-continue-watching-btn')) {
+        return;
+      }
+      
+      // Prevent multiple rapid clicks
+      if (item.classList.contains('resuming')) {
+        return;
+      }
+      
+      item.classList.add('resuming');
+      
       const movieData = {
         id: progressData.tmdb_id,
         title: title,
@@ -4889,8 +5026,12 @@ async function createContinueWatchingItem(progressData) {
         }
       };
       
+      console.log('🎬 Reanudando desde continuar viendo:', movieData);
+      
       // Resume playback automatically
-      resumeFromProgress(movieData, true);
+      resumeFromProgress(movieData, true).finally(() => {
+        item.classList.remove('resuming');
+      });
     });
 
     return item;
@@ -4898,6 +5039,93 @@ async function createContinueWatchingItem(progressData) {
   } catch (error) {
     console.error('Error creando elemento de continuar viendo:', error);
     return null;
+  }
+}
+
+// Function to remove a continue watching item
+async function removeContinueWatchingItem(progressData) {
+  if (!currentUser) {
+    throw new Error('Usuario no autenticado');
+  }
+
+  try {
+    const token = await getAuthToken();
+    if (!token) {
+      throw new Error('No se pudo obtener token de autenticación');
+    }
+
+    // Build delete URL with path parameters as expected by server
+    let url = `/api/watch-progress/${progressData.content_type}/${progressData.tmdb_id}`;
+    
+    // Add query parameters for TV shows (season/episode)
+    const queryParams = new URLSearchParams();
+    if (progressData.season_number !== null && progressData.season_number !== undefined) {
+      queryParams.append('season_number', progressData.season_number.toString());
+    }
+    if (progressData.episode_number !== null && progressData.episode_number !== undefined) {
+      queryParams.append('episode_number', progressData.episode_number.toString());
+    }
+    
+    if (queryParams.toString()) {
+      url += `?${queryParams.toString()}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error del servidor: ${errorText}`);
+    }
+
+    console.log('✅ Elemento de continuar viendo eliminado exitosamente');
+    return true;
+  } catch (error) {
+    console.log('Error eliminando elemento de continuar viendo:', error);
+    throw error;
+  }
+}
+
+// Function to clean duplicate continue watching items
+async function cleanupDuplicateContinueWatching() {
+  if (!currentUser) {
+    return;
+  }
+
+  try {
+    const token = await getAuthToken();
+    if (!token) {
+      return;
+    }
+
+    console.log('🧹 Limpiando duplicados en continuar viendo...');
+
+    const response = await fetch('/api/watch-progress/cleanup-duplicates', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log(`✅ Duplicados limpiados: ${result.cleaned || 0} elementos eliminados`);
+      
+      // Refresh continue watching section after cleanup
+      if (typeof refreshContinueWatchingSection === 'function') {
+        setTimeout(() => {
+          refreshContinueWatchingSection();
+        }, 1000);
+      }
+    }
+  } catch (error) {
+    console.error('Error limpiando duplicados:', error);
   }
 }
 
@@ -5164,6 +5392,17 @@ async function createExpandedContinueWatchingItem(progressItem) {
 // Function to refresh continue watching section
 async function refreshContinueWatchingSection() {
   if (currentUser) {
+    // Occasionally clean duplicates (every 10th refresh)
+    if (!window.continueWatchingRefreshCount) {
+      window.continueWatchingRefreshCount = 0;
+    }
+    window.continueWatchingRefreshCount++;
+    
+    if (window.continueWatchingRefreshCount % 10 === 0) {
+      console.log('🧹 Ejecutando limpieza periódica de duplicados...');
+      cleanupDuplicateContinueWatching();
+    }
+    
     continueWatchingLoaded = false; // Reset flag to allow refresh
     await loadContinueWatchingSection();
     continueWatchingLoaded = true;
@@ -5871,36 +6110,89 @@ function playVideoFileWithStats(fileIndex) {
   // Set up watch progress tracking
   const currentMovie = getCurrentMovieData();
   if (currentMovie) {
-    // Set originalTitle for subtitle search functionality
-    originalTitle = currentMovie.title || currentMovie.name || 'Unknown Movie';
-    console.log('🎬 originalTitle configurado en playVideoFileWithStats:', originalTitle);
+    // Set originalTitle for subtitle search functionality (only if not already set)
+    if (!originalTitle) {
+      originalTitle = currentMovie.title || currentMovie.name || 'Unknown Movie';
+      console.log('🎬 originalTitle configurado en playVideoFileWithStats:', originalTitle);
+    }
     
-    setupWatchData(
-      currentMovie.content_type || 'movie',
-      currentMovie.id,
-      currentMovie.title || currentMovie.name,
-      currentMovie.season_number || null,
-      currentMovie.episode_number || null,
-      currentTorrentInfo,
-      fileIndex
-    );
+    // Only set up watch data if we're not resuming (to avoid overwriting existing data)
+    if (!window.isResuming && !currentWatchData) {
+      setupWatchData(
+        currentMovie.content_type || 'movie',
+        currentMovie.id,
+        currentMovie.title || currentMovie.name,
+        currentMovie.season_number || null,
+        currentMovie.episode_number || null,
+        currentTorrentInfo,
+        fileIndex
+      );
+    }
 
-    // Load existing progress and set video time if available
-    loadWatchProgress(
-      currentWatchData.content_type,
-      currentWatchData.tmdb_id,
-      currentWatchData.season_number,
-      currentWatchData.episode_number
-    ).then(progressData => {
-      if (progressData && progressData.playback_position > 30) {
-        // Ask user if they want to resume from saved position with a nice modal
-        const resumeTime = formatTime(progressData.playback_position);
-        showResumeModal(resumeTime, progressData.playback_position, videoPlayer);
-      } else {
-        // Start progress tracking immediately if no saved progress
-        startWatchProgressTracking();
+    // Handle progress loading/resuming
+    if (window.isResuming && window.resumePosition) {
+      // We're resuming, so start tracking immediately and set the video position
+      console.log('🔄 Resumiendo reproducción desde posición guardada:', window.resumePosition);
+      startWatchProgressTracking();
+      
+      // Set the video time to saved position once it loads
+      const targetTime = window.resumePosition;
+      const resumeTime = formatTime(targetTime);
+      
+      const setVideoTime = () => {
+        if (videoPlayer.readyState >= 2) { // HAVE_CURRENT_DATA or higher
+          videoPlayer.currentTime = targetTime;
+          console.log(`✅ Video tiempo establecido a: ${resumeTime}`);
+          showNotification(`▶️ Continuando desde ${resumeTime}`, 'success', 3000);
+          return true;
+        }
+        return false;
+      };
+      
+      // Try to set time immediately if video is already loaded
+      if (!setVideoTime()) {
+        // If not loaded, wait for appropriate events
+        const events = ['loadeddata', 'canplay', 'loadedmetadata'];
+        let eventHandled = false;
+        
+        events.forEach(eventName => {
+          videoPlayer.addEventListener(eventName, () => {
+            if (!eventHandled && setVideoTime()) {
+              eventHandled = true;
+            }
+          }, { once: true });
+        });
+        
+        // Fallback timeout
+        setTimeout(() => {
+          if (!eventHandled) {
+            setVideoTime();
+          }
+        }, 2000);
       }
-    });
+      
+      // Clear resume flags
+      window.isResuming = false;
+      window.resumePosition = null;
+      
+    } else {
+      // Normal playback - load existing progress and ask user
+      loadWatchProgress(
+        currentWatchData.content_type,
+        currentWatchData.tmdb_id,
+        currentWatchData.season_number,
+        currentWatchData.episode_number
+      ).then(progressData => {
+        if (progressData && progressData.playback_position > 30) {
+          // Ask user if they want to resume from saved position with a nice modal
+          const resumeTime = formatTime(progressData.playback_position);
+          showResumeModal(resumeTime, progressData.playback_position, videoPlayer);
+        } else {
+          // Start progress tracking immediately if no saved progress
+          startWatchProgressTracking();
+        }
+      });
+    }
   } else {
     // Only show notification, don't start progress tracking without valid watch data
     console.log('⚠️ No se puede rastrear progreso: información de contenido no disponible');
@@ -5913,12 +6205,16 @@ function playVideoFileWithStats(fileIndex) {
 function getCurrentMovieData() {
   // First, try to use stored content data
   if (currentContentData) {
+    console.log('📊 getCurrentMovieData: Using currentContentData:', currentContentData);
     return currentContentData;
   }
+  
+  console.log('📊 getCurrentMovieData: No currentContentData, trying modal extraction...');
   
   // Fallback: Try to extract data from the current modal
   const modal = document.getElementById('movie-modal');
   if (!modal || modal.style.display === 'none') {
+    console.log('📊 getCurrentMovieData: No modal or modal hidden');
     return null;
   }
 
@@ -5929,15 +6225,19 @@ function getCurrentMovieData() {
     const tmdbId = modalContent.dataset.tmdbId || modalContent.dataset.movieId;
     const contentType = modalContent.dataset.contentType || modalContent.dataset.type || 'movie';
     
-    return {
+    const extractedData = {
       id: tmdbId ? parseInt(tmdbId) : null,
       title: titleElement ? titleElement.textContent.trim() : 'Unknown',
       content_type: contentType,
       season_number: modalContent.dataset.seasonNumber ? parseInt(modalContent.dataset.seasonNumber) : null,
       episode_number: modalContent.dataset.episodeNumber ? parseInt(modalContent.dataset.episodeNumber) : null
     };
+    
+    console.log('📊 getCurrentMovieData: Extracted from modal:', extractedData);
+    return extractedData;
   }
   
+  console.log('📊 getCurrentMovieData: No modal content found');
   return null;
 }
 
