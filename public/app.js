@@ -1125,12 +1125,6 @@ function createTrendingCard(title, defaultContentType = 'movie') {
         </svg>
       `)}'; this.onerror=null;">
       
-      <!-- Content type indicator overlay -->
-      <div class="content-type-indicator">
-        ${contentTypeIcon}
-        <span>${contentTypeTag}</span>
-      </div>
-      
       <!-- Hover overlay with additional information -->
       <div class="trending-hover-overlay">
         <div class="hover-content">
@@ -3246,13 +3240,27 @@ async function fetchTorrents(movieTitle) {
         
         let torrentButtons = `
           <div class="torrent-quote">
-            <h3>Torrents disponibles</h3>`;
+            <h3>Torrents Disponibles</h3>
+            <div class="torrent-info-banner">
+              <div class="info-item">
+                <span class="info-icon">📊</span>
+                <span class="info-text">${allTorrents.length} opción${allTorrents.length !== 1 ? 'es' : ''} encontrada${allTorrents.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-icon">⚡</span>
+                <span class="info-text">Descarga directa disponible</span>
+              </div>
+            </div>`;
         
 
         if (hasDemo) {
           torrentButtons += `
-            <div class="demo-warning" style="background: #ff6b35; color: white; padding: 8px 12px; border-radius: 4px; margin-bottom: 10px; font-size: 14px;">
-              ⚠️ Datos de demostración - Los torrents reales no están disponibles debido a restricciones de red
+            <div class="demo-warning">
+              <div class="warning-header">
+                <span class="warning-icon">⚠️</span>
+                <span class="warning-title">Modo Demostración</span>
+              </div>
+              <p class="warning-text">Los torrents mostrados son datos de ejemplo. Las descargas reales no están disponibles debido a restricciones de red.</p>
             </div>`;
         }
         
@@ -3267,31 +3275,39 @@ async function fetchTorrents(movieTitle) {
           const escapedMovieTitle = movieTitle.replace(/'/g, "\\'").replace(/"/g, '\\"');
           
           torrentButtons += `
-            <div class="torrent-item${torrent.isDemo ? ' demo-torrent' : ''}">
-              <div class="torrent-header">
-                <button class="torrent-button" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${movieTitle}" onclick="toggleTorrentActions(this)">
-                  <div class="torrent-info-left">
-                    <span class="torrent-quality">${torrent.quality}${providerInfo}</span>
-                    <span class="torrent-size">${torrent.size}</span>
+            <div class="torrent-item${torrent.isDemo ? ' demo-torrent' : ''}" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${movieTitle}" onclick="toggleTorrentActions(this)">
+              <div class="torrent-main-content">
+                <div class="torrent-primary-info">
+                  <div class="torrent-quality-badge">
+                    <span class="quality-text">${torrent.quality}${providerInfo}</span>
                   </div>
-                  <div class="torrent-info-right">
-                    <span class="torrent-seeds">🌱 ${torrent.seeds || 0}</span>
-                    <span class="torrent-expand">⌄</span>
+                  <div class="torrent-metadata">
+                    <span class="torrent-size-info">📦 ${torrent.size}</span>
+                    <span class="torrent-seeds-info">🌱 ${torrent.seeds || 0} seeds</span>
                   </div>
-                </button>
-              </div>
-              <div class="torrent-name" title="${torrent.title || movieTitle}">
-                📁 ${torrent.title || movieTitle}
+                </div>
+                <div class="torrent-secondary-info">
+                  <div class="torrent-filename">
+                    <span class="file-icon">📁</span>
+                    <span class="filename-text">${torrent.title || movieTitle}</span>
+                  </div>
+                  <div class="torrent-expand-indicator">
+                    <span class="expand-text">Opciones</span>
+                    <span class="expand-arrow">⌄</span>
+                  </div>
+                </div>
               </div>
               <div class="torrent-actions" style="display: none;">
-                <button class="action-button watch-online" onclick="event.stopPropagation(); watchOnlineWithStats('${escapedMagnetLink}', '${escapedMovieTitle}')">
-                  <span class="action-icon">▶</span>
-                  <span class="action-text">Ver Online</span>
-                </button>
-                <a class="action-button download-torrent" href="${magnetLink}" download>
-                  <span class="action-icon">🧲</span>
-                  <span class="action-text">Descargar</span>
-                </a>
+                <div class="actions-grid">
+                  <button class="action-button watch-online" onclick="event.stopPropagation(); watchOnlineWithStats('${escapedMagnetLink}', '${escapedMovieTitle}')">
+                    <span class="action-icon">▶</span>
+                    <span class="action-text">Ver Online</span>
+                  </button>
+                  <a class="action-button download-torrent" href="${magnetLink}" download onclick="event.stopPropagation();">
+                    <span class="action-icon">🧲</span>
+                    <span class="action-text">Descargar</span>
+                  </a>
+                </div>
               </div>
             </div>
           `;
@@ -7187,15 +7203,18 @@ window.addEventListener('beforeunload', () => {
 // Global function for TV episode watching with season/episode info
 window.watchTVEpisodeOnline = watchTVEpisodeOnline;
 
-window.toggleTorrentActions = function(button) {
-  const torrentItem = button.closest('.torrent-item');
+window.toggleTorrentActions = function(element) {
+  // Para el nuevo diseño, element puede ser un div.torrent-item
+  const torrentItem = element.classList.contains('torrent-item') ? element : element.closest('.torrent-item');
   const actionsDiv = torrentItem.querySelector('.torrent-actions');
   const allActions = document.querySelectorAll('.torrent-actions');
-  const allButtons = document.querySelectorAll('.torrent-button');
+  const allTorrentItems = document.querySelectorAll('.torrent-item');
   
 
   allActions.forEach(actions => {
-    if (actions !== actionsDiv && actions.classList.contains('active')) {
+    const parentItem = actions.closest('.torrent-item');
+    if (actions !== actionsDiv && parentItem.classList.contains('active')) {
+      parentItem.classList.remove('active');
       actions.classList.remove('active');
       actions.style.maxHeight = '0px';
       setTimeout(() => {
@@ -7205,16 +7224,16 @@ window.toggleTorrentActions = function(button) {
   });
   
 
-  allButtons.forEach(btn => {
-    if (btn !== button) {
-      btn.classList.remove('active');
+  allTorrentItems.forEach(item => {
+    if (item !== torrentItem) {
+      item.classList.remove('active');
     }
   });
   
 
-  if (actionsDiv.classList.contains('active')) {
+  if (torrentItem.classList.contains('active')) {
 
-    button.classList.remove('active');
+    torrentItem.classList.remove('active');
     actionsDiv.classList.remove('active');
     actionsDiv.style.maxHeight = '0px';
     setTimeout(() => {
@@ -7222,12 +7241,12 @@ window.toggleTorrentActions = function(button) {
     }, 300);
   } else {
 
-    button.classList.add('active');
-    actionsDiv.style.display = 'flex';
+    torrentItem.classList.add('active');
+    actionsDiv.style.display = 'block';
     actionsDiv.classList.add('active');
 
     setTimeout(() => {
-      actionsDiv.style.maxHeight = '80px';
+      actionsDiv.style.maxHeight = '120px';
     }, 10);
   }
 };
@@ -7237,7 +7256,7 @@ document.addEventListener('click', function(event) {
 
   if (!event.target.closest('.torrent-item')) {
     const allActions = document.querySelectorAll('.torrent-actions.active');
-    const allButtons = document.querySelectorAll('.torrent-button.active');
+    const allTorrentItems = document.querySelectorAll('.torrent-item.active');
     
     allActions.forEach(actions => {
       actions.classList.remove('active');
@@ -7247,8 +7266,8 @@ document.addEventListener('click', function(event) {
       }, 300);
     });
     
-    allButtons.forEach(button => {
-      button.classList.remove('active');
+    allTorrentItems.forEach(item => {
+      item.classList.remove('active');
     });
   }
 });
