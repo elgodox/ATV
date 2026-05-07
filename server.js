@@ -413,6 +413,10 @@ app.get('/api/titles', async (req, res) => {
       
  
       data.results = filterAdultContent(data.results, adultFilter);
+
+      if (platform && platform !== '') {
+        data.results.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+      }
       
       data.total_results = data.results.length;
     }

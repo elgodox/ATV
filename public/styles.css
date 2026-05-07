@@ -2755,8 +2755,490 @@ h1 {
   min-height: 45px;
 }
 
+/* Apple-like streaming surface */
+.best-torrent-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  margin-top: 22px;
+  padding: 24px;
+  border-radius: 22px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.07)),
+    rgba(18, 18, 20, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+}
+
+.best-torrent-kicker {
+  display: inline-flex;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.best-torrent-copy h3 {
+  margin: 0 0 8px;
+  color: #fff;
+  font-size: 28px;
+  line-height: 1.05;
+  font-weight: 700;
+}
+
+.best-torrent-copy p {
+  margin: 0;
+  max-width: 640px;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.55;
+}
+
+.best-torrent-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.best-torrent-meta span {
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+}
+
+.primary-play-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 168px;
+  min-height: 52px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 999px;
+  background: #f5f5f7;
+  color: #111;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.24);
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.primary-play-button:hover {
+  background: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.32);
+}
+
+.modal-close-button {
+  position: fixed;
+  top: 22px;
+  right: 24px;
+  z-index: 1002;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.modal-close-button:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: scale(1.04);
+}
+
+.playback-setup-content,
+.stream-loading-content {
+  width: min(900px, calc(100vw - 32px));
+  margin: 6vh auto;
+  padding: 28px;
+  border-radius: 28px;
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08)),
+    rgba(15, 15, 17, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 34px 90px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  color: #fff;
+  backdrop-filter: blur(28px) saturate(1.25);
+  -webkit-backdrop-filter: blur(28px) saturate(1.25);
+  animation: modalSlideIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.playback-setup-hero {
+  max-width: 680px;
+  margin-bottom: 24px;
+}
+
+.setup-kicker {
+  display: inline-flex;
+  margin-bottom: 10px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.playback-setup-hero h2,
+.stream-loading-state h2,
+.stream-file-header h2,
+.stream-error-state h2 {
+  margin: 0 0 10px;
+  color: #fff;
+  font-size: 34px;
+  line-height: 1.05;
+}
+
+.playback-setup-hero p,
+.setup-note,
+.stream-loading-note,
+.stream-loading-state p,
+.stream-error-state p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.68);
+  line-height: 1.55;
+}
+
+.playback-setup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.setup-panel {
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.setup-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 16px;
+}
+
+.setup-panel-header i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.setup-panel-header span {
+  display: block;
+  color: rgba(255, 255, 255, 0.54);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.setup-panel-header strong {
+  display: block;
+  color: #fff;
+  font-size: 17px;
+}
+
+.setup-select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 44px 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(245, 245, 247, 0.12);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  outline: none;
+}
+
+.setup-select option {
+  background: #1c1c1e;
+  color: #fff;
+}
+
+.preplay-quality-details,
+.stream-summary-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.preplay-quality-details span,
+.stream-summary-pills span {
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 13px;
+}
+
+.preplay-start-button,
+.secondary-setup-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.preplay-start-button {
+  width: 100%;
+  margin-top: 18px;
+  background: #f5f5f7;
+  color: #111;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.3);
+}
+
+.secondary-setup-button {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.stream-loading-state,
+.stream-error-state {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 14px;
+  padding: 32px 16px;
+}
+
+.stream-torrent-summary {
+  margin-bottom: 18px;
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.stream-torrent-summary h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
+.stream-error-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.player-control-deck {
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+  gap: 12px;
+  margin: 14px 0 10px;
+}
+
+.player-control-group {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  min-height: 58px;
+  padding: 10px 12px 10px 16px;
+  border-radius: 18px;
+  background: rgba(246, 246, 247, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.player-control-group label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 86px;
+}
+
+.control-eyebrow {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.control-value {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.player-pill-select,
+.player-subtitle-language-slot .modern-select {
+  width: 100%;
+  min-height: 40px;
+  margin: 0;
+  padding: 0 40px 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.09)),
+    rgba(20, 20, 22, 0.78);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, 0.72) 50%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72) 50%, transparent 50%);
+  background-position:
+    calc(100% - 20px) 17px,
+    calc(100% - 14px) 17px;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+.player-pill-select:focus,
+.player-subtitle-language-slot .modern-select:focus {
+  border-color: rgba(10, 132, 255, 0.8);
+  box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.16);
+}
+
+.subtitle-settings-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-width: 132px;
+  min-height: 58px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  background: rgba(246, 246, 247, 0.1);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: background 180ms ease, transform 180ms ease, border-color 180ms ease;
+}
+
+.subtitle-settings-toggle:hover,
+.subtitle-settings-toggle.active {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.24);
+  transform: translateY(-1px);
+}
+
+#subtitle-controls {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05)),
+    rgba(18, 18, 20, 0.7);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+}
+
+#subtitle-controls.subtitle-settings-collapsed {
+  display: none;
+}
+
+#subtitle-controls.subtitle-settings-expanded {
+  display: block;
+  animation: subtitleSettingsIn 180ms ease-out;
+}
+
+@keyframes subtitleSettingsIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.subtitle-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.subtitle-option {
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.11);
+}
+
 /* Responsividad para subtítulos */
 @media (max-width: 768px) {
+  .best-torrent-panel,
+  .player-control-deck,
+  .subtitle-options {
+    grid-template-columns: 1fr;
+  }
+
+  .best-torrent-panel {
+    padding: 20px;
+  }
+
+  .best-torrent-copy h3 {
+    font-size: 24px;
+  }
+
+  .primary-play-button {
+    width: 100%;
+  }
+
+  .playback-setup-content,
+  .stream-loading-content {
+    margin: 5vh auto;
+    padding: 20px;
+  }
+
+  .playback-setup-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .playback-setup-hero h2,
+  .stream-loading-state h2,
+  .stream-file-header h2,
+  .stream-error-state h2 {
+    font-size: 28px;
+  }
+
+  .player-control-group {
+    grid-template-columns: 1fr;
+  }
+
+  .subtitle-settings-toggle {
+    width: 100%;
+  }
+
   .subtitle-header {
     flex-direction: column;
     gap: 15px;

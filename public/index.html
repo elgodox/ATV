@@ -233,26 +233,6 @@
     </div>
   </div>
 
-  <!-- Secciones de Streaming Populares -->
-  <div id="trending-sections" class="trending-sections">
-    <!-- Las secciones de trending se cargarán aquí dinámicamente -->
-  </div>
-
-  <!-- Sección de Tendencias por País -->
-  <div id="country-trending-section" class="country-trending-section hidden">
-    <div class="section-header">
-      <h2>
-        <i class="fas fa-fire"></i>
-        Tendencias en tu región
-      </h2>
-    </div>
-    <div id="country-trending-container" class="trending-container">
-      <div id="country-trending-grid" class="trending-grid">
-        <!-- Los elementos de trending por país se cargarán aquí -->
-      </div>
-    </div>
-  </div>
-
   <!-- Resultados -->
   <div id="movie-grid"></div>
 
@@ -271,6 +251,56 @@
     </div>
   </div>
 
+  <!-- Modal para preparar reproducción -->
+  <div id="playback-setup-modal" class="modal hidden">
+    <button class="modal-close-button" onclick="closePlaybackSetupModal()" aria-label="Cerrar">
+      <i class="fas fa-times"></i>
+    </button>
+    <div class="playback-setup-content">
+      <div class="playback-setup-hero">
+        <span class="setup-kicker">Antes de reproducir</span>
+        <h2>Elige calidad y subtítulos</h2>
+        <p>Por defecto usamos la mejor calidad disponible, pero puedes cambiarla antes de cargar el torrent.</p>
+      </div>
+      <div class="playback-setup-grid">
+        <div class="setup-panel quality-panel">
+          <div class="setup-panel-header">
+            <i class="fas fa-layer-group"></i>
+            <div>
+              <span>Calidad</span>
+              <strong id="preplay-quality-summary">Mejor disponible</strong>
+            </div>
+          </div>
+          <select id="preplay-quality-select" class="setup-select" aria-label="Calidad antes de reproducir"></select>
+          <div id="preplay-quality-details" class="preplay-quality-details"></div>
+        </div>
+        <div class="setup-panel subtitle-panel">
+          <div class="setup-panel-header">
+            <i class="fas fa-closed-captioning"></i>
+            <div>
+              <span>Subtítulos</span>
+              <strong>Idioma inicial</strong>
+            </div>
+          </div>
+          <select id="preplay-subtitle-language" class="setup-select" aria-label="Idioma de subtítulos antes de reproducir">
+            <option value="none">Sin búsqueda automática</option>
+            <option value="es" selected>Español</option>
+            <option value="en">English</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+            <option value="it">Italiano</option>
+            <option value="pt">Português</option>
+          </select>
+          <p class="setup-note">Luego puedes cambiar el idioma, buscar online o cargar archivos desde el reproductor.</p>
+        </div>
+      </div>
+      <button id="preplay-start-button" class="preplay-start-button">
+        <i class="fas fa-play"></i>
+        Reproducir ahora
+      </button>
+    </div>
+  </div>
+
   <!-- Modal para el reproductor de video -->
   <div id="video-modal" class="modal hidden">
     <span class="close" onclick="closeVideoModal()">&times;</span>
@@ -279,6 +309,29 @@
         <video id="video-player" controls preload="metadata" crossorigin="anonymous">
           Tu navegador no soporta la reproducción de video.
         </video>
+
+        <div id="player-control-deck" class="player-control-deck" style="display: none;">
+          <div class="player-control-group quality-control-group">
+            <label for="player-quality-select">
+              <span class="control-eyebrow">Calidad</span>
+              <span id="player-quality-current" class="control-value">Auto</span>
+            </label>
+            <select id="player-quality-select" class="player-pill-select" aria-label="Seleccionar calidad de video">
+              <option value="">Mejor disponible</option>
+            </select>
+          </div>
+          <div class="player-control-group subtitle-language-control">
+            <label for="language-select">
+              <span class="control-eyebrow">Subtítulos</span>
+              <span class="control-value">Idioma</span>
+            </label>
+            <div id="player-subtitle-language-slot" class="player-subtitle-language-slot"></div>
+          </div>
+          <button id="subtitle-settings-toggle" class="subtitle-settings-toggle" type="button" onclick="toggleSubtitleSettings()" aria-expanded="false" aria-controls="subtitle-controls">
+            <i class="fas fa-sliders-h"></i>
+            <span>Opciones</span>
+          </button>
+        </div>
         
         <!-- Torrent statistics positioned subtly below video -->
         <div id="torrent-stats" class="torrent-stats-overlay" style="display: none;">
@@ -337,7 +390,7 @@
         </div>
         
         <!-- Controles de subtítulos -->
-        <div id="subtitle-controls">
+        <div id="subtitle-controls" class="subtitle-settings-collapsed">
           <div class="subtitle-header">
             <h3>🎬 Subtítulos</h3>
           </div>
@@ -369,6 +422,7 @@
                   <option value="it">🇮🇹 Italiano</option>
                   <option value="pt">🇵🇹 Português</option>
                 </select>
+                <div id="subtitle-language-home"></div>
                 <button id="search-subtitles-btn" class="action-btn search-btn">
                   <span class="btn-icon">🔍</span>
                   Buscar
@@ -408,15 +462,21 @@
 
   <!-- Modal para seleccionar archivo de video del torrent -->
   <div id="file-selection-modal" class="modal hidden">
-    <span class="close" onclick="closeFileSelectionModal()">&times;</span>
-    <div class="modal-content">
-      <h2>Seleccionar Archivo de Video</h2>
-      <div id="torrent-loading">
-        <p>Explorando torrent...</p>
+    <button class="modal-close-button" onclick="closeFileSelectionModal()" aria-label="Cerrar">
+      <i class="fas fa-times"></i>
+    </button>
+    <div class="stream-loading-content">
+      <div id="torrent-loading" class="stream-loading-state">
+        <span class="setup-kicker">Preparando stream</span>
+        <h2>Conectando con el torrent</h2>
         <div class="loading-spinner"></div>
+        <p id="loading-status">Buscando peers disponibles...</p>
       </div>
-      <div id="file-list" style="display: none;">
-        <h3>Archivos de Video Disponibles:</h3>
+      <div id="file-list" class="stream-file-list" style="display: none;">
+        <div class="stream-file-header">
+          <span class="setup-kicker">Archivo de video</span>
+          <h2>Selecciona qué reproducir</h2>
+        </div>
         <div id="video-files-list"></div>
       </div>
     </div>

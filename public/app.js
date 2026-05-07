@@ -32,6 +32,10 @@ window.localSubtitleBlobUrls = [];
 let watchProgressInterval = null;
 let currentWatchData = null;
 let currentContentData = null; // Store current movie/show data for streaming
+let currentQualityOptions = [];
+let currentPlaybackQualityKey = null;
+let currentPlaybackSetupContext = null;
+let pendingSubtitleLanguage = null;
 let lastSavedTime = 0;
 const SAVE_INTERVAL = 10; // Save progress every 10 seconds
 let continueWatchingLoaded = false; // Flag to prevent multiple loads
@@ -652,7 +656,14 @@ document.addEventListener('DOMContentLoaded', function() {
     typeSelect.addEventListener('change', updateGenreSelect);
   }
   if (genreSelect) genreSelect.addEventListener("change", applyFilters);
-  if (platformSelect) platformSelect.addEventListener("change", applyFilters);
+  if (platformSelect) {
+    platformSelect.addEventListener("change", function() {
+      if (this.value && sortSelect) {
+        sortSelect.value = 'popularity.desc';
+      }
+      applyFilters();
+    });
+  }
   if (sortSelect) sortSelect.addEventListener("change", applyFilters);
   if (adultFilter) adultFilter.addEventListener("click", cycleAdultFilter);
   
@@ -3184,6 +3195,121 @@ function renderStars(voteAverage) {
   return stars;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function getQualityRank(quality) {
+  const normalized = String(quality || '').toLowerCase();
+  if (normalized.includes('4k') || normalized.includes('2160')) return 600;
+  if (normalized.includes('1440')) return 500;
+  if (normalized.includes('1080')) return 400;
+  if (normalized.includes('720')) return 300;
+  if (normalized.includes('480')) return 200;
+  if (normalized.includes('360')) return 100;
+  return 0;
+}
+
+function parseSizeToBytes(size) {
+  if (typeof size === 'number') return size;
+  const match = String(size || '').replace(',', '.').match(/([\d.]+)\s*(TB|GB|MB|KB|B)/i);
+  if (!match) return 0;
+  const value = parseFloat(match[1]);
+  const unit = match[2].toUpperCase();
+  const multipliers = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4 };
+  return Math.round(value * (multipliers[unit] || 1));
+}
+
+function torrentHealthScore(torrent) {
+  const seeds = Number(torrent.seeds || torrent.seeders || 0);
+  const peers = Number(torrent.peers || torrent.leeches || torrent.leechers || 0);
+  const sizeBytes = torrent.size_bytes || parseSizeToBytes(torrent.size);
+  const sourceBonus = torrent.isDemo ? -500 : 0;
+  return (getQualityRank(torrent.quality) * 1000000) + (seeds * 1000) + (peers * 100) + Math.min(sizeBytes / (1024 ** 3), 20) + sourceBonus;
+}
+
+function getTorrentMagnet(torrent, fallbackTitle) {
+  return torrent.magnet || torrent.url || `magnet:?xt=urn:btih:${torrent.hash}&dn=${encodeURIComponent(fallbackTitle)}&tr=udp://tracker.openbittorrent.com:80/announce`;
+}
+
+function selectBestTorrentsByQuality(torrents, fallbackTitle) {
+  const bestByQuality = new Map();
+
+  torrents.forEach((torrent) => {
+    const quality = torrent.quality || 'Auto';
+    const magnet = getTorrentMagnet(torrent, fallbackTitle);
+    if (!magnet || magnet.includes('undefined')) return;
+
+    const normalizedTorrent = {
+      ...torrent,
+      quality,
+      magnet,
+      title: torrent.title || fallbackTitle,
+      score: torrentHealthScore(torrent)
+    };
+
+    const existing = bestByQuality.get(quality);
+    if (!existing || normalizedTorrent.score > existing.score) {
+      bestByQuality.set(quality, normalizedTorrent);
+    }
+  });
+
+  return Array.from(bestByQuality.values()).sort((a, b) => {
+    const qualityDiff = getQualityRank(b.quality) - getQualityRank(a.quality);
+    return qualityDiff || (b.score - a.score);
+  });
+}
+
+function setCurrentQualityOptions(torrents, defaultTitle, selectedMagnet = null) {
+  currentQualityOptions = torrents.map((torrent, index) => ({
+    key: `${torrent.quality || 'Auto'}-${torrent.hash || index}`,
+    quality: torrent.quality || 'Auto',
+    magnet: torrent.magnet,
+    title: torrent.title || defaultTitle,
+    size: torrent.size || 'Unknown',
+    seeds: torrent.seeds || 0,
+    isDemo: !!torrent.isDemo
+  }));
+
+  const selected = currentQualityOptions.find(option => option.magnet === selectedMagnet) || currentQualityOptions[0] || null;
+  currentPlaybackQualityKey = selected?.key || null;
+}
+
+function renderBestTorrentCTA(torrents, title, options = {}) {
+  const bestTorrent = torrents[0];
+  const qualityList = torrents.map(torrent => torrent.quality).filter(Boolean).join(' / ');
+  const subtitle = options.type === 'tv'
+    ? `T${options.season} ${options.episode ? `E${options.episode}` : 'temporada completa'}`
+    : 'Película';
+  const playCall = options.type === 'tv'
+    ? `openPlaybackSetupModal({ type: 'tv', season: ${options.season || 'null'}, episode: ${options.episode || 'null'} })`
+    : `openPlaybackSetupModal({ type: 'movie' })`;
+
+  return `
+    <div class="best-torrent-panel">
+      <div class="best-torrent-copy">
+        <span class="best-torrent-kicker">Mejor torrent seleccionado</span>
+        <h3>${escapeHtml(bestTorrent.quality)} por defecto</h3>
+        <p>${escapeHtml(subtitle)} preparado con la mejor combinación de calidad y seeds. Puedes cambiar la calidad antes de reproducir.</p>
+        <div class="best-torrent-meta">
+          <span>${escapeHtml(bestTorrent.size || 'Tamaño desconocido')}</span>
+          <span>${bestTorrent.seeds || 0} seeds</span>
+          <span>${escapeHtml(qualityList || bestTorrent.quality)}</span>
+        </div>
+      </div>
+      <button class="primary-play-button" onclick="${playCall}">
+        <i class="fas fa-play"></i>
+        Configurar y reproducir
+      </button>
+    </div>
+  `;
+}
+
 
 async function fetchTorrents(movieTitle) {
   try {
@@ -3230,25 +3356,28 @@ async function fetchTorrents(movieTitle) {
       }
 
       if (allTorrents.length > 0) {
-
         const hasDemo = allTorrents.some(torrent => torrent.isDemo);
-        
-        allTorrents.sort((a, b) => {
-          const qualityOrder = ["4K", "1080p", "720p", "DVDRip", "WEB-DL", "SD"];
-          return qualityOrder.indexOf(a.quality) - qualityOrder.indexOf(b.quality);
-        });
-        
+        const bestTorrents = selectBestTorrentsByQuality(allTorrents, movieTitle);
+        if (bestTorrents.length === 0) {
+          elements.modalTrailer.insertAdjacentHTML(
+            "afterend",
+            '<div class="no-torrents-message">No se encontraron torrents reproducibles para esta película.</div>'
+          );
+          return;
+        }
+        setCurrentQualityOptions(bestTorrents, movieTitle);
+
         let torrentButtons = `
           <div class="torrent-quote">
-            <h3>Torrents Disponibles</h3>
+            <h3>Streaming</h3>
             <div class="torrent-info-banner">
               <div class="info-item">
-                <span class="info-icon">📊</span>
-                <span class="info-text">${allTorrents.length} opción${allTorrents.length !== 1 ? 'es' : ''} encontrada${allTorrents.length !== 1 ? 's' : ''}</span>
+                <span class="info-icon">✨</span>
+                <span class="info-text">${bestTorrents.length} calidad${bestTorrents.length !== 1 ? 'es' : ''} curada${bestTorrents.length !== 1 ? 's' : ''}</span>
               </div>
               <div class="info-item">
-                <span class="info-icon">⚡</span>
-                <span class="info-text">Descarga directa disponible</span>
+                <span class="info-icon">▶</span>
+                <span class="info-text">Reproduce en la mayor calidad por defecto</span>
               </div>
             </div>`;
         
@@ -3264,55 +3393,8 @@ async function fetchTorrents(movieTitle) {
             </div>`;
         }
         
-        torrentButtons += `<div class="torrent-buttons">`;
-        
-        allTorrents.forEach((torrent, index) => {
-          const magnetLink = torrent.magnet || torrent.url || `magnet:?xt=urn:btih:${torrent.hash}&dn=${encodeURIComponent(movieTitle)}&tr=udp://tracker.openbittorrent.com:80/announce`;
-          const providerInfo = torrent.isDemo ? " 🎭 Demo" : "";
-          
-
-          const escapedMagnetLink = magnetLink.replace(/'/g, "\\'").replace(/"/g, '\\"');
-          const escapedMovieTitle = movieTitle.replace(/'/g, "\\'").replace(/"/g, '\\"');
-          
-          torrentButtons += `
-            <div class="torrent-item${torrent.isDemo ? ' demo-torrent' : ''}" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${movieTitle}" onclick="toggleTorrentActions(this)">
-              <div class="torrent-main-content">
-                <div class="torrent-primary-info">
-                  <div class="torrent-quality-badge">
-                    <span class="quality-text">${torrent.quality}${providerInfo}</span>
-                  </div>
-                  <div class="torrent-metadata">
-                    <span class="torrent-size-info">📦 ${torrent.size}</span>
-                    <span class="torrent-seeds-info">🌱 ${torrent.seeds || 0} seeds</span>
-                  </div>
-                </div>
-                <div class="torrent-secondary-info">
-                  <div class="torrent-filename">
-                    <span class="file-icon">📁</span>
-                    <span class="filename-text">${torrent.title || movieTitle}</span>
-                  </div>
-                  <div class="torrent-expand-indicator">
-                    <span class="expand-text">Opciones</span>
-                    <span class="expand-arrow">⌄</span>
-                  </div>
-                </div>
-              </div>
-              <div class="torrent-actions" style="display: none;">
-                <div class="actions-grid">
-                  <button class="action-button watch-online" onclick="event.stopPropagation(); watchOnlineWithStats('${escapedMagnetLink}', '${escapedMovieTitle}')">
-                    <span class="action-icon">▶</span>
-                    <span class="action-text">Ver Online</span>
-                  </button>
-                  <a class="action-button download-torrent" href="${magnetLink}" download onclick="event.stopPropagation();">
-                    <span class="action-icon">🧲</span>
-                    <span class="action-text">Descargar</span>
-                  </a>
-                </div>
-              </div>
-            </div>
-          `;
-        });
-        torrentButtons += `</div></div>`;
+        torrentButtons += renderBestTorrentCTA(bestTorrents, movieTitle);
+        torrentButtons += `</div>`;
         elements.modalTrailer.insertAdjacentHTML("afterend", torrentButtons);
       } else {
         elements.modalTrailer.insertAdjacentHTML(
@@ -3482,10 +3564,28 @@ async function searchTVTorrents(tvTitle, season, episode, resultsContainer) {
 function displayTVTorrents(torrents, container, tvTitle, season, episode) {
 
   const hasDemo = torrents.some(torrent => torrent.isDemo);
+  const bestTorrents = selectBestTorrentsByQuality(torrents, tvTitle);
+
+  if (bestTorrents.length === 0) {
+    container.innerHTML = '<div class="no-torrents-message">No se encontraron torrents reproducibles para este episodio.</div>';
+    return;
+  }
+
+  setCurrentQualityOptions(bestTorrents, tvTitle);
   
   let torrentButtons = `
     <div class="torrent-quote">
-      <h4>Torrents encontrados</h4>`;
+      <h4>Streaming</h4>
+      <div class="torrent-info-banner">
+        <div class="info-item">
+          <span class="info-icon">✨</span>
+          <span class="info-text">${bestTorrents.length} calidad${bestTorrents.length !== 1 ? 'es' : ''} curada${bestTorrents.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-icon">▶</span>
+          <span class="info-text">La mayor calidad inicia por defecto</span>
+        </div>
+      </div>`;
   
 
   if (hasDemo) {
@@ -3495,49 +3595,8 @@ function displayTVTorrents(torrents, container, tvTitle, season, episode) {
       </div>`;
   }
   
-  torrentButtons += `<div class="torrent-buttons">`;
-  
-  torrents.forEach((torrent) => {
-    const magnetLink = torrent.magnet;
-    const torrentTitle = torrent.title;
-    const providerInfo = torrent.isDemo ? " 🎭 Demo" : "";
-    
-
-    const escapedMagnetLink = magnetLink.replace(/'/g, "\\'").replace(/"/g, '\\"');
-    const escapedTorrentTitle = torrentTitle.replace(/'/g, "\\'").replace(/"/g, '\\"');
-    
-    torrentButtons += `
-      <div class="torrent-item${torrent.isDemo ? ' demo-torrent' : ''}">
-        <div class="torrent-header">
-          <button class="torrent-button" data-quality="${torrent.quality}" data-magnet="${magnetLink}" data-title="${torrentTitle}" onclick="toggleTorrentActions(this)">
-            <div class="torrent-info-left">
-              <span class="torrent-quality">${torrent.quality}${providerInfo}</span>
-              <span class="torrent-size">${torrent.size}</span>
-            </div>
-            <div class="torrent-info-right">
-              <span class="torrent-seeds">🌱 ${torrent.seeds}</span>
-              <span class="torrent-expand">⌄</span>
-            </div>
-          </button>
-        </div>
-        <div class="torrent-name" title="${torrentTitle}">
-          📁 ${torrentTitle}
-        </div>
-        <div class="torrent-actions" style="display: none;">
-          <button class="action-button watch-online" onclick="event.stopPropagation(); watchTVEpisodeOnline('${escapedMagnetLink}', '${escapedTorrentTitle}', ${season}, ${episode || 'null'})">
-            <span class="action-icon">▶</span>
-            <span class="action-text">Ver Online</span>
-          </button>
-          <a class="action-button download-torrent" href="${magnetLink}" download>
-            <span class="action-icon">🧲</span>
-            <span class="action-text">Descargar</span>
-          </a>
-        </div>
-      </div>
-    `;
-  });
-  
-  torrentButtons += `</div></div>`;
+  torrentButtons += renderBestTorrentCTA(bestTorrents, tvTitle, { type: 'tv', season, episode });
+  torrentButtons += `</div>`;
   container.innerHTML = torrentButtons;
 }
 
@@ -4181,19 +4240,11 @@ document.getElementById("search-bar").addEventListener("input", (e) => {
   if (searchQuery === '') {
     hideSearchResultsInfo();
     
-    // Show trending sections when search is cleared, but only if favorites are not active
-    if (!showingFavorites) {
-      toggleTrendingSectionsVisibility(false);
-    }
-    
     currentPage = 1;
     animateMovieGrid();
     getTitles(currentPage);
     return;
   }
-  
-  // Hide trending sections when searching
-  toggleTrendingSectionsVisibility(true);
 
   searchTimeout = setTimeout(() => {
     currentPage = 1;
@@ -5676,7 +5727,6 @@ window.onload = async function () {
   // Load trending sections and continue watching after authentication is initialized
   setTimeout(async () => {
     if (!document.getElementById('search-bar').value.trim() && !showingFavorites) {
-      await loadTrendingSections();
       // Load continue watching section after trending sections to prevent flickering
       if (!continueWatchingLoaded) {
         await loadContinueWatchingSection();
@@ -5844,6 +5894,197 @@ async function watchTVEpisodeOnline(magnetURI, episodeTitle, seasonNumber, episo
   await watchOnlineWithStats(magnetURI, episodeTitle);
 }
 
+function getSubtitleLanguageLabel(language) {
+  const labels = {
+    none: 'Sin búsqueda automática',
+    es: 'Español',
+    en: 'English',
+    fr: 'Français',
+    de: 'Deutsch',
+    it: 'Italiano',
+    pt: 'Português'
+  };
+  return labels[language] || language;
+}
+
+function openPlaybackSetupModal(options = {}) {
+  if (!currentQualityOptions.length) {
+    showNotification('No hay calidades disponibles para reproducir', 'warning', 3000);
+    return;
+  }
+
+  currentPlaybackSetupContext = options;
+  const modal = document.getElementById('playback-setup-modal');
+  const qualitySelect = document.getElementById('preplay-quality-select');
+  const subtitleSelect = document.getElementById('preplay-subtitle-language');
+  const startButton = document.getElementById('preplay-start-button');
+
+  if (!modal || !qualitySelect || !subtitleSelect || !startButton) return;
+
+  const selectedKey = currentPlaybackQualityKey || currentQualityOptions[0].key;
+  qualitySelect.innerHTML = currentQualityOptions.map((option, index) => {
+    const selectedAttr = option.key === selectedKey ? 'selected' : '';
+    const bestLabel = index === 0 ? ' · recomendada' : '';
+    const label = `${option.quality}${bestLabel}${option.size && option.size !== 'Unknown' ? ` · ${option.size}` : ''}${option.seeds ? ` · ${option.seeds} seeds` : ''}`;
+    return `<option value="${escapeHtml(option.key)}" ${selectedAttr}>${escapeHtml(label)}</option>`;
+  }).join('');
+
+  const updateDetails = () => {
+    const selected = currentQualityOptions.find(option => option.key === qualitySelect.value) || currentQualityOptions[0];
+    const summary = document.getElementById('preplay-quality-summary');
+    const details = document.getElementById('preplay-quality-details');
+    if (summary) summary.textContent = selected.quality;
+    if (details) {
+      details.innerHTML = `
+        <span>${escapeHtml(selected.title || 'Video')}</span>
+        <span>${escapeHtml(selected.size || 'Tamaño desconocido')}</span>
+        <span>${selected.seeds || 0} seeds</span>
+      `;
+    }
+  };
+
+  qualitySelect.onchange = updateDetails;
+  updateDetails();
+
+  startButton.onclick = async () => {
+    const selected = currentQualityOptions.find(option => option.key === qualitySelect.value) || currentQualityOptions[0];
+    currentPlaybackQualityKey = selected.key;
+    pendingSubtitleLanguage = subtitleSelect.value !== 'none' ? subtitleSelect.value : null;
+    closePlaybackSetupModal();
+    await startBestTorrentPlayback(selected.magnet, selected.title, currentPlaybackSetupContext || {});
+  };
+
+  modal.classList.remove('hidden');
+  modal.style.display = 'block';
+}
+
+function closePlaybackSetupModal() {
+  const modal = document.getElementById('playback-setup-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.style.display = 'none';
+}
+
+async function startBestTorrentPlayback(magnetURI, title, options = {}) {
+  const selected = currentQualityOptions.find(option => option.magnet === magnetURI);
+  if (selected) {
+    currentPlaybackQualityKey = selected.key;
+  }
+
+  if (options.type === 'tv') {
+    await watchTVEpisodeOnline(magnetURI, title, options.season, options.episode);
+    return;
+  }
+
+  await watchOnlineWithStats(magnetURI, title);
+}
+
+function ensureSingleQualityOption(magnetURI, title) {
+  if (currentQualityOptions.some(option => option.magnet === magnetURI)) return;
+
+  const quality = extractQualityFromTorrentName(title) || 'Auto';
+  setCurrentQualityOptions([{
+    quality,
+    magnet: magnetURI,
+    title,
+    size: 'Unknown',
+    seeds: 0
+  }], title, magnetURI);
+}
+
+function moveSubtitleLanguageSelectToPlayer() {
+  const languageSelect = document.getElementById('language-select');
+  const playerSlot = document.getElementById('player-subtitle-language-slot');
+  if (languageSelect && playerSlot && languageSelect.parentElement !== playerSlot) {
+    playerSlot.appendChild(languageSelect);
+  }
+}
+
+function restoreSubtitleLanguageSelectHome() {
+  const languageSelect = document.getElementById('language-select');
+  const home = document.getElementById('subtitle-language-home');
+  if (languageSelect && home && languageSelect.parentElement !== home) {
+    home.appendChild(languageSelect);
+  }
+}
+
+function configurePlayerQualityControls(currentMagnet, title) {
+  const controlDeck = document.getElementById('player-control-deck');
+  const qualitySelect = document.getElementById('player-quality-select');
+  const qualityCurrent = document.getElementById('player-quality-current');
+
+  if (!controlDeck || !qualitySelect || !qualityCurrent) return;
+
+  ensureSingleQualityOption(currentMagnet, title);
+  const selected = currentQualityOptions.find(option => option.magnet === currentMagnet) ||
+    currentQualityOptions.find(option => option.key === currentPlaybackQualityKey) ||
+    currentQualityOptions[0];
+
+  currentPlaybackQualityKey = selected?.key || null;
+  qualitySelect.innerHTML = currentQualityOptions.map(option => {
+    const selectedAttr = option.key === currentPlaybackQualityKey ? 'selected' : '';
+    const label = `${option.quality}${option.size && option.size !== 'Unknown' ? ` · ${option.size}` : ''}${option.seeds ? ` · ${option.seeds} seeds` : ''}`;
+    return `<option value="${escapeHtml(option.key)}" ${selectedAttr}>${escapeHtml(label)}</option>`;
+  }).join('');
+
+  qualityCurrent.textContent = selected?.quality || 'Auto';
+  controlDeck.style.display = 'grid';
+  moveSubtitleLanguageSelectToPlayer();
+  hideSubtitleSettings();
+
+  qualitySelect.onchange = async function() {
+    const nextOption = currentQualityOptions.find(option => option.key === this.value);
+    if (!nextOption || nextOption.key === currentPlaybackQualityKey) return;
+
+    await switchTorrentQuality(nextOption);
+  };
+}
+
+function hideSubtitleSettings() {
+  const subtitleControls = document.getElementById('subtitle-controls');
+  const toggle = document.getElementById('subtitle-settings-toggle');
+
+  if (subtitleControls) {
+    subtitleControls.classList.add('subtitle-settings-collapsed');
+    subtitleControls.classList.remove('subtitle-settings-expanded');
+  }
+
+  if (toggle) {
+    toggle.classList.remove('active');
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+}
+
+function toggleSubtitleSettings() {
+  const subtitleControls = document.getElementById('subtitle-controls');
+  const toggle = document.getElementById('subtitle-settings-toggle');
+  if (!subtitleControls) return;
+
+  const shouldOpen = subtitleControls.classList.contains('subtitle-settings-collapsed');
+  subtitleControls.classList.toggle('subtitle-settings-collapsed', !shouldOpen);
+  subtitleControls.classList.toggle('subtitle-settings-expanded', shouldOpen);
+
+  if (toggle) {
+    toggle.classList.toggle('active', shouldOpen);
+    toggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+  }
+}
+
+async function switchTorrentQuality(nextOption) {
+  const videoPlayer = document.getElementById('video-player');
+  const resumeAt = videoPlayer && Number.isFinite(videoPlayer.currentTime) ? videoPlayer.currentTime : 0;
+
+  currentPlaybackQualityKey = nextOption.key;
+  if (resumeAt > 3) {
+    window.isResuming = true;
+    window.resumePosition = resumeAt;
+  }
+
+  showNotification(`Cambiando a ${nextOption.quality}...`, 'info', 2500);
+  await closeVideoModal();
+  await watchOnlineWithStats(nextOption.magnet, nextOption.title);
+}
+
 
 async function watchOnlineWithStats(magnetURI, movieTitle) {
 
@@ -5883,15 +6124,11 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
       const statusMessage = statusMessages[Math.min(retryCount, statusMessages.length - 1)];
       
       document.getElementById('torrent-loading').innerHTML = `
-        <p>🔍 Explorando torrent...</p>
+        <span class="setup-kicker">Preparando stream</span>
+        <h2>Conectando con el torrent</h2>
         <div class="loading-spinner"></div>
         <p id="loading-status">${statusMessage}${retryText}</p>
-        <p style="font-size: 0.9em; color: #ccc; margin-top: 10px;">
-          ⏱️ Los torrents pueden tardar 30-60 segundos en cargar dependiendo de la cantidad de peers disponibles.
-        </p>
-        <p style="font-size: 0.8em; color: #888; margin-top: 5px;">
-          💡 Si un torrent no carga, intenta con otra calidad (720p suele ser más rápido que 1080p).
-        </p>
+        <p class="stream-loading-note">Puede tardar 30-60 segundos según los peers disponibles. Si no carga, vuelve y prueba otra calidad.</p>
       `;
 
       const controller = new AbortController();
@@ -5951,16 +6188,15 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
 
 
       const torrentInfoHtml = `
-        <div class="torrent-info">
-          <h4>✅ Torrent Cargado Exitosamente:</h4>
-          <p><strong>📝 Nombre:</strong> ${torrentInfo.name}</p>
-          <p><strong>📦 Tamaño:</strong> ${formatBytes(torrentInfo.length)}</p>
-          <p><strong>🌱 Seeds:</strong> <span style="color: #4caf50; font-weight: bold;">${torrentInfo.seeds || 0}</span></p>
-          <p><strong>📥 Leechers:</strong> <span style="color: #ff9800; font-weight: bold;">${torrentInfo.leechers || 0}</span></p>
-          <p><strong>👥 Peers totales:</strong> <span style="color: #2196f3;">${torrentInfo.numPeers}</span></p>
-          <p><strong>📊 Progreso:</strong> <span style="color: #4caf50;">${(torrentInfo.progress * 100).toFixed(1)}%</span></p>
-          <p><strong>⬇️ Velocidad descarga:</strong> <span style="color: #2196f3;">${formatSpeed(torrentInfo.downloadSpeed)}</span></p>
-          <p><strong>⬆️ Velocidad subida:</strong> <span style="color: #9c27b0;">${formatSpeed(torrentInfo.uploadSpeed)}</span></p>
+        <div class="stream-torrent-summary">
+          <span class="setup-kicker">Torrent cargado</span>
+          <h3>${escapeHtml(torrentInfo.name)}</h3>
+          <div class="stream-summary-pills">
+            <span>${formatBytes(torrentInfo.length)}</span>
+            <span>${torrentInfo.seeds || 0} seeds</span>
+            <span>${torrentInfo.numPeers || 0} peers</span>
+            <span>${formatSpeed(torrentInfo.downloadSpeed)}</span>
+          </div>
         </div>
       `;
 
@@ -5978,7 +6214,7 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
         return;
       }
 
-      const videoFilesHtml = '<h3>🎬 Archivos de Video Disponibles:</h3>';
+      const videoFilesHtml = '';
       videoFilesList.innerHTML += videoFilesHtml;
 
       torrentInfo.videoFiles.forEach((file, index) => {
@@ -5989,11 +6225,11 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
         
         fileItem.innerHTML = `
           <div class="video-file-info">
-            <div class="video-file-name">🎥 ${file.name}</div>
-            <div class="video-file-size">📦 ${fileSize}</div>
+            <div class="video-file-name">${escapeHtml(file.name)}</div>
+            <div class="video-file-size">${fileSize}</div>
           </div>
           <button class="video-file-button" onclick="playVideoFileWithStats(${file.index})" data-file-index="${file.index}">
-            ▶️ Reproducir
+            Reproducir
           </button>
         `;
         
@@ -6026,13 +6262,14 @@ async function watchOnlineWithStats(magnetURI, movieTitle) {
       }
       
       document.getElementById('torrent-loading').innerHTML = `
-        <div style="color: #ff4444; text-align: center;">
-          <h4>❌ Error explorando el torrent</h4>
-          <p><strong>Error:</strong> ${errorMessage}</p>
-          ${suggestions ? `<p style="color: #ccc; margin-top: 10px;"><strong>💡 Sugerencia:</strong> ${suggestions}</p>` : ''}
-          <div style="margin-top: 20px;">
-            <button onclick="closeFileSelectionModal()" style="padding: 8px 16px; background-color: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">❌ Cerrar</button>
-            <button onclick="watchOnlineWithStats('${magnetURI}', '${movieTitle}')" style="padding: 8px 16px; background-color: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer;">🔄 Reintentar</button>
+        <div class="stream-error-state">
+          <span class="setup-kicker">No se pudo preparar</span>
+          <h2>Error explorando el torrent</h2>
+          <p>${escapeHtml(errorMessage)}</p>
+          ${suggestions ? `<p class="stream-loading-note">${escapeHtml(suggestions)}</p>` : ''}
+          <div class="stream-error-actions">
+            <button onclick="closeFileSelectionModal()" class="secondary-setup-button">Cerrar</button>
+            <button onclick="watchOnlineWithStats(decodeURIComponent('${encodeURIComponent(magnetURI)}'), decodeURIComponent('${encodeURIComponent(movieTitle)}'))" class="preplay-start-button">Reintentar</button>
           </div>
         </div>
       `;
@@ -6077,6 +6314,8 @@ function playVideoFileWithStats(fileIndex) {
   const streamUrl = `/api/torrent/stream/${currentTorrentInfo.infoHash}/${fileIndex}`;
   videoPlayer.src = streamUrl;
 
+  configurePlayerQualityControls(currentTorrentInfo.magnetURI, currentTorrentInfo.name || currentTorrentInfo.title || 'Video');
+
 
   const torrentStatsDiv = document.getElementById('torrent-stats');
   if (torrentStatsDiv) {
@@ -6120,6 +6359,18 @@ function playVideoFileWithStats(fileIndex) {
 
 
   setupSubtitleControls();
+
+  if (pendingSubtitleLanguage) {
+    const languageSelect = document.getElementById('language-select');
+    if (languageSelect) {
+      languageSelect.value = pendingSubtitleLanguage;
+    }
+    const languageToSearch = pendingSubtitleLanguage;
+    pendingSubtitleLanguage = null;
+    setTimeout(() => {
+      searchOnlineSubtitles(languageToSearch);
+    }, 600);
+  }
 
   setupVideoPlayerEvents();
 
@@ -6824,6 +7075,13 @@ async function closeVideoModal() {
   const videoModal = document.getElementById('video-modal');
   videoModal.classList.add('hidden');
   videoModal.style.display = 'none';
+
+  restoreSubtitleLanguageSelectHome();
+  const controlDeck = document.getElementById('player-control-deck');
+  if (controlDeck) {
+    controlDeck.style.display = 'none';
+  }
+  hideSubtitleSettings();
   
   // Remove video player event listeners to prevent errors during cleanup
   const videoPlayer = document.getElementById('video-player');
@@ -7202,6 +7460,10 @@ window.addEventListener('beforeunload', () => {
 
 // Global function for TV episode watching with season/episode info
 window.watchTVEpisodeOnline = watchTVEpisodeOnline;
+window.startBestTorrentPlayback = startBestTorrentPlayback;
+window.openPlaybackSetupModal = openPlaybackSetupModal;
+window.closePlaybackSetupModal = closePlaybackSetupModal;
+window.toggleSubtitleSettings = toggleSubtitleSettings;
 
 window.toggleTorrentActions = function(element) {
   // Para el nuevo diseño, element puede ser un div.torrent-item
